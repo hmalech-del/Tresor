@@ -95,13 +95,21 @@
     };
   }
 
+  /* Zeitgeber für alle Aufgaben.
+   *
+   * Zwei Eigenheiten mobiler Geräte werden hier abgefangen: Im Hintergrund
+   * (Bildschirm aus, anderer Tab) liefert requestAnimationFrame gar nichts,
+   * und beim Zurückkommen käme sonst ein Riesensprung an - also wird jeder
+   * Schritt gedeckelt. Und solange das Dokument versteckt ist, zählt gar
+   * keine Zeit: Eine Aufgabe soll nicht weiterlaufen, während niemand
+   * hinsieht. */
   function takt(rueckruf) {
     var laeuft = true, letzte = performance.now();
     function schritt(jetzt) {
       if (!laeuft) return;
-      var delta = (jetzt - letzte) / 1000;
+      var delta = Math.min(0.25, (jetzt - letzte) / 1000);
       letzte = jetzt;
-      rueckruf(delta, jetzt);
+      if (!document.hidden) rueckruf(delta, jetzt);
       if (laeuft) requestAnimationFrame(schritt);
     }
     requestAnimationFrame(schritt);
@@ -195,7 +203,8 @@
     beschreibe: function (p) { return util.dauer(p.sekunden) + ' nichts tun'; },
     starte: function (kontext) {
       var p = kontext.params;
-      var b = buehne(kontext, 'Nichts tun', util.dauer(p.sekunden) + ' lang nicht tippen, nicht scrollen, den Tab nicht wechseln.');
+      var b = buehne(kontext, 'Nichts tun', util.dauer(p.sekunden)
+        + ' lang nicht tippen und nicht scrollen. Geht der Bildschirm aus oder wechselst du die App, pausiert die Uhr - sie läuft nur, solange du hinsiehst.');
       var starten = el('button', { class: 'knopf gross', type: 'button', text: 'Ruhe beginnen' });
       b.koerper.appendChild(starten);
       var fortschritt = balken(b.koerper, '');
@@ -213,9 +222,18 @@
 
       starten.addEventListener('click', function () {
         laeuft = true; schonzeit = 0.7; starten.disabled = true; b.sag('Ruhig bleiben.', 'laeuft');
+        if (T.wachhalter) T.wachhalter.an('aufgabe');
       });
       var beiStoerung = function () { stoeren('Berührt.'); };
-      var beiSicht = function () { if (document.hidden) stoeren('App verlassen.'); };
+      /* Geht der Bildschirm aus oder wechselt die App, wird pausiert statt
+       * abgebrochen - auf Android schaltet das Display sonst mitten in der
+       * Übung ab und die Aufgabe wäre unlösbar. Die Uhr steht so lange
+       * still, der Fortschritt bleibt. */
+      var beiSicht = function () {
+        if (!laeuft) return;
+        if (document.hidden) { schonzeit = 0.7; b.sag('Pausiert. Es geht weiter, sobald du wieder da bist.', ''); }
+        else { schonzeit = 0.7; b.sag('Weiter. Ruhig bleiben.', 'laeuft'); }
+      };
       document.addEventListener('pointerdown', beiStoerung);
       document.addEventListener('keydown', beiStoerung);
       document.addEventListener('wheel', beiStoerung, { passive: true });

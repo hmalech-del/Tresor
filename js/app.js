@@ -24,7 +24,7 @@
    * dem Handy schlaeft der Bildschirm sonst mitten in der Rechnung ein.
    * Kostet zusaetzlich Strom, deshalb als Schalter und nicht automatisch. */
 
-  var wachhalter = { sperre: null, gewuenscht: false };
+  var wachhalter = T.wachhalter;
 
   function wachWunschLaden() {
     try { return global.localStorage.getItem('tresor.wachhalten') === '1'; }
@@ -35,22 +35,11 @@
     try { global.localStorage.setItem('tresor.wachhalten', an ? '1' : '0'); } catch (fehler) {}
   }
 
-  async function bildschirmWachHalten(an) {
-    wachhalter.gewuenscht = an;
-    try {
-      if (an) {
-        if (wachhalter.sperre || !global.navigator.wakeLock || document.hidden) return;
-        wachhalter.sperre = await global.navigator.wakeLock.request('screen');
-        wachhalter.sperre.addEventListener('release', function () { wachhalter.sperre = null; });
-      } else if (wachhalter.sperre) {
-        var sperre = wachhalter.sperre;
-        wachhalter.sperre = null;
-        await sperre.release();
-      }
-    } catch (fehler) { wachhalter.sperre = null; }
+  function bildschirmWachHalten(an) {
+    if (an) wachhalter.an('rechnen'); else wachhalter.aus('rechnen');
   }
 
-  /* Schalter fuer die beiden Rechenansichten. */
+  /* Schalter für die Rechenansichten. */
   function wachSchalter() {
     if (!global.navigator.wakeLock) return null;
     var kaestchen = el('input', { type: 'checkbox', checked: wachWunschLaden() ? 'checked' : null });
@@ -78,7 +67,7 @@
     if (zustand.exitUhr) { clearInterval(zustand.exitUhr); zustand.exitUhr = null; }
     // Der Notausgang rechnet weiter - nur seine Anzeige verschwindet
     zustand.exitAnzeige = null;
-    if (wachhalter.sperre) bildschirmWachHalten(false);
+    bildschirmWachHalten(false);
     if (zustand.aufraeumen) { try { zustand.aufraeumen(); } catch (fehler) {} zustand.aufraeumen = null; }
     if (zustand.loeser) { zustand.loeser.anhalten(); zustand.loeser = null; }
   }
@@ -241,6 +230,22 @@
         + (exitMinS === exitMaxS ? util.dauer(exitMaxS) : util.dauer(exitMinS) + ' bis ' + util.dauer(exitMaxS))
         + ' Rechenzeit kostet. Löschen des Tresors löscht die Zahl.'
       : 'Danach gibt es keinen Notausgang: Nur die Aufgaben und die Rechenzeit führen zur Zahl zurück. Löschen des Tresors löscht die Zahl.';
+    /* Wie viele Aufgabenplätze gibt es überhaupt? Bei fünf Fragmenten mit je
+     * einer Aufgabe sind es fünf - wer sechs Dimensionen ankreuzt, sieht eine
+     * davon nie. Das sagt die Oberfläche lieber vorher. */
+    var plaetze = zustand.laenge * konfig.aufgabenProFragment;
+    var proFragment = konfig.aufgabenProFragment === 1 ? 'einer Aufgabe' : konfig.aufgabenProFragment + ' Aufgaben';
+    var uebrig = dimensionen.length - plaetze;
+    $('#dimension-hinweis').textContent = uebrig > 0
+      ? 'Achtung: ' + zustand.laenge + ' Fragmente mit je ' + proFragment + ' ergeben nur ' + plaetze
+        + ' Aufgabenplätze – ' + (uebrig === 1 ? 'eine deiner ' : uebrig + ' deiner ') + dimensionen.length
+        + ' Dimensionen ' + (uebrig === 1 ? 'bleibt' : 'bleiben') + ' außen vor, und der Zufall entscheidet welche. Mit '
+        + Math.ceil(dimensionen.length / zustand.laenge) + ' Aufgaben je Fragment sind alle dabei.'
+      : dimensionen.length === 1
+        ? 'Eine Dimension auf ' + plaetze + ' Aufgabenplätze: Es kommen lauter Aufgaben aus dieser einen, '
+          + 'jede Sorte einmal, bevor sich eine wiederholt.'
+        : dimensionen.length + ' Dimensionen auf ' + plaetze + ' Aufgabenplätze: Jede kommt mindestens einmal dran, '
+          + 'danach geht es reihum weiter.';
     $('#schaetzung-detail').textContent =
       zustand.laenge + ' Fragmente · ' + konfig.aufgabenProFragment
       + (konfig.aufgabenProFragment === 1 ? ' Aufgabe' : ' Aufgaben') + ' je Fragment · '
@@ -305,6 +310,7 @@
 
     var dimensionTeil = el('section', { class: 'karte' }, [
       el('h2', { text: '2 · Womit soll der Tresor dich aufhalten?' }),
+      el('p', { class: 'flaut klein', id: 'dimension-hinweis', text: '' }),
       el('div', { class: 'dimension-gitter' }, dimensionen.map(function (dimension) {
         var module = T.herausforderungen.nachDimension(dimension.id);
         var kasten = el('label', { class: 'dimension-karte' + (dimension.fertig ? '' : ' ist-geplant') }, [
@@ -914,7 +920,7 @@
     var exit = zustand.tresor && zustand.tresor.notausgang;
     if (exit) exit.mitlaufen = false;
     if (zustand.exitLoeser) { zustand.exitLoeser.anhalten(); zustand.exitLoeser = null; }
-    if (wachhalter.sperre) bildschirmWachHalten(false);
+    bildschirmWachHalten(false);
     sichern(true);
     exitAnzeigeAktualisieren();
   }
@@ -1165,6 +1171,9 @@
         }
       };
 
+      // Bildschirm während der Aufgabe anlassen: Auf dem Handy geht er sonst
+      // mitten in einer Geduldsübung aus.
+      wachhalter.an('aufgabe');
       var aufraeumenAufgabe = modul.starte(kontext);
       var fristUhr = null;
       if (aufgabe.frist) {
@@ -1183,6 +1192,7 @@
       }
       zustand.aufraeumen = function () {
         if (fristUhr) clearInterval(fristUhr);
+        wachhalter.aus('aufgabe');
         if (aufraeumenAufgabe) aufraeumenAufgabe();
       };
       if (aufgabe.zustand.fristAbgelaufen) {
@@ -1334,10 +1344,7 @@
       zeichneEinrichten();
     }
 
-    document.addEventListener('visibilitychange', function () {
-      if (document.hidden) { sichern(true); return; }
-      if (wachhalter.gewuenscht && !wachhalter.sperre) bildschirmWachHalten(true);
-    });
+    document.addEventListener('visibilitychange', function () { if (document.hidden) sichern(true); });
     global.addEventListener('pagehide', function () { sichern(true); });
   }
 

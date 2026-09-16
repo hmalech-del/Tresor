@@ -72,6 +72,55 @@
     return bytes;
   }
 
+  /* ---------------- Bildschirm wachhalten ----------------
+   *
+   * Auf Android schaltet das Display nach wenigen Sekunden ohne Berührung ab.
+   * Genau das passiert bei Aufgaben wie "Nichts tun" oder "Wachbleiben" - und
+   * beim Rechnen eines Zeitschlosses. Die Sperre wird mit Gründen verwaltet,
+   * damit sich zwei Stellen nicht gegenseitig die Sperre wegnehmen, und nach
+   * Rückkehr in den Vordergrund neu angefordert (Browser geben sie beim
+   * Verstecken frei). */
+  var wachGruende = {};
+  var wachSperre = null;
+
+  function wachAnfordern() {
+    var global = typeof window !== 'undefined' ? window : globalThis;
+    if (wachSperre || !global.navigator || !global.navigator.wakeLock) return;
+    if (typeof document !== 'undefined' && document.hidden) return;
+    try {
+      global.navigator.wakeLock.request('screen').then(function (sperre) {
+        if (!Object.keys(wachGruende).length) { sperre.release().catch(function () {}); return; }
+        wachSperre = sperre;
+        sperre.addEventListener('release', function () { wachSperre = null; });
+      }).catch(function () {});
+    } catch (fehler) { /* nicht verfügbar, dann eben nicht */ }
+  }
+
+  function wachFreigeben() {
+    if (!wachSperre) return;
+    var sperre = wachSperre;
+    wachSperre = null;
+    try { sperre.release(); } catch (fehler) {}
+  }
+
+  var wachhalter = {
+    an: function (grund) { wachGruende[grund || 'allgemein'] = true; wachAnfordern(); },
+    aus: function (grund) {
+      delete wachGruende[grund || 'allgemein'];
+      if (!Object.keys(wachGruende).length) wachFreigeben();
+    },
+    aktiv: function () { return !!wachSperre; },
+    gewuenscht: function () { return Object.keys(wachGruende).length > 0; }
+  };
+
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden && wachhalter.gewuenscht()) wachAnfordern();
+    });
+  }
+
+  T.wachhalter = wachhalter;
+
   T.util = {
     $: $, $$: $$, el: el, leeren: leeren, dauer: dauer, uhrwerk: uhrwerk,
     zeitpunkt: zeitpunkt, minutenAlsUhr: minutenAlsUhr, grenze: grenze,

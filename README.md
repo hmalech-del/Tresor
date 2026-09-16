@@ -189,12 +189,23 @@ Jede Dimension lässt sich einzeln zuschalten und in fünf Intensitätsstufen
 regeln. Die Stufen steuern Dauer, Toleranz und Anzahl; die letzten beiden
 Fragmente werden automatisch eine Stufe härter.
 
+**Wie die Aufgaben verteilt werden:** Ein Tresor hat so viele Fragmente wie das
+Geheimnis Teile hat – bei fünf Ziffern also fünf. Jedes Fragment bekommt
+`Aufgaben pro Fragment` Stück, zusammen sind das die verfügbaren
+*Aufgabenplätze*. Gezogen wird reihum über die gewählten Dimensionen: Bei zwei
+Dimensionen wechseln sie sich ab, bei einer kommen lauter Aufgaben aus ihr.
+Gibt es mehr Dimensionen als Plätze – sechs Dimensionen bei fünf Fragmenten mit
+je einer Aufgabe –, bleibt entsprechend viel außen vor. Die Einrichtung rechnet
+das vor und nennt die Zahl der Aufgaben je Fragment, mit der alle drankommen.
+Welche Dimension in so einem Fall ausfällt, entscheidet der Zufall: Die
+Reihenfolge wird je Tresor gemischt, damit es nicht immer dieselbe trifft.
+
 ### Geduld
 
 | Aufgabe | Worum es geht |
 |---|---|
 | **Stillhalten** | Knopf gedrückt halten, Loslassen setzt zurück |
-| **Nichts tun** | Bildschirm offen lassen – jede Berührung, jeder Tabwechsel setzt zurück |
+| **Nichts tun** | Nicht tippen, nicht scrollen – jede Berührung setzt zurück. Geht der Bildschirm aus oder wechselst du die App, **pausiert** die Uhr, statt abzubrechen |
 | **Atemtakt** | Dem Atemrhythmus folgen und an jedem Wendepunkt tippen |
 | **Wachbleiben** | Auf unregelmäßige Signale innerhalb eines kurzen Fensters reagieren |
 | **Gleichmaß** | Einen Regler in vorgegebener Zeit gleichmäßig durchschieben – Sollfenster und Statusanzeige liegen *über* dem Regler, damit der Daumen sie nicht verdeckt |
@@ -368,6 +379,19 @@ invertiert, gedreht, verrauscht, JPEG-komprimiert und mit Schlagschatten:
 Vorschlag immer korrigierbar, und unsichere Ziffern werden rot markiert.
 
 ---
+
+## Auf dem Handy
+
+Zwei Eigenheiten mobiler Geräte fängt die App ab:
+
+* Der **Bildschirm** schaltet nach wenigen Sekunden ohne Berührung ab – mitten
+  in „Nichts tun" oder „Wachbleiben". Solange eine Aufgabe läuft, hält die App
+  ihn deshalb per Wake Lock wach; beim Rechnen eines Zeitschlosses gibt es
+  denselben Schalter zum Mitnehmen.
+* Geht er trotzdem aus oder wechselst du die App, **pausieren alle Uhren**,
+  statt weiterzulaufen oder abzubrechen. Beim Zurückkommen geht es dort weiter,
+  wo es aufgehört hat. (Einzige Ausnahme: „Stillhalten" gilt weiterhin als
+  abgebrochen, wenn du die App verlässt – der Finger war ja weg.)
 
 ## Lokal starten
 

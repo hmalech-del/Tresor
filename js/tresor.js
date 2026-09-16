@@ -103,6 +103,10 @@
     }).filter(Boolean);
 
     if (!toepfe.length) return [];
+    /* Reihenfolge der Dimensionen mischen: Sonst wäre bei mehr Dimensionen als
+     * Aufgabenplätzen immer dieselbe - nämlich die zuletzt gewählte - die, die
+     * gar nicht drankommt. */
+    toepfe = zufall.mische(toepfe);
 
     function zieh(topf) {
       if (topf.zeiger >= topf.vorrat.length) { topf.vorrat = zufall.mische(topf.vorrat); topf.zeiger = 0; }
@@ -175,7 +179,17 @@
       return fragment.aufgaben.some(function (a) { return a.id === 'zeitfenster'; });
     });
     var gebundene = plan.reduce(function (summe2, fragment) { return summe2 + fragment.loesungen.length; }, 0);
-    return { sekunden: summe, mitZeitfenster: mitZeitfenster, gebundeneAufgaben: gebundene };
+    var genutzt = {};
+    plan.forEach(function (fragment) {
+      fragment.aufgaben.forEach(function (aufgabe) { genutzt[aufgabe.dimension] = true; });
+    });
+    return {
+      sekunden: summe,
+      mitZeitfenster: mitZeitfenster,
+      gebundeneAufgaben: gebundene,
+      plaetze: laenge * konfig.aufgabenProFragment,
+      genutzteDimensionen: Object.keys(genutzt)
+    };
   }
 
   /* Verriegeln: für jedes Fragment ein Zeitschloss schmieden, die Antworten der
