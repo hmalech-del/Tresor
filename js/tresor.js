@@ -30,7 +30,7 @@
         maxFaktor: 3,
         folge: 'aufgaben'           // 'aufgaben' oder 'alles' (Rechenzeit verfällt mit)
       },
-      notausgang: { minSekunden: 0, maxSekunden: 0, wartetage: 0 }
+      notausgang: { minSekunden: 0, maxSekunden: 0 }
     };
   }
 
@@ -273,8 +273,9 @@
       notausgang = {
         art: 'rechenzeit',
         blind: true,
+        mitlaufen: false,          // rechnet im Hintergrund weiter, solange die Seite offen ist
         rahmen: [exitMin, exitMax],
-        frei: Date.now() + (exitKonfig.wartetage || 0) * 86400000,
+        frei: 0,
         schloss: {
           n: exitPuzzle.n, a: exitPuzzle.a,
           pruef: await T.krypto.pruefwert(exitPuzzle.b),

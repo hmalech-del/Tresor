@@ -13,6 +13,8 @@
     laenge: 5,
     aufraeumen: null,
     loeser: null,
+    exitLoeser: null,
+    exitAnzeige: null,
     letzteSicherung: 0,
     fotoErgebnis: null
   };
@@ -74,6 +76,8 @@
   function aufraeumen() {
     if (zustand.fristUhr) { clearInterval(zustand.fristUhr); zustand.fristUhr = null; }
     if (zustand.exitUhr) { clearInterval(zustand.exitUhr); zustand.exitUhr = null; }
+    // Der Notausgang rechnet weiter - nur seine Anzeige verschwindet
+    zustand.exitAnzeige = null;
     if (wachhalter.sperre) bildschirmWachHalten(false);
     if (zustand.aufraeumen) { try { zustand.aufraeumen(); } catch (fehler) {} zustand.aufraeumen = null; }
     if (zustand.loeser) { zustand.loeser.anhalten(); zustand.loeser = null; }
@@ -170,8 +174,7 @@
       },
       notausgang: {
         minSekunden: Number($('#notausgang-min').value),
-        maxSekunden: Number($('#notausgang-min').value) ? Number($('#notausgang-max').value) : 0,
-        wartetage: Number($('#notausgang-frist').value)
+        maxSekunden: Number($('#notausgang-min').value) ? Number($('#notausgang-max').value) : 0
       }
     };
   }
@@ -217,9 +220,6 @@
     anzeige.textContent = 'ungefähr ' + util.dauer(schaetzung.sekunden);
     $('#rechenzeit-feld').classList.toggle('versteckt', ohneRechenzeit);
     $('#reihenfolge-feld').classList.toggle('versteckt', zustand.art === 'foto');
-    // Der Notausgang bleibt in beiden Modi; nur seine Wartefrist ergibt
-    // ohne Rechenzeit keinen Sinn, weil er dort selbst eine Wartezeit ist.
-    $('#notausgang-frist').closest('.feld').classList.toggle('versteckt', ohneRechenzeit);
     util.$$('#notausgang-min option, #notausgang-max option').forEach(function (option) {
       if (!option.dataset.sekunden) return;
       option.textContent = util.dauer(Number(option.dataset.sekunden))
@@ -393,7 +393,7 @@
         ])
       ]),
       el('div', { class: 'feld' }, [
-        el('label', { for: 'notausgang-min', id: 'notausgang-min-label', text: 'Notausgang – frühestens offen nach' }),
+        el('label', { for: 'notausgang-min', text: 'Notausgang – öffnet frühestens nach' }),
         el('select', { id: 'notausgang-min' }, [el('option', { value: '0' }, 'kein Notausgang')]
           .concat(T.tresorLogik.NOTAUSGANG_WERTE.map(function (sekunden) {
             var option = el('option', { value: String(sekunden) }, util.dauer(sekunden) + ' Rechenzeit');
@@ -402,7 +402,7 @@
           })))
       ]),
       el('div', { class: 'feld', id: 'notausgang-max-feld' }, [
-        el('label', { for: 'notausgang-max', text: 'spätestens offen nach' }),
+        el('label', { for: 'notausgang-max', text: '… und spätestens nach' }),
         el('select', { id: 'notausgang-max' }, T.tresorLogik.NOTAUSGANG_WERTE.map(function (sekunden) {
           var option = el('option', { value: String(sekunden), selected: sekunden === 7200 ? 'selected' : null },
             util.dauer(sekunden) + ' Rechenzeit');
@@ -411,16 +411,7 @@
         }))
       ]),
       el('p', { class: 'flaut klein', id: 'notausgang-spanne', text: '' }),
-      el('div', { class: 'feld' }, [
-        el('label', { for: 'notausgang-frist', text: 'Notausgang erst freischalten' }),
-        el('select', { id: 'notausgang-frist' }, [
-          el('option', { value: '0' }, 'sofort'),
-          el('option', { value: '1' }, 'nach 1 Tag'),
-          el('option', { value: '3' }, 'nach 3 Tagen'),
-          el('option', { value: '7' }, 'nach 7 Tagen')
-        ])
-      ]),
-      el('p', { class: 'flaut klein', text: 'Der Notausgang ist ein zweites Zeitschloss über das ganze Geheimnis: keine Aufgaben, nur Rechenzeit. Er ist die Obergrenze dafür, wie lange du ausgesperrt bleiben kannst – die Wartefrist davor ist allerdings nur eine Sperre der Oberfläche.' }),
+      el('p', { class: 'flaut klein', text: 'Der Notausgang ist der zweite Weg zum ganzen Geheimnis, falls du an einer Aufgabe hängen bleibst: keine Aufgaben, nur Zeit. Wie lange genau, wird beim Verriegeln aus deiner Spanne gezogen.' }),
       el('p', { class: 'flaut klein aufwandzeile', id: 'notausgang-aufwand', text: '' })
     ]);
 
@@ -824,36 +815,8 @@
     }
 
     if (!fertig && tresor.notausgang && !tresor.notausgang.benutzt) {
-      var exit = tresor.notausgang;
-      if (T.tresorLogik.notausgangUhrPruefen(tresor)) sichern(true);
-      var inhalt = [
-        el('h2', { text: 'Notausgang' }),
-        el('p', { class: 'flaut', text: 'Ein zweiter Weg zum ganzen Geheimnis. Keine Aufgaben, keine Sperrfristen. '
-          + notausgangSpanne(exit) })
-      ];
-      if (exit.art === 'wartezeit') {
-        var bereit = T.tresorLogik.notausgangBereit(tresor);
-        var verstrichenExit = el('strong', { class: 'fristzeit',
-          text: util.dauer((Date.now() - tresor.erstellt) / 1000) });
-        inhalt.push(el('p', {}, ['verstrichen: ', verstrichenExit]));
-        inhalt.push(bereit
-          ? el('button', { class: 'knopf', type: 'button', text: 'Notausgang öffnen', onclick: zeichneNotausgang })
-          : el('p', { class: 'flaut klein', text: 'Noch nicht offen. Die Uhr läuft weiter, auch wenn die App zu ist.' }));
-        if (!bereit) {
-          // Mitlaufen lassen, damit der Notausgang von selbst anklickbar wird
-          zustand.exitUhr = setInterval(function () {
-            if (T.tresorLogik.notausgangBereit(tresor)) { zeichneTresor(); return; }
-            verstrichenExit.textContent = util.dauer((Date.now() - tresor.erstellt) / 1000);
-          }, 1000);
-        }
-      } else {
-        var gerechnet = exit.stand.erledigt / (tresor.rate || 1);
-        inhalt.push(Date.now() < (exit.frei || 0)
-          ? el('p', { class: 'flaut', text: 'Freigeschaltet ' + util.zeitpunkt(exit.frei) + '.' })
-          : el('button', { class: 'knopf', type: 'button', onclick: zeichneNotausgang,
-              text: gerechnet >= 1 ? 'Notausgang fortsetzen (' + util.dauer(gerechnet) + ' gerechnet)' : 'Notausgang öffnen' }));
-      }
-      wurzel.appendChild(el('section', { class: 'karte notausgang-karte' }, inhalt));
+      wurzel.appendChild(notausgangKarte(tresor));
+      exitAnzeigeAktualisieren();          // erst jetzt hängt die Karte im Dokument
     }
 
     wurzel.appendChild(el('section', { class: 'karte' }, [
@@ -908,105 +871,150 @@
     }, 0);
   }
 
-  /* Eigene Ansicht, damit nie zwei Zeitschlösser gleichzeitig rechnen. */
-  function zeichneNotausgang() {
-    aufraeumen();
+  /* ---------------- Notausgang ----------------
+   *
+   * Er läuft im Hintergrund weiter, egal welche Aufgabe gerade angezeigt wird,
+   * und nimmt seinen Lauf nach einem Neuladen von selbst wieder auf. Anhalten
+   * geht jederzeit; der Zwischenstand bleibt erhalten. */
+
+  function notausgangLaeuft() { return !!zustand.exitLoeser; }
+
+  function notausgangStarten() {
     var tresor = zustand.tresor;
+    var exit = tresor && tresor.notausgang;
+    if (!exit || exit.benutzt || exit.art === 'wartezeit' || zustand.exitLoeser) return;
+    exit.mitlaufen = true;
+    zustand.exitStart = { zeit: Date.now(), schritte: exit.stand.erledigt };
+    zustand.exitLoeser = new T.zeitschloss.Loeser(exit.schloss, exit.stand, function (stand) {
+      exit.stand.erledigt = stand.erledigt;
+      exit.stand.x = stand.x;
+      exitAnzeigeAktualisieren();
+      sichern(false);
+    });
+    if (wachWunschLaden()) bildschirmWachHalten(true);
+    zustand.exitLoeser.starten().then(function (b) {
+      zustand.exitLoeser = null;
+      if (!b) { exitAnzeigeAktualisieren(); sichern(true); return; }
+      return T.tresorLogik.notausgangOeffnen(tresor, b).then(function () {
+        exit.mitlaufen = false;
+        sichern(true);
+        zeichneTresor();
+      });
+    }).catch(function (fehler) {
+      zustand.exitLoeser = null;
+      exit.mitlaufen = false;
+      sichern(true);
+      global.alert('Notausgang: Rechenfehler – ' + fehler.message);
+    });
+    sichern(true);
+    exitAnzeigeAktualisieren();
+  }
+
+  function notausgangAnhalten() {
+    var exit = zustand.tresor && zustand.tresor.notausgang;
+    if (exit) exit.mitlaufen = false;
+    if (zustand.exitLoeser) { zustand.exitLoeser.anhalten(); zustand.exitLoeser = null; }
+    if (wachhalter.sperre) bildschirmWachHalten(false);
+    sichern(true);
+    exitAnzeigeAktualisieren();
+  }
+
+  /* Hält die sichtbare Notausgang-Karte aktuell, ohne sie zu besitzen: Ist
+   * gerade eine andere Ansicht offen, passiert schlicht nichts. */
+  function exitAnzeigeAktualisieren() {
+    var teile = zustand.exitAnzeige;
+    var tresor = zustand.tresor;
+    if (!teile || !tresor || !tresor.notausgang) return;
+    // Noch nicht (oder nicht mehr) im Dokument: dann gibt es nichts zu malen.
+    // Die Bezüge bleiben stehen, der nächste Aufruf trifft die fertige Karte.
+    if (!teile.wurzel.isConnected) return;
     var exit = tresor.notausgang;
-    var wurzel = util.leeren($('#buehne'));
-    wurzel.appendChild(el('section', { class: 'karte' }, [
-      el('button', { class: 'knopf', type: 'button', text: '← zurück zum Tresor', onclick: zeichneTresor })
-    ]));
-    var karte = el('section', { class: 'karte aufgabenkarte' });
-    wurzel.appendChild(karte);
-    if (exit.art === 'wartezeit') { wartezeitNotausgang(karte, exit); return; }
+    var erledigt = exit.stand.erledigt;
+    var obergrenze = exit.schloss.obergrenze || exit.schloss.t || 1;
+    var untergrenze = exit.schloss.untergrenze || 0;
+    teile.fuellung.style.width = (Math.min(1, erledigt / obergrenze) * 100).toFixed(2) + '%';
+    teile.anzeige.textContent = util.dauer(erledigt / (tresor.rate || 1));
+    teile.text.textContent = erledigt.toLocaleString('de-DE') + ' Schritte · '
+      + (untergrenze && erledigt < untergrenze
+          ? 'frühestens ab ' + util.dauer(untergrenze / (tresor.rate || 1)) + ' kann es aufspringen'
+          : 'kann jederzeit aufspringen');
+    teile.knopf.textContent = notausgangLaeuft() ? 'Anhalten' : 'Rechnen starten';
+    teile.zustandstext.textContent = notausgangLaeuft()
+      ? 'Rechnet im Hintergrund – auch während du an den Aufgaben arbeitest, solange diese Seite offen bleibt.'
+      : 'Angehalten. Der Zwischenstand bleibt erhalten.';
+  }
 
-    var blind = !!exit.blind;
-    var obergrenze = blind ? exit.schloss.obergrenze : exit.schloss.t;
-    var untergrenze = blind ? (exit.schloss.untergrenze || 0) : obergrenze;
+  /* Die Karte auf dem Tresor-Bildschirm. Sie steuert den Notausgang, hält ihn
+   * aber nicht am Leben - das tut der Löser selbst. */
+  function notausgangKarte(tresor) {
+    var exit = tresor.notausgang;
+    if (T.tresorLogik.notausgangUhrPruefen(tresor)) sichern(true);
+    var karte = el('section', { class: 'karte notausgang-karte' }, [
+      el('h2', { text: 'Notausgang' }),
+      el('p', { class: 'flaut', text: 'Der zweite Weg zum ganzen Geheimnis, falls du hängen bleibst. '
+        + notausgangSpanne(exit) })
+    ]);
 
-    karte.appendChild(el('p', { class: 'aufgabe-titel', text: 'Notausgang' }));
-    karte.appendChild(el('p', { class: 'aufgabe-hinweis', text: blind
-      ? 'Dieses Zeitschloss gibt das ganze Geheimnis frei – ohne Aufgaben, ohne Wartezeiten. '
-        + 'Wie viele Quadrierungen nötig sind, weiß niemand: gespeichert ist nur ein Prüfwert der Lösung, '
-        + 'und der Rechner merkt selbst, wann er angekommen ist. ' + notausgangSpanne(exit)
-        + ' Ausgelastet ist ein Kern; der Fortschritt wird gespeichert.'
-      : 'Dieses Zeitschloss gibt das ganze Geheimnis frei – ohne Aufgaben, ohne Wartezeiten. Es kostet '
-        + obergrenze.toLocaleString('de-DE') + ' sequentielle Quadrierungen, also rund '
-        + util.dauer(exit.sekunden) + ' Rechenzeit auf einem Kern. Der Fortschritt wird gespeichert, '
-        + 'die Strecke lässt sich in Etappen abarbeiten.' }));
+    if (exit.art === 'wartezeit') {
+      var bereit = T.tresorLogik.notausgangBereit(tresor);
+      var verstrichen = el('strong', { class: 'fristzeit',
+        text: util.dauer((Date.now() - tresor.erstellt) / 1000) });
+      karte.appendChild(el('p', {}, ['verstrichen: ', verstrichen]));
+      var oeffnen = el('button', { class: 'knopf gross haupt', type: 'button', text: 'Geheimnis freigeben' });
+      oeffnen.disabled = !bereit;
+      oeffnen.addEventListener('click', function () {
+        if (oeffnen.disabled) return;
+        oeffnen.disabled = true;
+        T.tresorLogik.notausgangOeffnen(tresor, null).then(function () {
+          sichern(true);
+          zeichneTresor();
+        }).catch(function (fehler) {
+          karte.appendChild(el('p', { class: 'warnung', text: 'Entschlüsseln fehlgeschlagen: ' + fehler.message }));
+        });
+      });
+      karte.appendChild(oeffnen);
+      karte.appendChild(el('p', { class: 'flaut klein', text: bereit
+        ? 'Der Notausgang ist offen.'
+        : 'Noch zu. Die Uhr läuft weiter, auch wenn die App geschlossen ist.' }));
+      if (!bereit) {
+        zustand.exitUhr = setInterval(function () {
+          if (T.tresorLogik.notausgangBereit(tresor)) { zeichneTresor(); return; }
+          verstrichen.textContent = util.dauer((Date.now() - tresor.erstellt) / 1000);
+        }, 1000);
+      }
+      return karte;
+    }
 
-    var anzeige = el('div', { class: 'countdown', text: '--:--' });
+    var anzeige = el('div', { class: 'countdown', text: '–' });
     var fuellung = el('i');
     var balken = el('div', { class: 'balken' }, [fuellung]);
-    if (blind && untergrenze && untergrenze < obergrenze) {
-      balken.appendChild(el('span', { class: 'balken-marke', style: 'left:' + (untergrenze / obergrenze * 100).toFixed(1) + '%' }));
+    var untergrenze = exit.schloss.untergrenze || 0;
+    var obergrenze = exit.schloss.obergrenze || exit.schloss.t || 1;
+    if (untergrenze && untergrenze < obergrenze) {
+      balken.appendChild(el('span', { class: 'balken-marke',
+        style: 'left:' + (untergrenze / obergrenze * 100).toFixed(1) + '%' }));
     }
     var text = el('span', { class: 'balken-text', text: '' });
-    var knopf = el('button', { class: 'knopf gross haupt', type: 'button', text: 'Rechnen starten' });
-    karte.appendChild(el('p', { class: 'flaut klein', text: blind ? 'gerechnet' : 'verbleibend' }));
+    var knopf = el('button', { class: 'knopf', type: 'button', text: 'Rechnen starten' });
+    var zustandstext = el('p', { class: 'flaut klein', text: '' });
+    knopf.addEventListener('click', function () {
+      if (notausgangLaeuft()) notausgangAnhalten(); else notausgangStarten();
+    });
+
+    karte.appendChild(el('p', { class: 'flaut klein', text: 'bisher gerechnet' }));
     karte.appendChild(anzeige);
     karte.appendChild(balken);
     karte.appendChild(text);
     karte.appendChild(knopf);
-    var exitSchalter = wachSchalter();
-    if (exitSchalter) karte.appendChild(exitSchalter);
+    var schalter = wachSchalter();
+    if (schalter) karte.appendChild(schalter);
+    karte.appendChild(zustandstext);
 
-    var laeuft = false, startZeit = 0, startSchritte = exit.stand.erledigt;
-
-    function zeichneStand(erledigt) {
-      fuellung.style.width = (Math.min(1, erledigt / obergrenze) * 100).toFixed(2) + '%';
-      var rate = laeuft && Date.now() > startZeit
-        ? (erledigt - startSchritte) / ((Date.now() - startZeit) / 1000) : tresor.rate;
-      if (blind) {
-        // Kein Countdown: Es gibt keine bekannte Restzeit, nur geleistete Arbeit.
-        anzeige.textContent = util.dauer(erledigt / (tresor.rate || 1)) + (laeuft ? '' : ' (pausiert)');
-        text.textContent = erledigt.toLocaleString('de-DE') + ' Schritte'
-          + (untergrenze && erledigt < untergrenze
-              ? ' · frühestens ab ' + util.dauer(untergrenze / (tresor.rate || 1)) + ' kann es aufspringen'
-              : ' · jederzeit möglich');
-        return;
-      }
-      var rest = rate > 0 ? (obergrenze - erledigt) / rate : 0;
-      anzeige.textContent = laeuft ? util.uhrwerk(rest) : util.uhrwerk(rest) + ' (pausiert)';
-      text.textContent = erledigt.toLocaleString('de-DE') + ' von ' + obergrenze.toLocaleString('de-DE')
-        + ' Schritten · ' + (erledigt / obergrenze * 100).toFixed(1) + ' %';
-    }
-    zeichneStand(exit.stand.erledigt);
-
-    function starten() {
-      if (laeuft) {
-        laeuft = false; knopf.textContent = 'Weiterrechnen';
-        bildschirmWachHalten(false);
-        if (zustand.loeser) zustand.loeser.anhalten();
-        return;
-      }
-      laeuft = true; startZeit = Date.now(); startSchritte = exit.stand.erledigt;
-      knopf.textContent = 'Pause';
-      zeichneStand(exit.stand.erledigt);
-      if (wachWunschLaden()) bildschirmWachHalten(true);
-      zustand.loeser = new T.zeitschloss.Loeser(exit.schloss, exit.stand, function (stand) {
-        exit.stand.erledigt = stand.erledigt;
-        exit.stand.x = stand.x;
-        zeichneStand(stand.erledigt);
-        sichern(false);
-      });
-      zustand.loeser.starten().then(function (b) {
-        if (!b) { laeuft = false; knopf.textContent = 'Weiterrechnen'; zeichneStand(exit.stand.erledigt); sichern(true); return; }
-        zustand.loeser = null;
-        return T.tresorLogik.notausgangOeffnen(tresor, b).then(function () {
-          sichern(true);
-          zeichneTresor();
-        });
-      }).catch(function (fehler) {
-        laeuft = false;
-        karte.appendChild(el('p', { class: 'warnung', text: 'Rechenfehler: ' + fehler.message }));
-      });
-    }
-    knopf.addEventListener('click', starten);
-    zustand.aufraeumen = function () { if (zustand.loeser) zustand.loeser.anhalten(); };
-    starten();
+    zustand.exitAnzeige = { wurzel: karte, anzeige: anzeige, fuellung: fuellung, text: text,
+      knopf: knopf, zustandstext: zustandstext };
+    return karte;
   }
+
 
   /* ---------------- Verlauf ---------------- */
 
@@ -1064,50 +1072,9 @@
     ]));
   }
 
-  /* Notausgang ohne Rechenzeit: Es hilft nur die Uhr. */
-  function wartezeitNotausgang(karte, exit) {
-    var tresor = zustand.tresor;
-    util.leeren(karte);
-    karte.appendChild(el('p', { class: 'aufgabe-titel', text: 'Notausgang' }));
-    karte.appendChild(el('p', { class: 'aufgabe-hinweis', text:
-      'Dieser Tresor läuft ohne Rechenzeit, der Notausgang also auch. ' + notausgangSpanne(exit) }));
-
-    var anzeige = el('div', { class: 'countdown', text: '–' });
-    karte.appendChild(el('p', { class: 'flaut klein', text: 'verstrichen seit dem Verriegeln' }));
-    karte.appendChild(anzeige);
-    var knopf = el('button', { class: 'knopf gross haupt', type: 'button', text: 'Geheimnis freigeben' });
-    var hinweis = el('p', { class: 'flaut klein', text: '' });
-    karte.appendChild(knopf);
-    karte.appendChild(hinweis);
-
-    function auffrischen() {
-      if (T.tresorLogik.notausgangUhrPruefen(tresor)) sichern(true);
-      anzeige.textContent = util.dauer((Date.now() - tresor.erstellt) / 1000);
-      var bereit = T.tresorLogik.notausgangBereit(tresor);
-      knopf.disabled = !bereit;
-      hinweis.textContent = bereit
-        ? 'Der Notausgang ist offen.'
-        : 'Noch zu. Die Uhr läuft weiter, auch wenn du die Seite schließt.';
-    }
-
-    knopf.addEventListener('click', function () {
-      if (knopf.disabled) return;
-      knopf.disabled = true;
-      T.tresorLogik.notausgangOeffnen(tresor, null).then(function () {
-        sichern(true);
-        zeichneTresor();
-      }).catch(function (fehler) {
-        karte.appendChild(el('p', { class: 'warnung', text: 'Entschlüsseln fehlgeschlagen: ' + fehler.message }));
-      });
-    });
-
-    auffrischen();
-    var uhr = setInterval(auffrischen, 1000);
-    zustand.aufraeumen = function () { clearInterval(uhr); };
-  }
-
   function neuAnlegen() {
     if (!global.confirm('Neuen Tresor anlegen? Das Ergebnis bleibt im Verlauf, der Tresor selbst wird gelöscht.')) return;
+    if (zustand.exitLoeser) { zustand.exitLoeser.anhalten(); zustand.exitLoeser = null; }
     T.speicher.loeschen();
     zustand.tresor = null;
     zustand.geheimnis = '';
@@ -1117,6 +1084,7 @@
   function tresorLoeschen() {
     if (!global.confirm('Tresor endgültig löschen? Die Zahl ist danach nicht mehr rekonstruierbar.')) return;
     aufraeumen();
+    if (zustand.exitLoeser) { zustand.exitLoeser.anhalten(); zustand.exitLoeser = null; }
     T.speicher.loeschen();
     zustand.tresor = null;
     zustand.geheimnis = '';
@@ -1359,6 +1327,9 @@
       zustand.tresor = gespeichert;
       zustand.laenge = gespeichert.laenge;
       zeichneTresor();
+      // Lief der Notausgang beim letzten Mal, nimmt er den Faden wieder auf
+      var exit = gespeichert.notausgang;
+      if (exit && exit.mitlaufen && !exit.benutzt && exit.art !== 'wartezeit') notausgangStarten();
     } else {
       zeichneEinrichten();
     }

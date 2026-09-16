@@ -51,6 +51,8 @@ Sichern.
 | **sicher** (Standard) | Echte, nicht abkürzbare Rechenzeit je Fragment | zweites Zeitschloss, zufällige **Rechenzeit** | ein Kern unter Volllast, Akku |
 | **weniger sicher** | Nichts – der Schlüsselanteil liegt offen daneben | zufällige **Wartezeit** ab dem Verriegeln | keine |
 
+Beide Modi stellen den Notausgang über dieselben zwei Felder ein.
+
 Im weniger sicheren Modus sind die Aufgaben reine Oberflächenhürden: Wer den
 `localStorage` liest, kommt sofort an das Geheimnis. Dafür kostet nichts Strom,
 und es gibt keine Wartezeit auf den Rechner. **Antwortgebundene Rätsel wirken
@@ -305,11 +307,17 @@ Drei Schalter, die quer über alle Dimensionen wirken:
   Rechenzeit, eine Markierung für die Untergrenze und den Hinweis, ab wann es
   aufspringen kann.
 
-  Optional lässt er sich zusätzlich für 1, 3 oder 7 Tage sperren – diese
-  Wartefrist ist allerdings nur eine Sperre der Oberfläche, im Gegensatz zur
-  Rechenzeit dahinter. Er läuft in einer eigenen Ansicht, damit nie zwei
-  Zeitschlösser um dieselbe CPU streiten. Im Modus **ohne Rechenzeit** wird
-  derselbe Notausgang zur reinen Wartezeit – siehe „Zwei Sicherheitsstufen".
+  Er **rechnet im Hintergrund**: einmal gestartet, läuft er weiter, während du
+  an den Aufgaben sitzt, und nimmt seinen Lauf nach einem Neuladen von selbst
+  wieder auf. Anhalten geht jederzeit, der Zwischenstand bleibt. Gesteuert wird
+  er direkt auf dem Tresor-Bildschirm, es gibt keine eigene Ansicht mehr.
+  Laufen Fragment-Zeitschloss und Notausgang gleichzeitig, sind das zwei
+  Worker – auf einem Mehrkerngerät stören sie sich nicht.
+
+  Eingestellt wird er mit **zwei Feldern**: „öffnet frühestens nach" und
+  „… und spätestens nach". Mehr braucht es nicht. Im Modus **ohne Rechenzeit**
+  bedeuten dieselben zwei Felder Wartezeit statt Rechenzeit – siehe „Zwei
+  Sicherheitsstufen".
 
 ---
 

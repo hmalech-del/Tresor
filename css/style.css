@@ -296,7 +296,13 @@ select, input[type=file] {
 .doppelregler { display: flex; flex-direction: column; gap: 2px; }
 .fristmarke { color: var(--messing); font-size: 12px; }
 .schluesselmarke { font-size: 12px; }
-.notausgang-karte { border-style: dashed; }
+.notausgang-karte {
+  border-style: dashed;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+.notausgang-karte > h2, .notausgang-karte > p { align-self: stretch; margin: 0; }
+.notausgang-karte .balken-text { text-align: center; }
+.notausgang-karte .countdown { margin: 0; }
 .marke-glueck { color: #d08ad6; border-color: rgba(208,138,214,.4); }
 .marke-logik { color: #7fc7c0; border-color: rgba(127,199,192,.4); }
 .marke-raetsel { color: var(--messing); border-color: rgba(217,164,65,.4); }
