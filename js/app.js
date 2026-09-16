@@ -73,6 +73,7 @@
 
   function aufraeumen() {
     if (zustand.fristUhr) { clearInterval(zustand.fristUhr); zustand.fristUhr = null; }
+    if (zustand.exitUhr) { clearInterval(zustand.exitUhr); zustand.exitUhr = null; }
     if (wachhalter.sperre) bildschirmWachHalten(false);
     if (zustand.aufraeumen) { try { zustand.aufraeumen(); } catch (fehler) {} zustand.aufraeumen = null; }
     if (zustand.loeser) { zustand.loeser.anhalten(); zustand.loeser = null; }
@@ -177,23 +178,31 @@
 
   function aufwandAktualisieren() {
     if (!$('#rechenzeit-aufwand')) return;
-    if ($('#sicherheit').value === 'leicht') {
+    var ohneRechenzeit = $('#sicherheit').value !== 'rechenzeit';
+
+    if (ohneRechenzeit) {
       $('#rechenzeit-aufwand').textContent = '';
-      $('#notausgang-aufwand').textContent = '';
-      return;
+    } else {
+      var proSchloss = T.tresorLogik.RECHENZEIT_STUFEN[Number($('#rechenzeit').value) - 1];
+      $('#rechenzeit-aufwand').textContent = rechenaufwand(proSchloss * zustand.laenge)
+        + ' (' + zustand.laenge + ' × ' + util.dauer(proSchloss) + ', in Etappen verteilbar)';
     }
-    var proSchloss = T.tresorLogik.RECHENZEIT_STUFEN[Number($('#rechenzeit').value) - 1];
-    $('#rechenzeit-aufwand').textContent = rechenaufwand(proSchloss * zustand.laenge)
-      + ' (' + zustand.laenge + ' × ' + util.dauer(proSchloss) + ', in Etappen verteilbar)';
+
+    // Den Notausgang gibt es in beiden Modi - nur zahlt er einmal in
+    // Rechenzeit und einmal schlicht in Wartezeit.
     var exitMin = Number($('#notausgang-min').value);
     var exitMax = exitMin ? Math.max(exitMin, Number($('#notausgang-max').value)) : 0;
+    var exitArt = ohneRechenzeit ? 'Wartezeit' : 'Rechenzeit';
     $('#notausgang-max-feld').classList.toggle('versteckt', !exitMin);
     $('#notausgang-spanne').textContent = !exitMin ? ''
       : exitMin === exitMax
-        ? 'Feste Dauer: der Notausgang springt nach ' + util.dauer(exitMin) + ' Rechenzeit auf.'
+        ? 'Feste Dauer: der Notausgang springt nach ' + util.dauer(exitMin) + ' ' + exitArt + ' auf.'
         : 'Die tatsächliche Dauer wird beim Verriegeln zufällig zwischen ' + util.dauer(exitMin)
-          + ' und ' + util.dauer(exitMax) + ' gezogen und nirgends gespeichert – du erfährst sie erst, wenn er aufspringt.';
-    $('#notausgang-aufwand').textContent = exitMax ? rechenaufwand(exitMax) : '';
+          + ' und ' + util.dauer(exitMax) + ' gezogen. '
+          + (ohneRechenzeit
+              ? 'Angezeigt wird sie nicht – im Browser-Speicher steht sie allerdings, wie alles in diesem Modus.'
+              : 'Gespeichert wird sie nicht – du erfährst sie erst, wenn er aufspringt.');
+    $('#notausgang-aufwand').textContent = exitMax && !ohneRechenzeit ? rechenaufwand(exitMax) : '';
   }
 
   function schaetzungAktualisieren() {
@@ -202,23 +211,31 @@
     var dimensionen = aktiveDimensionen();
     if (!dimensionen.length) { anzeige.textContent = '-'; return; }
     var konfig = konfigurationLesen();
-    var leicht = konfig.sicherheit === 'leicht';
+    var ohneRechenzeit = !T.tresorLogik.rechenzeitModus(konfig);
     var schaetzung = T.tresorLogik.geschaetzteDauer(konfig, zustand.laenge);
-    var rechen = leicht ? 0 : T.tresorLogik.RECHENZEIT_STUFEN[util.grenze(konfig.rechenzeit, 1, 5) - 1];
+    var rechen = ohneRechenzeit ? 0 : T.tresorLogik.RECHENZEIT_STUFEN[util.grenze(konfig.rechenzeit, 1, 5) - 1];
     anzeige.textContent = 'ungefähr ' + util.dauer(schaetzung.sekunden);
-    $('#rechenzeit-feld').classList.toggle('versteckt', leicht);
+    $('#rechenzeit-feld').classList.toggle('versteckt', ohneRechenzeit);
     $('#reihenfolge-feld').classList.toggle('versteckt', zustand.art === 'foto');
-    util.$$('#notausgang-min, #notausgang-max, #notausgang-frist').forEach(function (feld) {
-      feld.closest('.feld').classList.toggle('versteckt', leicht);
+    // Der Notausgang bleibt in beiden Modi; nur seine Wartefrist ergibt
+    // ohne Rechenzeit keinen Sinn, weil er dort selbst eine Wartezeit ist.
+    $('#notausgang-frist').closest('.feld').classList.toggle('versteckt', ohneRechenzeit);
+    util.$$('#notausgang-min option, #notausgang-max option').forEach(function (option) {
+      if (!option.dataset.sekunden) return;
+      option.textContent = util.dauer(Number(option.dataset.sekunden))
+        + (ohneRechenzeit ? ' Wartezeit' : ' Rechenzeit');
     });
-    $('#sicherheit-hinweis').textContent = leicht
-      ? 'Ohne Zeitschloss: Der Schlüssel liegt offen daneben, die Aufgaben sind reine Oberflächenhürden. Wer den Browser-Speicher liest, kommt sofort an das Geheimnis. Dafür kostet es keinen Strom und keine Wartezeit auf den Rechner. Antwortgebundene Rätsel wirken auch hier, weil ihre Lösung in den Schlüssel eingeht.'
-      : 'Mit Zeitschloss: Jedes Fragment kostet echte, nicht abkürzbare Rechenzeit - auch für jemanden mit Entwicklerwerkzeug.';
+    $('#sicherheit-hinweis').textContent = ohneRechenzeit
+      ? 'Weniger sicher: Die Schlüssel liegen offen im Browser-Speicher, die Aufgaben sind Oberflächenhürden. Wer den Speicher liest, kommt sofort an das Geheimnis. Dafür kostet nichts Strom, und der Notausgang ist hier eine Wartezeit statt Rechenzeit. Antwortgebundene Rätsel wirken auch in diesem Modus, weil ihre Lösung in den Schlüssel eingeht.'
+      : 'Sicher: Jedes Fragment kostet echte, nicht abkürzbare Rechenzeit - auch für jemanden mit Entwicklerwerkzeug.';
     var exitMinS = Math.min(konfig.notausgang.minSekunden, konfig.notausgang.maxSekunden);
     var exitMaxS = Math.max(konfig.notausgang.minSekunden, konfig.notausgang.maxSekunden);
     aufwandAktualisieren();
-    $('#abschluss-warnung').textContent = leicht
-      ? 'Der leichte Modus hält niemanden auf, der den Browser-Speicher liest - er hält dich auf. Löschen des Tresors löscht das Geheimnis.'
+    $('#abschluss-warnung').textContent = ohneRechenzeit
+      ? 'Der weniger sichere Modus hält niemanden auf, der den Browser-Speicher liest - er hält dich auf.'
+        + (exitMaxS ? ' Der Notausgang öffnet nach ' + (exitMinS === exitMaxS ? util.dauer(exitMaxS)
+            : util.dauer(exitMinS) + ' bis ' + util.dauer(exitMaxS)) + ' Wartezeit.' : '')
+        + ' Löschen des Tresors löscht das Geheimnis.'
       : exitMaxS
       ? 'Ab hier führen nur noch die Aufgaben zur Zahl - oder der Notausgang, der '
         + (exitMinS === exitMaxS ? util.dauer(exitMaxS) : util.dauer(exitMinS) + ' bis ' + util.dauer(exitMaxS))
@@ -376,17 +393,21 @@
         ])
       ]),
       el('div', { class: 'feld' }, [
-        el('label', { for: 'notausgang-min', text: 'Notausgang – frühestens offen nach' }),
+        el('label', { for: 'notausgang-min', id: 'notausgang-min-label', text: 'Notausgang – frühestens offen nach' }),
         el('select', { id: 'notausgang-min' }, [el('option', { value: '0' }, 'kein Notausgang')]
           .concat(T.tresorLogik.NOTAUSGANG_WERTE.map(function (sekunden) {
-            return el('option', { value: String(sekunden) }, util.dauer(sekunden) + ' Rechenzeit');
+            var option = el('option', { value: String(sekunden) }, util.dauer(sekunden) + ' Rechenzeit');
+            option.dataset.sekunden = String(sekunden);
+            return option;
           })))
       ]),
       el('div', { class: 'feld', id: 'notausgang-max-feld' }, [
         el('label', { for: 'notausgang-max', text: 'spätestens offen nach' }),
         el('select', { id: 'notausgang-max' }, T.tresorLogik.NOTAUSGANG_WERTE.map(function (sekunden) {
-          return el('option', { value: String(sekunden), selected: sekunden === 7200 ? 'selected' : null },
+          var option = el('option', { value: String(sekunden), selected: sekunden === 7200 ? 'selected' : null },
             util.dauer(sekunden) + ' Rechenzeit');
+          option.dataset.sekunden = String(sekunden);
+          return option;
         }))
       ]),
       el('p', { class: 'flaut klein', id: 'notausgang-spanne', text: '' }),
@@ -413,8 +434,8 @@
       el('div', { class: 'feld' }, [
         el('label', { for: 'sicherheit', text: 'Wie fest soll das Schloss sein?' }),
         el('select', { id: 'sicherheit' }, [
-          el('option', { value: 'rechenzeit' }, 'Zeitschloss – kostet echte Rechenzeit'),
-          el('option', { value: 'leicht' }, 'leicht – nur Aufgaben, keine Rechenzeit')
+          el('option', { value: 'rechenzeit' }, 'sicher – Zeitschloss aus echter Rechenzeit'),
+          el('option', { value: 'ohne-rechenzeit' }, 'weniger sicher – ohne Rechenzeit, nur Uhr und Aufgaben')
         ])
       ]),
       el('p', { class: 'flaut klein', id: 'sicherheit-hinweis', text: '' }),
@@ -804,18 +825,35 @@
 
     if (!fertig && tresor.notausgang && !tresor.notausgang.benutzt) {
       var exit = tresor.notausgang;
-      var freiAb = exit.frei || 0;
-      var gesperrt = Date.now() < freiAb;
-      var gerechnet = exit.stand.erledigt / (tresor.rate || 1);
-      wurzel.appendChild(el('section', { class: 'karte notausgang-karte' }, [
+      if (T.tresorLogik.notausgangUhrPruefen(tresor)) sichern(true);
+      var inhalt = [
         el('h2', { text: 'Notausgang' }),
-        el('p', { class: 'flaut', text: 'Ein zweites Zeitschloss über das ganze Geheimnis. Keine Aufgaben, keine Sperrfristen – nur Rechenzeit. '
-          + notausgangSpanne(exit) }),
-        gesperrt
-          ? el('p', { class: 'flaut', text: 'Freigeschaltet ' + util.zeitpunkt(freiAb) + '.' })
+        el('p', { class: 'flaut', text: 'Ein zweiter Weg zum ganzen Geheimnis. Keine Aufgaben, keine Sperrfristen. '
+          + notausgangSpanne(exit) })
+      ];
+      if (exit.art === 'wartezeit') {
+        var bereit = T.tresorLogik.notausgangBereit(tresor);
+        var verstrichenExit = el('strong', { class: 'fristzeit',
+          text: util.dauer((Date.now() - tresor.erstellt) / 1000) });
+        inhalt.push(el('p', {}, ['verstrichen: ', verstrichenExit]));
+        inhalt.push(bereit
+          ? el('button', { class: 'knopf', type: 'button', text: 'Notausgang öffnen', onclick: zeichneNotausgang })
+          : el('p', { class: 'flaut klein', text: 'Noch nicht offen. Die Uhr läuft weiter, auch wenn die App zu ist.' }));
+        if (!bereit) {
+          // Mitlaufen lassen, damit der Notausgang von selbst anklickbar wird
+          zustand.exitUhr = setInterval(function () {
+            if (T.tresorLogik.notausgangBereit(tresor)) { zeichneTresor(); return; }
+            verstrichenExit.textContent = util.dauer((Date.now() - tresor.erstellt) / 1000);
+          }, 1000);
+        }
+      } else {
+        var gerechnet = exit.stand.erledigt / (tresor.rate || 1);
+        inhalt.push(Date.now() < (exit.frei || 0)
+          ? el('p', { class: 'flaut', text: 'Freigeschaltet ' + util.zeitpunkt(exit.frei) + '.' })
           : el('button', { class: 'knopf', type: 'button', onclick: zeichneNotausgang,
-              text: gerechnet >= 1 ? 'Notausgang fortsetzen (' + util.dauer(gerechnet) + ' gerechnet)' : 'Notausgang öffnen' })
-      ]));
+              text: gerechnet >= 1 ? 'Notausgang fortsetzen (' + util.dauer(gerechnet) + ' gerechnet)' : 'Notausgang öffnen' }));
+      }
+      wurzel.appendChild(el('section', { class: 'karte notausgang-karte' }, inhalt));
     }
 
     wurzel.appendChild(el('section', { class: 'karte' }, [
@@ -828,7 +866,7 @@
         ? 'Zeitschlösser dieses Tresors: ' + tresor.fragmente[0].schloss.t.toLocaleString('de-DE')
           + ' sequentielle Quadrierungen modulo einer 1024-Bit-Zahl, gemessen mit '
           + (tresor.rate || 0).toLocaleString('de-DE') + ' Quadrierungen/s auf diesem Gerät.'
-        : 'Leichter Modus: kein Zeitschloss. Die Schlüsselanteile liegen offen im Browser-Speicher, '
+        : 'Weniger sicherer Modus: kein Zeitschloss. Die Schlüsselanteile liegen offen im Browser-Speicher, '
           + 'die Aufgaben sind Oberflächenhürden.' }),
       el('p', { text: gebundeneAufgaben(tresor)
         ? gebundeneAufgaben(tresor) + ' Aufgaben sind an den Schlüssel gebunden: ihre Lösung ist nicht gespeichert, nur ein Prüfwert mit '
@@ -846,8 +884,14 @@
   /* Wie lange der Notausgang dauert - bei blinden Schlössern ist das
    * absichtlich eine Spanne und keine Zahl. */
   function notausgangSpanne(exit) {
-    if (!exit.blind) return 'Rund ' + util.dauer(exit.sekunden) + ', damit bleibst du höchstens so lange ausgesperrt.';
     var rahmen = exit.rahmen || [0, 0];
+    if (exit.art === 'wartezeit') {
+      if (rahmen[0] === rahmen[1]) return 'Er öffnet ' + util.dauer(rahmen[1]) + ' nach dem Verriegeln.';
+      return 'Wann, steht nicht fest: irgendwann zwischen ' + util.dauer(rahmen[0]) + ' und '
+        + util.dauer(rahmen[1]) + ' nach dem Verriegeln, beim Verriegeln zufällig gezogen. '
+        + 'Angezeigt wird der Termin nicht – im Browser-Speicher steht er, wie alles in diesem Modus.';
+    }
+    if (!exit.blind) return 'Rund ' + util.dauer(exit.sekunden) + ', damit bleibst du höchstens so lange ausgesperrt.';
     if (rahmen[0] === rahmen[1]) return 'Rund ' + util.dauer(rahmen[1]) + ' Rechenzeit.';
     return 'Wie lange, steht nicht fest: irgendwo zwischen ' + util.dauer(rahmen[0]) + ' und '
       + util.dauer(rahmen[1]) + ' Rechenzeit, beim Verriegeln zufällig gezogen und nirgends gespeichert.';
@@ -875,6 +919,8 @@
     ]));
     var karte = el('section', { class: 'karte aufgabenkarte' });
     wurzel.appendChild(karte);
+    if (exit.art === 'wartezeit') { wartezeitNotausgang(karte, exit); return; }
+
     var blind = !!exit.blind;
     var obergrenze = blind ? exit.schloss.obergrenze : exit.schloss.t;
     var untergrenze = blind ? (exit.schloss.untergrenze || 0) : obergrenze;
@@ -978,7 +1024,7 @@
           el('div', { class: 'verlaufinfo' }, [
             el('strong', { text: eintrag.art === 'foto' ? 'Bild, ' + eintrag.stufen + ' Stufen' : eintrag.ergebnis.length + '-stellige Zahl' }),
             el('span', { class: 'flaut klein', text: 'geöffnet ' + util.zeitpunkt(eintrag.geoeffnet)
-              + ' · ' + (eintrag.sicherheit === 'leicht' ? 'leichter Modus' : 'mit Zeitschloss')
+              + ' · ' + (eintrag.sicherheit === 'rechenzeit' ? 'mit Zeitschloss' : 'ohne Rechenzeit')
               + (eintrag.notausgangBenutzt ? ' · über den Notausgang' : '') })
           ]),
           el('button', { class: 'knopf', type: 'button', text: 'ansehen',
@@ -1016,6 +1062,48 @@
         zurueck();
       } })
     ]));
+  }
+
+  /* Notausgang ohne Rechenzeit: Es hilft nur die Uhr. */
+  function wartezeitNotausgang(karte, exit) {
+    var tresor = zustand.tresor;
+    util.leeren(karte);
+    karte.appendChild(el('p', { class: 'aufgabe-titel', text: 'Notausgang' }));
+    karte.appendChild(el('p', { class: 'aufgabe-hinweis', text:
+      'Dieser Tresor läuft ohne Rechenzeit, der Notausgang also auch. ' + notausgangSpanne(exit) }));
+
+    var anzeige = el('div', { class: 'countdown', text: '–' });
+    karte.appendChild(el('p', { class: 'flaut klein', text: 'verstrichen seit dem Verriegeln' }));
+    karte.appendChild(anzeige);
+    var knopf = el('button', { class: 'knopf gross haupt', type: 'button', text: 'Geheimnis freigeben' });
+    var hinweis = el('p', { class: 'flaut klein', text: '' });
+    karte.appendChild(knopf);
+    karte.appendChild(hinweis);
+
+    function auffrischen() {
+      if (T.tresorLogik.notausgangUhrPruefen(tresor)) sichern(true);
+      anzeige.textContent = util.dauer((Date.now() - tresor.erstellt) / 1000);
+      var bereit = T.tresorLogik.notausgangBereit(tresor);
+      knopf.disabled = !bereit;
+      hinweis.textContent = bereit
+        ? 'Der Notausgang ist offen.'
+        : 'Noch zu. Die Uhr läuft weiter, auch wenn du die Seite schließt.';
+    }
+
+    knopf.addEventListener('click', function () {
+      if (knopf.disabled) return;
+      knopf.disabled = true;
+      T.tresorLogik.notausgangOeffnen(tresor, null).then(function () {
+        sichern(true);
+        zeichneTresor();
+      }).catch(function (fehler) {
+        karte.appendChild(el('p', { class: 'warnung', text: 'Entschlüsseln fehlgeschlagen: ' + fehler.message }));
+      });
+    });
+
+    auffrischen();
+    var uhr = setInterval(auffrischen, 1000);
+    zustand.aufraeumen = function () { clearInterval(uhr); };
   }
 
   function neuAnlegen() {
@@ -1134,18 +1222,18 @@
         buehne.appendChild(el('p', { class: 'warnung', text: 'Die geheime Frist war abgelaufen. Neuer Anlauf, neue Frist.' }));
       }
     } else if (!fragment.schloss) {
-      leichteFreigabe(buehne, fragment);
+      freigabeOhneZeitschloss(buehne, fragment);
     } else {
       zeitschlossBuehne(buehne, fragment);
     }
   }
 
-  /* Leichter Modus: kein Zeitschloss, das Fragment geht sofort auf. */
-  function leichteFreigabe(buehne, fragment) {
+  /* Ohne Zeitschloss: Das Fragment geht sofort auf. */
+  function freigabeOhneZeitschloss(buehne, fragment) {
     util.leeren(buehne);
     buehne.appendChild(el('p', { class: 'aufgabe-titel', text: 'Fragment freigeben' }));
     buehne.appendChild(el('p', { class: 'aufgabe-hinweis', text:
-      'Alle Aufgaben dieses Fragments sind erledigt. Dieser Tresor läuft ohne Zeitschloss, es geht also sofort weiter.' }));
+      'Alle Aufgaben dieses Fragments sind erledigt. Dieser Tresor läuft ohne Rechenzeit, es geht also sofort weiter.' }));
     var knopf = el('button', { class: 'knopf gross haupt', type: 'button', text: 'Freigeben' });
     buehne.appendChild(knopf);
     knopf.addEventListener('click', function () {

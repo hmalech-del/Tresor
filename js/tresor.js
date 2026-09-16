@@ -19,7 +19,7 @@
       aufgabenProFragment: 2,
       rechenzeit: 2,
       reihenfolge: 'links',
-      sicherheit: 'rechenzeit',      // 'rechenzeit' = Zeitschloss, 'leicht' = nur Oberfläche
+      sicherheit: 'rechenzeit',      // 'rechenzeit' = Zeitschloss, sonst: ohne Rechenzeit
       strafe: 0,
       geheimeFrist: {
         aktiv: false,
@@ -32,6 +32,10 @@
       },
       notausgang: { minSekunden: 0, maxSekunden: 0, wartetage: 0 }
     };
+  }
+
+  function rechenzeitModus(konfig) {
+    return (konfig.sicherheit || 'rechenzeit') === 'rechenzeit';
   }
 
   function zufallsHex(bytes) {
@@ -164,7 +168,7 @@
         return teil + T.herausforderungen.hole(aufgabe.id).schaetzung(aufgabe.params);
       }, 0);
     }, 0);
-    if (konfig.sicherheit !== 'leicht') {
+    if (rechenzeitModus(konfig)) {
       summe += laenge * RECHENZEIT_STUFEN[util.grenze(konfig.rechenzeit, 1, 5) - 1];
     }
     var mitZeitfenster = plan.some(function (fragment) {
@@ -185,7 +189,7 @@
     var saat = T.neueSaat();
     var zufall = new T.Zufall(saat);
     var laenge = teile.length;
-    var mitRechenzeit = konfig.sicherheit !== 'leicht';
+    var mitRechenzeit = rechenzeitModus(konfig);
 
     var rate = 0, sekundenProSchloss = 0, schritte = 0;
     if (mitRechenzeit) {
@@ -267,6 +271,7 @@
       exitSchritte = Math.min(Math.max(exitSchritte, untergrenze), obergrenze);
       var exitPuzzle = await T.zeitschloss.erzeugen(exitSchritte);
       notausgang = {
+        art: 'rechenzeit',
         blind: true,
         rahmen: [exitMin, exitMax],
         frei: Date.now() + (exitKonfig.wartetage || 0) * 86400000,
@@ -283,6 +288,23 @@
       };
       exitPuzzle.b = null;
       exitSchritte = null;
+    } else if (exitMax) {
+      /* Ohne Rechenzeit bleibt als Notausgang die Uhr: Er öffnet irgendwann
+       * zwischen den beiden Grenzen, gezogen beim Verriegeln. Das ist keine
+       * kryptografische Sperre - der Schlüssel liegt daneben, wie alles in
+       * diesem Modus. Es ist ein Sicherheitsnetz, keine Mauer. */
+      var wartezeit = Math.round(exitMin + zufallsAnteil() * (exitMax - exitMin));
+      var exitSchluessel = zufallsHex(32);
+      notausgang = {
+        art: 'wartezeit',
+        rahmen: [exitMin, exitMax],
+        frei: Date.now() + wartezeit * 1000,
+        gesehen: Date.now(),
+        schluessel: exitSchluessel,
+        paket: await T.krypto.verschluesseln('notausgang', exitSchluessel, JSON.stringify(teile), null),
+        benutzt: false
+      };
+      wartezeit = null;
     }
 
     /* Geheime Höchstzeit für den ganzen Tresor: jetzt gezogen, ab jetzt laufend. */
@@ -371,8 +393,30 @@
   }
 
   /* Notausgang geknackt: das ganze Geheimnis wird auf die Fragmente verteilt. */
+  /* Wartezeit-Notausgang: läuft die Uhr rückwärts, wandert der Termin mit -
+   * sonst wäre die Sperre mit einer Zeitumstellung erledigt. */
+  function notausgangUhrPruefen(tresor) {
+    var exit = tresor.notausgang;
+    if (!exit || exit.art !== 'wartezeit' || exit.benutzt) return false;
+    var jetzt = Date.now();
+    var verschoben = false;
+    if (exit.gesehen && jetzt < exit.gesehen - 120000) {
+      exit.frei += (exit.gesehen - jetzt);
+      verschoben = true;
+    }
+    exit.gesehen = Math.max(exit.gesehen || 0, jetzt);
+    return verschoben;
+  }
+
+  function notausgangBereit(tresor) {
+    var exit = tresor.notausgang;
+    if (!exit || exit.benutzt) return false;
+    return Date.now() >= (exit.frei || 0);
+  }
+
   async function notausgangOeffnen(tresor, bHex) {
-    var teile = JSON.parse(await T.krypto.entschluesseln('notausgang', bHex, tresor.notausgang.paket, null));
+    var teile = JSON.parse(await T.krypto.entschluesseln(
+      'notausgang', tresor.notausgang.schluessel || bHex, tresor.notausgang.paket, null));
     tresor.fragmente.forEach(function (fragment) {
       if (fragment.offen) return;
       fragment.inhalt = teile[fragment.position];
@@ -450,6 +494,9 @@
     archivEintrag: archivEintrag,
     fragmentOeffnen: fragmentOeffnen,
     notausgangOeffnen: notausgangOeffnen,
+    notausgangBereit: notausgangBereit,
+    notausgangUhrPruefen: notausgangUhrPruefen,
+    rechenzeitModus: rechenzeitModus,
     strafzeit: strafzeit,
     neueFrist: neueFrist,
     RECHENZEIT_STUFEN: RECHENZEIT_STUFEN,

@@ -16,7 +16,8 @@ Eine statische Seite, kein Build-Schritt, keine Abhängigkeiten.
    korrigieren) oder ein **Bild**, das selbst das Geheimnis ist.
 2. **Schwierigkeit wählen** – welche Dimensionen (Geduld, Zeit, Glück, Logik,
    Rätsel), wie intensiv, wie viele Aufgaben pro Fragment, wie viel Rechenzeit
-   pro Zeitschloss, dazu Strafzeiten, geheime Fristen und Notausgang.
+   pro Zeitschloss, dazu Sicherheitsstufe, Strafzeiten, geheime Fristen und
+   Notausgang.
    Die Seite zeigt laufend den voraussichtlichen Gesamtaufwand.
 3. **Verriegeln** – die App schmiedet pro Ziffer ein Zeitschloss, verschlüsselt
    die Ziffer damit und wirft den Klartext weg.
@@ -45,17 +46,24 @@ Sichern.
 
 ## Zwei Sicherheitsstufen
 
-| Modus | Was die Fragmente schützt | Kosten |
-|---|---|---|
-| **Zeitschloss** (Standard) | Echte, nicht abkürzbare Rechenzeit je Fragment | Ein Kern unter Volllast, Akku |
-| **Leicht** | Nichts – der Schlüsselanteil liegt offen daneben | Keine |
+| Modus | Was die Fragmente schützt | Notausgang | Kosten |
+|---|---|---|---|
+| **sicher** (Standard) | Echte, nicht abkürzbare Rechenzeit je Fragment | zweites Zeitschloss, zufällige **Rechenzeit** | ein Kern unter Volllast, Akku |
+| **weniger sicher** | Nichts – der Schlüsselanteil liegt offen daneben | zufällige **Wartezeit** ab dem Verriegeln | keine |
 
-Im leichten Modus sind die Aufgaben reine Oberflächenhürden: Wer den
+Im weniger sicheren Modus sind die Aufgaben reine Oberflächenhürden: Wer den
 `localStorage` liest, kommt sofort an das Geheimnis. Dafür kostet nichts Strom,
 und es gibt keine Wartezeit auf den Rechner. **Antwortgebundene Rätsel wirken
-auch dort**, weil ihre Lösung in den Schlüssel eingeht – ein leichter Tresor mit
-Logik- und Rätselaufgaben ist also nicht ganz ungeschützt. Den Notausgang gibt
-es in diesem Modus nicht; er wäre sinnlos.
+auch dort**, weil ihre Lösung in den Schlüssel eingeht – ein solcher Tresor mit
+Logik- und Rätselaufgaben ist also nicht ganz ungeschützt.
+
+Den **Notausgang gibt es in beiden Modi**, denn er ist ein Sicherheitsnetz für
+den Fall, dass man eine Aufgabe nicht packt – kein Bonus fürs Zeitschloss. Ohne
+Rechenzeit hilft nur die Uhr: Er öffnet irgendwann zwischen den beiden von dir
+gesetzten Grenzen, gezogen beim Verriegeln, und der Termin wird nicht angezeigt.
+Anders als beim Zeitschloss steht er allerdings im Browser-Speicher – wie alles
+in diesem Modus. Die Uhr läuft auch bei geschlossener App weiter und lässt sich
+nicht durch Zurückstellen der Systemuhr austricksen.
 
 ---
 
@@ -300,7 +308,8 @@ Drei Schalter, die quer über alle Dimensionen wirken:
   Optional lässt er sich zusätzlich für 1, 3 oder 7 Tage sperren – diese
   Wartefrist ist allerdings nur eine Sperre der Oberfläche, im Gegensatz zur
   Rechenzeit dahinter. Er läuft in einer eigenen Ansicht, damit nie zwei
-  Zeitschlösser um dieselbe CPU streiten.
+  Zeitschlösser um dieselbe CPU streiten. Im Modus **ohne Rechenzeit** wird
+  derselbe Notausgang zur reinen Wartezeit – siehe „Zwei Sicherheitsstufen".
 
 ---
 
