@@ -67,6 +67,9 @@ Rechenzeit ist echte Rechenzeit, und das merkt das Gerät:
   spürbar, 30 Minuten kosten am Handy etwa zehn bis fünfundzwanzig Prozent,
   acht Stunden mehr als eine volle Ladung. Die Einrichtung schreibt das bei
   jeder Stufe dazu, statt nur „30 min Rechenzeit" anzuzeigen.
+* Für den Notausgang mit Spanne heißt das: Die Obergrenze ist auch die
+  Obergrenze des Aufwands – gerechnet wird aber oft weniger, weil die gezogene
+  Dauer irgendwo dazwischen liegt.
 * Ein Schalter in der Rechenansicht hält den **Bildschirm wach** (Wake Lock),
   damit das Handy nicht mitten in der Rechnung einschläft – als Schalter, weil
   der Bildschirm selbst Strom zieht.
@@ -230,13 +233,25 @@ Drei Schalter, die quer über alle Dimensionen wirken:
   den Tresor unlösbar machen. „Geheim" heißt hier: nicht angezeigt. Im
   `localStorage` steht der gezogene Wert, wie alles andere auch.
 
-* **Notausgang** – die Exit-Strategie. Ein zweites, unabhängiges Zeitschloss
-  über das *ganze* Geheimnis: keine Aufgaben, keine Sperrfristen, nur
-  Rechenzeit (5 min bis 8 h, frei wählbar). Damit steht fest, wie lange du dich
-  höchstens aussperren kannst. Optional lässt er sich für 1, 3 oder 7 Tage
-  sperren – diese Wartefrist ist allerdings nur eine Sperre der Oberfläche,
-  im Gegensatz zur Rechenzeit dahinter. Er läuft in einer eigenen Ansicht,
-  damit nie zwei Zeitschlösser um dieselbe CPU streiten.
+* **Notausgang** – die Exit-Strategie, und zwar mit unbekannter Dauer. Ein
+  zweites, unabhängiges Zeitschloss über das *ganze* Geheimnis: keine Aufgaben,
+  keine Sperrfristen, nur Rechenzeit. Du setzt eine Spanne – etwa „frühestens
+  nach 1 h, spätestens nach 5 h" –, die tatsächliche Dauer wird beim Verriegeln
+  daraus gezogen.
+
+  Sie ist dabei **wirklich** unbekannt und nicht bloß ausgeblendet: Die
+  Schrittzahl wird nirgends gespeichert. Abgelegt ist nur `SHA-256` der Lösung;
+  der Worker quadriert und prüft alle 250 000 Schritte, ob er angekommen ist.
+  Weder die App noch jemand, der den Speicher ausliest, kann die Dauer vorher
+  ablesen – bekannt sind nur Unter- und Obergrenze. Entsprechend gibt es in der
+  Ansicht keinen Countdown und keine Prozentzahl, sondern die geleistete
+  Rechenzeit, eine Markierung für die Untergrenze und den Hinweis, ab wann es
+  aufspringen kann.
+
+  Optional lässt er sich zusätzlich für 1, 3 oder 7 Tage sperren – diese
+  Wartefrist ist allerdings nur eine Sperre der Oberfläche, im Gegensatz zur
+  Rechenzeit dahinter. Er läuft in einer eigenen Ansicht, damit nie zwei
+  Zeitschlösser um dieselbe CPU streiten.
 
 ---
 
