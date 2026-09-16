@@ -101,35 +101,37 @@ function erzeugen(bits, schritte) {
   return { n: hex(n), a: hex(a), t: schritte, b: hex(b) };
 }
 
-var abbrechen = false;
-
+/* Durchgehende Schleife ohne Timer.
+ *
+ * Frueher gab diese Schleife nach jedem Block per setTimeout an die
+ * Ereignisschleife ab, um eine Stopp-Nachricht entgegennehmen zu koennen.
+ * Genau diese Timer drosseln Browser in Hintergrund-Tabs teils auf einen
+ * Durchlauf pro Sekunde - das Zeitschloss waere dort auf einen Bruchteil
+ * seiner Geschwindigkeit eingebrochen. Jetzt laeuft die Schleife durch; zum
+ * Pausieren beendet die Hauptseite den Worker einfach (terminate) und setzt
+ * beim zuletzt gemeldeten Zwischenstand wieder auf. Verloren geht dabei
+ * hoechstens die Rechnung seit der letzten Meldung, also rund 250 ms. */
 function loesen(nHex, startHex, erledigt, ziel) {
-  abbrechen = false;
   var n = BigInt('0x' + nHex);
   var x = BigInt('0x' + startHex);
   var i = erledigt;
   var block = 25000;
   var letzteMeldung = Date.now();
 
-  function stueck() {
-    if (abbrechen) { self.postMessage({ typ: 'gestoppt', erledigt: i, x: hex(x) }); return; }
+  while (i < ziel) {
     var ende = Math.min(ziel, i + block);
     var start = Date.now();
     while (i < ende) { x = (x * x) % n; i++; }
     var dauer = Math.max(1, Date.now() - start);
-    // Blockgröße auf ~120 ms einregeln, damit Fortschritt flüssig bleibt
-    block = Math.max(2000, Math.min(2000000, Math.round(block * (120 / dauer))));
-    if (i >= ziel) {
-      self.postMessage({ typ: 'fertig', erledigt: i, b: hex(x) });
-      return;
-    }
+    // Blockgroesse auf rund 150 ms einregeln: oft genug fuer fluessige
+    // Fortschrittsmeldungen, selten genug fuer wenig Verwaltungsaufwand.
+    block = Math.max(2000, Math.min(5000000, Math.round(block * (150 / dauer))));
     if (Date.now() - letzteMeldung > 250) {
       letzteMeldung = Date.now();
       self.postMessage({ typ: 'fortschritt', erledigt: i, ziel: ziel, x: hex(x) });
     }
-    setTimeout(stueck, 0);
   }
-  stueck();
+  self.postMessage({ typ: 'fertig', erledigt: i, b: hex(x) });
 }
 
 self.onmessage = function (ereignis) {
@@ -141,8 +143,6 @@ self.onmessage = function (ereignis) {
       self.postMessage({ typ: 'erzeugt', puzzle: erzeugen(m.bits || 1024, m.schritte) });
     } else if (m.cmd === 'loesen') {
       loesen(m.n, m.x, m.erledigt || 0, m.ziel);
-    } else if (m.cmd === 'stopp') {
-      abbrechen = true;
     }
   } catch (fehler) {
     self.postMessage({ typ: 'fehler', meldung: String(fehler && fehler.message || fehler) });

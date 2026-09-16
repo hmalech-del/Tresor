@@ -49,6 +49,33 @@ GCM-Tag sofort auf.
 Der Rechenfortschritt wird laufend gesichert: Tab schließen, später
 weitermachen – die bereits verbrauchte Rechenzeit bleibt erhalten.
 
+### Was das an Strom und Aufmerksamkeit kostet
+
+Rechenzeit ist echte Rechenzeit, und das merkt das Gerät:
+
+* Es läuft **ein** Rechenkern unter Volllast, in einem Web Worker. Die
+  Oberfläche bleibt flüssig, andere Programme laufen normal weiter – aber der
+  Kern ist belegt und das Gerät wird warm.
+* Der **Tab muss offen bleiben**. Geschlossen steht die Rechnung; verloren geht
+  nichts, aber es geht auch nichts voran.
+* Die Schleife im Worker läuft **ohne Timer** durch. Das ist Absicht: Browser
+  drosseln Timer in Hintergrund-Tabs teils auf einen Durchlauf pro Sekunde, was
+  das Zeitschloss dort auf einen Bruchteil eingebremst hätte. Pausiert wird
+  deshalb per `terminate`, fortgesetzt beim letzten gemeldeten Zwischenstand –
+  verloren gehen höchstens rund 250 ms Rechnung.
+* **Akku**, grobe Hausnummern und stark geräteabhängig: eine Minute ist kaum
+  spürbar, 30 Minuten kosten am Handy etwa zehn bis fünfundzwanzig Prozent,
+  acht Stunden mehr als eine volle Ladung. Die Einrichtung schreibt das bei
+  jeder Stufe dazu, statt nur „30 min Rechenzeit" anzuzeigen.
+* Ein Schalter in der Rechenansicht hält den **Bildschirm wach** (Wake Lock),
+  damit das Handy nicht mitten in der Rechnung einschläft – als Schalter, weil
+  der Bildschirm selbst Strom zieht.
+
+Praktisch heißt das: **kurze Rechenzeit pro Fragment** (10–45 s) als
+kryptografisch bindende Hürde, **lange Wartezeiten über Sperrfristen**, die
+nichts kosten, und den teuren Notausgang als das, was er ist – eine Reserve,
+die man in Etappen abarbeitet und hoffentlich nie braucht.
+
 ## Antwortgebundene Aufgaben
 
 Logik- und Rätselaufgaben sind mehr als Bedienoberfläche: ihre Lösung wird beim

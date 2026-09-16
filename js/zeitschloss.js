@@ -11,7 +11,7 @@
       worker.onmessage = function (ereignis) {
         var m = ereignis.data;
         if (m.typ === 'fehler') { worker.terminate(); ablehnen(new Error(m.meldung)); return; }
-        if (m.typ === 'fortschritt' || m.typ === 'gestoppt') { if (beiFortschritt) beiFortschritt(m); return; }
+        if (m.typ === 'fortschritt') { if (beiFortschritt) beiFortschritt(m); return; }
         if (m.typ === aufTyp) { worker.terminate(); erfuellen(m); }
       };
       worker.onerror = function (fehler) { worker.terminate(); ablehnen(new Error(fehler.message || 'Worker-Fehler')); };
@@ -47,25 +47,22 @@
     if (ich.laeuft) return ich.versprechen;
     ich.laeuft = true;
     ich.versprechen = new Promise(function (erfuellen, ablehnen) {
+      ich.aufloesen = erfuellen;
       ich.worker = new Worker(PFAD);
       ich.worker.onmessage = function (ereignis) {
         var m = ereignis.data;
         if (m.typ === 'fortschritt') {
           ich.erledigt = m.erledigt; ich.x = m.x;
           ich.beiFortschritt(ich.stand());
-        } else if (m.typ === 'gestoppt') {
-          ich.erledigt = m.erledigt; ich.x = m.x;
-          ich.laeuft = false;
-          ich.worker.terminate(); ich.worker = null;
-          ich.beiFortschritt(ich.stand());
-          erfuellen(null);
         } else if (m.typ === 'fertig') {
           ich.erledigt = m.erledigt; ich.laeuft = false;
           ich.worker.terminate(); ich.worker = null;
+          ich.aufloesen = null;
           erfuellen(m.b);
         } else if (m.typ === 'fehler') {
           ich.laeuft = false;
           ich.worker.terminate(); ich.worker = null;
+          ich.aufloesen = null;
           ablehnen(new Error(m.meldung));
         }
       };
@@ -77,8 +74,16 @@
     return ich.versprechen;
   };
 
+  /* Pausieren heisst: Worker beenden. Er rechnet in einer geschlossenen
+   * Schleife und koennte eine Nachricht gar nicht entgegennehmen. Weiter
+   * geht es beim zuletzt gemeldeten Zwischenstand. */
   Loeser.prototype.anhalten = function () {
-    if (this.worker) this.worker.postMessage({ cmd: 'stopp' });
+    if (!this.worker) return this.versprechen || Promise.resolve(null);
+    this.laeuft = false;
+    this.worker.terminate();
+    this.worker = null;
+    this.beiFortschritt(this.stand());
+    if (this.aufloesen) { var fertig = this.aufloesen; this.aufloesen = null; fertig(null); }
     return this.versprechen || Promise.resolve(null);
   };
 

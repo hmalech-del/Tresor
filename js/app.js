@@ -15,6 +15,50 @@
     fotoErgebnis: null
   };
 
+  /* ---------------- Bildschirm wachhalten ----------------
+   * Rechnet der Tresor, ist der Tab im Vordergrund am schnellsten - und auf
+   * dem Handy schlaeft der Bildschirm sonst mitten in der Rechnung ein.
+   * Kostet zusaetzlich Strom, deshalb als Schalter und nicht automatisch. */
+
+  var wachhalter = { sperre: null, gewuenscht: false };
+
+  function wachWunschLaden() {
+    try { return global.localStorage.getItem('tresor.wachhalten') === '1'; }
+    catch (fehler) { return false; }
+  }
+
+  function wachWunschSichern(an) {
+    try { global.localStorage.setItem('tresor.wachhalten', an ? '1' : '0'); } catch (fehler) {}
+  }
+
+  async function bildschirmWachHalten(an) {
+    wachhalter.gewuenscht = an;
+    try {
+      if (an) {
+        if (wachhalter.sperre || !global.navigator.wakeLock || document.hidden) return;
+        wachhalter.sperre = await global.navigator.wakeLock.request('screen');
+        wachhalter.sperre.addEventListener('release', function () { wachhalter.sperre = null; });
+      } else if (wachhalter.sperre) {
+        var sperre = wachhalter.sperre;
+        wachhalter.sperre = null;
+        await sperre.release();
+      }
+    } catch (fehler) { wachhalter.sperre = null; }
+  }
+
+  /* Schalter fuer die beiden Rechenansichten. */
+  function wachSchalter() {
+    if (!global.navigator.wakeLock) return null;
+    var kaestchen = el('input', { type: 'checkbox', checked: wachWunschLaden() ? 'checked' : null });
+    kaestchen.addEventListener('change', function () {
+      wachWunschSichern(kaestchen.checked);
+      bildschirmWachHalten(kaestchen.checked);
+    });
+    return el('label', { class: 'schalterzeile klein' }, [
+      kaestchen, el('span', { class: 'flaut', text: 'Bildschirm anlassen (braucht zusätzlich Strom)' })
+    ]);
+  }
+
   /* ---------------- Speichern ---------------- */
 
   function sichern(erzwingen) {
@@ -27,6 +71,7 @@
 
   function aufraeumen() {
     if (zustand.fristUhr) { clearInterval(zustand.fristUhr); zustand.fristUhr = null; }
+    if (wachhalter.sperre) bildschirmWachHalten(false);
     if (zustand.aufraeumen) { try { zustand.aufraeumen(); } catch (fehler) {} zustand.aufraeumen = null; }
     if (zustand.loeser) { zustand.loeser.anhalten(); zustand.loeser = null; }
   }
@@ -57,6 +102,18 @@
         if (e.key === 'Backspace' && !feld.value && feld.previousSibling) feld.previousSibling.focus();
       });
     });
+  }
+
+  /* Ehrliche Einordnung dessen, was Rechenzeit real kostet. Die Zahlen sind
+   * Hausnummern - ein Kern unter Volllast, Geraet und Drosselung entscheiden. */
+  function rechenaufwand(sekunden) {
+    if (!sekunden) return '';
+    var text = 'Ein Rechenkern ist dabei ' + util.dauer(sekunden) + ' voll ausgelastet, der Tab muss offen bleiben. ';
+    if (sekunden <= 120) return text + 'Akku: kaum spürbar.';
+    if (sekunden <= 900) return text + 'Akku: wenige Prozent, das Gerät wird warm.';
+    if (sekunden <= 3600) return text + 'Akku: am Handy grob 10 bis 25 Prozent.';
+    return text + 'Auf dem Handy unrealistisch (mehr als eine Akkuladung) – eher Laptop am Netzteil. '
+      + 'Der Fortschritt wird gespeichert, du kannst die Strecke in Etappen abarbeiten.';
   }
 
   function zeitOptionen(vorgabe) {
@@ -109,6 +166,15 @@
     };
   }
 
+  function aufwandAktualisieren() {
+    if (!$('#rechenzeit-aufwand')) return;
+    var proSchloss = T.tresorLogik.RECHENZEIT_STUFEN[Number($('#rechenzeit').value) - 1];
+    $('#rechenzeit-aufwand').textContent = rechenaufwand(proSchloss * zustand.laenge)
+      + ' (' + zustand.laenge + ' × ' + util.dauer(proSchloss) + ', in Etappen verteilbar)';
+    var exit = T.tresorLogik.NOTAUSGANG_STUFEN[Number($('#notausgang').value)];
+    $('#notausgang-aufwand').textContent = exit ? rechenaufwand(exit) : '';
+  }
+
   function schaetzungAktualisieren() {
     var anzeige = $('#schaetzung');
     if (!anzeige) return;
@@ -119,6 +185,7 @@
     var rechen = T.tresorLogik.RECHENZEIT_STUFEN[util.grenze(konfig.rechenzeit, 1, 5) - 1];
     anzeige.textContent = 'ungefähr ' + util.dauer(schaetzung.sekunden);
     var exitSekunden = T.tresorLogik.NOTAUSGANG_STUFEN[util.grenze(konfig.notausgang.stufe, 0, 4)];
+    aufwandAktualisieren();
     $('#abschluss-warnung').textContent = exitSekunden
       ? 'Ab hier führen nur noch die Aufgaben zur Zahl - oder der Notausgang mit ' + util.dauer(exitSekunden)
         + ' Rechenzeit. Löschen des Tresors löscht die Zahl.'
@@ -274,7 +341,8 @@
           el('option', { value: '7' }, 'nach 7 Tagen')
         ])
       ]),
-      el('p', { class: 'flaut klein', text: 'Der Notausgang ist ein zweites Zeitschloss über das ganze Geheimnis: keine Aufgaben, nur Rechenzeit. Er ist die Obergrenze dafür, wie lange du ausgesperrt bleiben kannst – die Wartefrist davor ist allerdings nur eine Sperre der Oberfläche.' })
+      el('p', { class: 'flaut klein', text: 'Der Notausgang ist ein zweites Zeitschloss über das ganze Geheimnis: keine Aufgaben, nur Rechenzeit. Er ist die Obergrenze dafür, wie lange du ausgesperrt bleiben kannst – die Wartefrist davor ist allerdings nur eine Sperre der Oberfläche.' }),
+      el('p', { class: 'flaut klein aufwandzeile', id: 'notausgang-aufwand', text: '' })
     ]);
 
     var feinTeil = el('section', { class: 'karte' }, [
@@ -287,7 +355,8 @@
       el('div', { class: 'feld' }, [
         el('label', { for: 'rechenzeit', text: 'Zeitschloss (echte Rechenzeit je Fragment)' }),
         el('input', { type: 'range', min: '1', max: '5', value: '2', id: 'rechenzeit' }),
-        el('output', { id: 'rechenzeit-anzeige', text: '45 s' })
+        el('output', { id: 'rechenzeit-anzeige', text: '45 s' }),
+        el('p', { class: 'flaut klein aufwandzeile', id: 'rechenzeit-aufwand', text: '' })
       ]),
       el('div', { class: 'feld' }, [
         el('label', { for: 'reihenfolge', text: 'Freigabereihenfolge' }),
@@ -376,6 +445,7 @@
       $('#rechenzeit-anzeige').textContent = util.dauer(T.tresorLogik.RECHENZEIT_STUFEN[Number(this.value) - 1]);
       schaetzungAktualisieren();
     });
+    aufwandAktualisieren();
     $('#reihenfolge').addEventListener('change', schaetzungAktualisieren);
     $('#verriegeln').addEventListener('click', verriegeln);
 
@@ -633,7 +703,8 @@
     karte.appendChild(el('p', { class: 'aufgabe-hinweis', text:
       'Dieses Zeitschloss gibt das ganze Geheimnis frei – ohne Aufgaben, ohne Wartezeiten. Es kostet '
       + exit.schloss.t.toLocaleString('de-DE') + ' sequentielle Quadrierungen, also rund '
-      + util.dauer(exit.sekunden) + ' Rechenzeit. Der Fortschritt wird gespeichert.' }));
+      + util.dauer(exit.sekunden) + ' Rechenzeit auf einem Kern. Der Fortschritt wird gespeichert, '
+      + 'die Strecke lässt sich in Etappen abarbeiten.' }));
 
     var anzeige = el('div', { class: 'countdown', text: '--:--' });
     var fuellung = el('i');
@@ -643,6 +714,8 @@
     karte.appendChild(el('div', { class: 'balken' }, [fuellung]));
     karte.appendChild(text);
     karte.appendChild(knopf);
+    var exitSchalter = wachSchalter();
+    if (exitSchalter) karte.appendChild(exitSchalter);
 
     var laeuft = false, startZeit = 0, startSchritte = exit.stand.erledigt;
 
@@ -661,12 +734,14 @@
     function starten() {
       if (laeuft) {
         laeuft = false; knopf.textContent = 'Weiterrechnen';
+        bildschirmWachHalten(false);
         if (zustand.loeser) zustand.loeser.anhalten();
         return;
       }
       laeuft = true; startZeit = Date.now(); startSchritte = exit.stand.erledigt;
       knopf.textContent = 'Pause';
       zeichneStand(exit.stand.erledigt);
+      if (wachWunschLaden()) bildschirmWachHalten(true);
       zustand.loeser = new T.zeitschloss.Loeser(exit.schloss, exit.stand, function (stand) {
         exit.stand.erledigt = stand.erledigt;
         exit.stand.x = stand.x;
@@ -838,7 +913,8 @@
     buehne.appendChild(el('p', { class: 'aufgabe-titel', text: 'Zeitschloss' }));
     buehne.appendChild(el('p', { class: 'aufgabe-hinweis', text:
       'Jetzt arbeitet der Rechner: ' + schritteGesamt.toLocaleString('de-DE') + ' Quadrierungen, die nur nacheinander gehen. '
-      + 'Mehr Kerne helfen nicht, nur verstrichene Zeit. Der Fortschritt wird gespeichert - du darfst die Seite schließen.' }));
+      + 'Mehr Kerne helfen nicht, nur verstrichene Zeit. Ausgelastet ist genau ein Kern, das Gerät bleibt benutzbar. '
+      + 'Der Fortschritt wird gespeichert - du darfst die Seite schließen.' }));
 
     var anzeige = el('div', { class: 'countdown', text: '--:--' });
     var fuellung = el('i');
@@ -848,6 +924,8 @@
     buehne.appendChild(el('div', { class: 'balken' }, [fuellung]));
     buehne.appendChild(text);
     buehne.appendChild(knopf);
+    var schalter = wachSchalter();
+    if (schalter) buehne.appendChild(schalter);
 
     var laeuft = false, startZeit = 0, startSchritte = fragment.stand.erledigt;
 
@@ -872,6 +950,7 @@
       startSchritte = fragment.stand.erledigt;
       knopf.textContent = 'Pause';
       zeichneStand(fragment.stand.erledigt);
+      if (wachWunschLaden()) bildschirmWachHalten(true);
       zustand.loeser = new T.zeitschloss.Loeser(fragment.schloss, fragment.stand, function (stand) {
         fragment.stand.erledigt = stand.erledigt;
         fragment.stand.x = stand.x;
@@ -895,6 +974,7 @@
       if (!zustand.loeser) return;
       laeuft = false;
       knopf.textContent = 'Weiterrechnen';
+      bildschirmWachHalten(false);
       zustand.loeser.anhalten();
     }
 
@@ -921,7 +1001,10 @@
       zeichneEinrichten();
     }
 
-    document.addEventListener('visibilitychange', function () { if (document.hidden) sichern(true); });
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) { sichern(true); return; }
+      if (wachhalter.gewuenscht && !wachhalter.sperre) bildschirmWachHalten(true);
+    });
     global.addEventListener('pagehide', function () { sichern(true); });
   }
 
