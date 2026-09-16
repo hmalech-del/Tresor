@@ -1,8 +1,8 @@
 # 🔒 Tresor – ein Geheimnis auf Raten
 
-Du gibst dem Tresor eine Zahl. Er zerlegt sie sofort in einzelne Ziffern,
-verschlüsselt jede für sich und gibt sie nur Stück für Stück wieder heraus –
-gegen Geduld, gegen Wartezeit und gegen echte Rechenzeit.
+Du gibst dem Tresor ein Geheimnis – eine Zahl oder ein Bild. Er zerlegt es
+sofort in Fragmente, verschlüsselt jedes für sich und gibt sie nur Stück für
+Stück wieder heraus – gegen Geduld, gegen Wartezeit und gegen echte Rechenzeit.
 
 Alles läuft im Browser: keine Server, kein Konto, keine Übertragung.
 Eine statische Seite, kein Build-Schritt, keine Abhängigkeiten.
@@ -11,8 +11,9 @@ Eine statische Seite, kein Build-Schritt, keine Abhängigkeiten.
 
 ## Der Ablauf
 
-1. **Geheimnis festlegen** – 3 bis 8 Ziffern eintippen oder ein Foto der Zahl
-   aufnehmen; die Ziffern werden im Bild erkannt und lassen sich korrigieren.
+1. **Geheimnis festlegen** – entweder eine **Zahl** (3 bis 8 Ziffern eintippen
+   oder ein Foto der Zahl aufnehmen, die Ziffern werden erkannt und lassen sich
+   korrigieren) oder ein **Bild**, das selbst das Geheimnis ist.
 2. **Schwierigkeit wählen** – welche Dimensionen (Geduld, Zeit, Glück, Logik,
    Rätsel), wie intensiv, wie viele Aufgaben pro Fragment, wie viel Rechenzeit
    pro Zeitschloss, dazu Strafzeiten, geheime Fristen und Notausgang.
@@ -20,7 +21,55 @@ Eine statische Seite, kein Build-Schritt, keine Abhängigkeiten.
 3. **Verriegeln** – die App schmiedet pro Ziffer ein Zeitschloss, verschlüsselt
    die Ziffer damit und wirft den Klartext weg.
 4. **Freispielen** – pro Fragment erst die Aufgaben, dann die Rechenzeit.
-   Jede gelöste Stufe legt genau eine Ziffer frei, an ihrer richtigen Stelle.
+   Jede gelöste Stufe legt genau eine Ziffer frei, an ihrer richtigen Stelle –
+   oder beim Bild die nächste Schärfestufe.
+5. **Verlauf** – geöffnete Tresore landen im Verlauf und bleiben dort abrufbar.
+
+---
+
+## Ein Bild als Geheimnis
+
+Ein Bild lässt sich nicht in Ziffern zerlegen, wohl aber in **Schärfestufen**:
+Stufe 1 ist ein grober Farbfleck von 24 px Breite, die letzte das ganze Bild
+(bis 1280 px, JPEG). Jede Stufe ist ein eigenes Fragment mit eigenem Schlüssel
+und eigenem Zeitschloss, die Freigabe geht also immer von grob nach fein – eine
+Zufallsreihenfolge gibt es hier nicht, sie ergäbe keinen Sinn.
+
+Die Zerlegung passiert vor dem Verriegeln und ist in der Einrichtung zu sehen:
+So weißt du vorher, wie wenig die erste Stufe verrät. Ein 900 × 600-Foto kostet
+mit fünf Stufen rund 30 kB; passt der Tresor nicht in den Browser-Speicher,
+sagt die App das, statt still zu scheitern. Am Ende gibt es das Bild zum
+Sichern.
+
+---
+
+## Zwei Sicherheitsstufen
+
+| Modus | Was die Fragmente schützt | Kosten |
+|---|---|---|
+| **Zeitschloss** (Standard) | Echte, nicht abkürzbare Rechenzeit je Fragment | Ein Kern unter Volllast, Akku |
+| **Leicht** | Nichts – der Schlüsselanteil liegt offen daneben | Keine |
+
+Im leichten Modus sind die Aufgaben reine Oberflächenhürden: Wer den
+`localStorage` liest, kommt sofort an das Geheimnis. Dafür kostet nichts Strom,
+und es gibt keine Wartezeit auf den Rechner. **Antwortgebundene Rätsel wirken
+auch dort**, weil ihre Lösung in den Schlüssel eingeht – ein leichter Tresor mit
+Logik- und Rätselaufgaben ist also nicht ganz ungeschützt. Den Notausgang gibt
+es in diesem Modus nicht; er wäre sinnlos.
+
+---
+
+## Verlauf
+
+Ein geöffneter Tresor wandert in den Verlauf, sobald das letzte Fragment
+aufgeht – noch bevor irgendetwas ihn überschreiben kann. Dort bleibt das
+Ergebnis abrufbar: die Zahl im Klartext, beim Bild die schärfste freigegebene
+Stufe samt Sicherungs-Link. Ein versehentlich geschlossener Tab, ein neuer
+Tresor oder ein gelöschter Tresor nehmen es nicht mit.
+
+Der Verlauf ist bewusst **unverschlüsselt** – der Tresor war ja offen, das
+Geheimnis ist raus. Er hält die letzten zwölf Einträge; wird der Speicher eng,
+fliegen die ältesten. Jeder Eintrag lässt sich einzeln löschen.
 
 ---
 
@@ -311,7 +360,6 @@ unverändert.
 | `css/style.css` | Gestaltung |
 | `js/util.js` | DOM-Helfer, Zeitformate, Hex |
 | `js/rng.js` | Zufallsstrom mit Saat |
-| `js/speicher.js` | `localStorage`, Gedächtnis für benutzte Aufgabentypen |
 | `js/krypto.js` | Schlüsselableitung, PBKDF2-Antwortbindung, AES-256-GCM |
 | `js/worker-timelock.js` | Primzahlen, Puzzle-Erzeugung, sequentielles Quadrieren |
 | `js/zeitschloss.js` | Hülle um den Worker, pausierbarer Löser |
@@ -321,5 +369,6 @@ unverändert.
 | `js/aufgaben-raetsel.js` | Chiffre, Morse, Anagramm, Zahlenrätsel |
 | `js/woerter.js` | Wortvorrat ohne Umlaute |
 | `js/tresor.js` | Aufgabenplan, Verriegeln, Freigabe |
-| `js/foto.js` | Ziffernerkennung im Bild |
+| `js/foto.js` | Ziffernerkennung im Bild, Zerlegung in Schärfestufen |
+| `js/speicher.js` | `localStorage`, Verlauf, benutzte Aufgabentypen |
 | `js/app.js` | Oberfläche und Ablauf |

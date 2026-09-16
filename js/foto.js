@@ -293,5 +293,48 @@
     };
   }
 
-  T.foto = { lesen: lesen };
+  /* ---------------- Bild als Geheimnis ----------------
+   *
+   * Ein Bild lässt sich nicht sinnvoll in Ziffern zerlegen, wohl aber in
+   * Schärfestufen: Stufe 1 ist ein grober Farbfleck, die letzte das ganze
+   * Bild. Jede Stufe wird für sich verschlüsselt und ist ein eigenes Fragment,
+   * so dass die Freigabe wie bei der Zahl schrittweise passiert. */
+  async function stufenBilder(datei, anzahl, maxKante) {
+    maxKante = maxKante || 1280;
+    var bild;
+    try { bild = await createImageBitmap(datei, { imageOrientation: 'from-image' }); }
+    catch (fehler) { bild = await createImageBitmap(datei); }
+
+    var faktor = Math.min(1, maxKante / Math.max(bild.width, bild.height));
+    var vollBreite = Math.max(8, Math.round(bild.width * faktor));
+    var vollHoehe = Math.max(8, Math.round(bild.height * faktor));
+    var kleinste = Math.max(8, Math.round(vollBreite / Math.pow(vollBreite / 24, 1)));
+
+    var stufen = [];
+    for (var i = 0; i < anzahl; i++) {
+      var anteil = anzahl === 1 ? 1 : i / (anzahl - 1);
+      var breite = Math.max(8, Math.round(24 * Math.pow(vollBreite / 24, anteil)));
+      var hoehe = Math.max(8, Math.round(breite * vollHoehe / vollBreite));
+      var c = leinwand(breite, hoehe);
+      var ctx = c.getContext('2d');
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(bild, 0, 0, breite, hoehe);
+      stufen.push({
+        breite: breite,
+        hoehe: hoehe,
+        bild: c.toDataURL('image/jpeg', i === anzahl - 1 ? 0.82 : 0.72)
+      });
+    }
+    bild.close && bild.close();
+    return {
+      stufen: stufen,
+      groesse: stufen.reduce(function (summe, stufe) { return summe + stufe.bild.length; }, 0),
+      vollBreite: vollBreite,
+      vollHoehe: vollHoehe,
+      kleinste: kleinste
+    };
+  }
+
+  T.foto = { lesen: lesen, stufenBilder: stufenBilder };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -7,7 +7,9 @@
   var zustand = {
     tresor: null,
     konfig: null,
+    art: 'zahl',
     geheimnis: '',
+    bild: null,
     laenge: 5,
     aufraeumen: null,
     loeser: null,
@@ -126,11 +128,13 @@
   function pruefeBereit() {
     var knopf = $('#verriegeln');
     if (!knopf) return;
-    var vollstaendig = /^\d+$/.test(zustand.geheimnis) && zustand.geheimnis.length === zustand.laenge;
+    var vollstaendig = zustand.art === 'foto'
+      ? !!zustand.bild
+      : /^\d+$/.test(zustand.geheimnis) && zustand.geheimnis.length === zustand.laenge;
     var dimensionen = aktiveDimensionen();
     knopf.disabled = !(vollstaendig && dimensionen.length);
     $('#bereit-hinweis').textContent = !vollstaendig
-      ? 'Es fehlen noch Ziffern.'
+      ? (zustand.art === 'foto' ? 'Es fehlt noch ein Bild.' : 'Es fehlen noch Ziffern.')
       : !dimensionen.length ? 'Wähle mindestens eine Dimension.' : '';
   }
 
@@ -152,6 +156,7 @@
       aufgabenProFragment: Number($('#aufgaben-pro-fragment').value),
       rechenzeit: Number($('#rechenzeit').value),
       reihenfolge: $('#reihenfolge').value,
+      sicherheit: $('#sicherheit').value,
       strafe: Number($('#strafzeit').value),
       geheimeFrist: {
         aktiv: $('#frist-aktiv').checked,
@@ -172,6 +177,11 @@
 
   function aufwandAktualisieren() {
     if (!$('#rechenzeit-aufwand')) return;
+    if ($('#sicherheit').value === 'leicht') {
+      $('#rechenzeit-aufwand').textContent = '';
+      $('#notausgang-aufwand').textContent = '';
+      return;
+    }
     var proSchloss = T.tresorLogik.RECHENZEIT_STUFEN[Number($('#rechenzeit').value) - 1];
     $('#rechenzeit-aufwand').textContent = rechenaufwand(proSchloss * zustand.laenge)
       + ' (' + zustand.laenge + ' × ' + util.dauer(proSchloss) + ', in Etappen verteilbar)';
@@ -192,13 +202,24 @@
     var dimensionen = aktiveDimensionen();
     if (!dimensionen.length) { anzeige.textContent = '-'; return; }
     var konfig = konfigurationLesen();
+    var leicht = konfig.sicherheit === 'leicht';
     var schaetzung = T.tresorLogik.geschaetzteDauer(konfig, zustand.laenge);
-    var rechen = T.tresorLogik.RECHENZEIT_STUFEN[util.grenze(konfig.rechenzeit, 1, 5) - 1];
+    var rechen = leicht ? 0 : T.tresorLogik.RECHENZEIT_STUFEN[util.grenze(konfig.rechenzeit, 1, 5) - 1];
     anzeige.textContent = 'ungefähr ' + util.dauer(schaetzung.sekunden);
+    $('#rechenzeit-feld').classList.toggle('versteckt', leicht);
+    $('#reihenfolge-feld').classList.toggle('versteckt', zustand.art === 'foto');
+    util.$$('#notausgang-min, #notausgang-max, #notausgang-frist').forEach(function (feld) {
+      feld.closest('.feld').classList.toggle('versteckt', leicht);
+    });
+    $('#sicherheit-hinweis').textContent = leicht
+      ? 'Ohne Zeitschloss: Der Schlüssel liegt offen daneben, die Aufgaben sind reine Oberflächenhürden. Wer den Browser-Speicher liest, kommt sofort an das Geheimnis. Dafür kostet es keinen Strom und keine Wartezeit auf den Rechner. Antwortgebundene Rätsel wirken auch hier, weil ihre Lösung in den Schlüssel eingeht.'
+      : 'Mit Zeitschloss: Jedes Fragment kostet echte, nicht abkürzbare Rechenzeit - auch für jemanden mit Entwicklerwerkzeug.';
     var exitMinS = Math.min(konfig.notausgang.minSekunden, konfig.notausgang.maxSekunden);
     var exitMaxS = Math.max(konfig.notausgang.minSekunden, konfig.notausgang.maxSekunden);
     aufwandAktualisieren();
-    $('#abschluss-warnung').textContent = exitMaxS
+    $('#abschluss-warnung').textContent = leicht
+      ? 'Der leichte Modus hält niemanden auf, der den Browser-Speicher liest - er hält dich auf. Löschen des Tresors löscht das Geheimnis.'
+      : exitMaxS
       ? 'Ab hier führen nur noch die Aufgaben zur Zahl - oder der Notausgang, der '
         + (exitMinS === exitMaxS ? util.dauer(exitMaxS) : util.dauer(exitMinS) + ' bis ' + util.dauer(exitMaxS))
         + ' Rechenzeit kostet. Löschen des Tresors löscht die Zahl.'
@@ -206,7 +227,7 @@
     $('#schaetzung-detail').textContent =
       zustand.laenge + ' Fragmente · ' + konfig.aufgabenProFragment
       + (konfig.aufgabenProFragment === 1 ? ' Aufgabe' : ' Aufgaben') + ' je Fragment · '
-      + util.dauer(rechen) + ' reine Rechenzeit pro Zeitschloss'
+      + (rechen ? util.dauer(rechen) + ' reine Rechenzeit pro Zeitschloss' : 'ohne Zeitschloss')
       + (schaetzung.gebundeneAufgaben ? ' · ' + schaetzung.gebundeneAufgaben + ' Aufgaben gehen in die Schlüssel ein' : '')
       + (schaetzung.mitZeitfenster ? ' · enthält ein Zeitfenster, das an eine Tageszeit gebunden ist' : '')
       + (konfig.strafe ? ' · Strafzeiten aktiv' : '')
@@ -225,24 +246,43 @@
 
     var geheimTeil = el('section', { class: 'karte' }, [
       el('h2', { text: '1 · Das Geheimnis' }),
-      el('p', { class: 'flaut', text: 'Die Zahl wird sofort in Fragmente zerlegt und verschlüsselt. Im Klartext existiert sie danach nirgends mehr - auch nicht für diese App.' }),
       el('div', { class: 'reiter' }, [
-        el('button', { class: 'reiter-knopf ist-aktiv', type: 'button', id: 'reiter-tippen', text: 'Tippen' }),
-        el('button', { class: 'reiter-knopf', type: 'button', id: 'reiter-foto', text: 'Foto' })
+        el('button', { class: 'reiter-knopf' + (zustand.art === 'zahl' ? ' ist-aktiv' : ''), type: 'button', id: 'art-zahl', text: 'Zahl' }),
+        el('button', { class: 'reiter-knopf' + (zustand.art === 'foto' ? ' ist-aktiv' : ''), type: 'button', id: 'art-foto', text: 'Bild' })
       ]),
-      el('div', { id: 'eingabe-tippen' }, [
-        el('div', { class: 'zifferzeile', id: 'ziffernfelder' }),
-        el('label', { class: 'nebenlabel' }, [
-          'Stellen: ',
-          el('select', { id: 'laenge' }, [3, 4, 5, 6, 7, 8].map(function (n) {
-            return el('option', { value: String(n), selected: n === zustand.laenge ? 'selected' : null }, String(n));
-          }))
+
+      el('div', { id: 'art-bereich-zahl', class: zustand.art === 'zahl' ? '' : 'versteckt' }, [
+        el('p', { class: 'flaut', text: 'Die Zahl wird sofort in Fragmente zerlegt und verschlüsselt - eine Ziffer je Fragment. Im Klartext existiert sie danach nirgends mehr, auch nicht für diese App.' }),
+        el('div', { class: 'reiter' }, [
+          el('button', { class: 'reiter-knopf ist-aktiv', type: 'button', id: 'reiter-tippen', text: 'Tippen' }),
+          el('button', { class: 'reiter-knopf', type: 'button', id: 'reiter-foto', text: 'Vom Foto ablesen' })
+        ]),
+        el('div', { id: 'eingabe-tippen' }, [
+          el('div', { class: 'zifferzeile', id: 'ziffernfelder' }),
+          el('label', { class: 'nebenlabel' }, [
+            'Stellen: ',
+            el('select', { id: 'laenge' }, [3, 4, 5, 6, 7, 8].map(function (n) {
+              return el('option', { value: String(n), selected: n === zustand.laenge ? 'selected' : null }, String(n));
+            }))
+          ])
+        ]),
+        el('div', { id: 'eingabe-foto', class: 'versteckt' }, [
+          el('p', { class: 'flaut', text: 'Foto oder Screenshot mit der Zahl - gut ausgeleuchtet, Ziffern möglichst gerade. Der Vorschlag lässt sich danach korrigieren.' }),
+          el('input', { type: 'file', accept: 'image/*', capture: 'environment', id: 'fotodatei' }),
+          el('div', { id: 'foto-ergebnis' })
         ])
       ]),
-      el('div', { id: 'eingabe-foto', class: 'versteckt' }, [
-        el('p', { class: 'flaut', text: 'Foto oder Screenshot mit der Zahl - gut ausgeleuchtet, Ziffern möglichst gerade. Der Vorschlag lässt sich danach korrigieren.' }),
-        el('input', { type: 'file', accept: 'image/*', capture: 'environment', id: 'fotodatei' }),
-        el('div', { id: 'foto-ergebnis' })
+
+      el('div', { id: 'art-bereich-foto', class: zustand.art === 'foto' ? '' : 'versteckt' }, [
+        el('p', { class: 'flaut', text: 'Das Bild selbst ist das Geheimnis. Es wird in Schärfestufen zerlegt: Stufe 1 ist ein grober Farbfleck, die letzte das ganze Bild. Jede Stufe ist ein eigenes Fragment und wird für sich verschlüsselt.' }),
+        el('input', { type: 'file', accept: 'image/*', id: 'bilddatei' }),
+        el('div', { class: 'feld' }, [
+          el('label', { for: 'bild-stufen', text: 'Schärfestufen' }),
+          el('select', { id: 'bild-stufen' }, [3, 4, 5, 6, 7, 8].map(function (n) {
+            return el('option', { value: String(n), selected: n === 5 ? 'selected' : null }, String(n) + ' Stufen');
+          }))
+        ]),
+        el('div', { id: 'bild-ergebnis' })
       ])
     ]);
 
@@ -371,12 +411,20 @@
         el('output', { id: 'aufgaben-anzeige', text: '2' })
       ]),
       el('div', { class: 'feld' }, [
+        el('label', { for: 'sicherheit', text: 'Wie fest soll das Schloss sein?' }),
+        el('select', { id: 'sicherheit' }, [
+          el('option', { value: 'rechenzeit' }, 'Zeitschloss – kostet echte Rechenzeit'),
+          el('option', { value: 'leicht' }, 'leicht – nur Aufgaben, keine Rechenzeit')
+        ])
+      ]),
+      el('p', { class: 'flaut klein', id: 'sicherheit-hinweis', text: '' }),
+      el('div', { class: 'feld', id: 'rechenzeit-feld' }, [
         el('label', { for: 'rechenzeit', text: 'Zeitschloss (echte Rechenzeit je Fragment)' }),
         el('input', { type: 'range', min: '1', max: '5', value: '2', id: 'rechenzeit' }),
         el('output', { id: 'rechenzeit-anzeige', text: '45 s' }),
         el('p', { class: 'flaut klein aufwandzeile', id: 'rechenzeit-aufwand', text: '' })
       ]),
-      el('div', { class: 'feld' }, [
+      el('div', { class: 'feld', id: 'reihenfolge-feld' }, [
         el('label', { for: 'reihenfolge', text: 'Freigabereihenfolge' }),
         el('select', { id: 'reihenfolge' }, [
           el('option', { value: 'links' }, 'von links nach rechts'),
@@ -411,6 +459,13 @@
       schaetzungAktualisieren(); pruefeBereit();
     });
 
+    $('#art-zahl').addEventListener('click', function () { artWechsel('zahl'); });
+    $('#art-foto').addEventListener('click', function () { artWechsel('foto'); });
+    $('#bilddatei').addEventListener('change', bildVerarbeiten);
+    $('#bild-stufen').addEventListener('change', function () {
+      if (zustand.bild && zustand.bild.datei) bildVerarbeiten({ target: { files: [zustand.bild.datei] } });
+      schaetzungAktualisieren();
+    });
     $('#reiter-tippen').addEventListener('click', function () { reiterWechsel('tippen'); });
     $('#reiter-foto').addEventListener('click', function () { reiterWechsel('foto'); });
     $('#fotodatei').addEventListener('change', fotoVerarbeiten);
@@ -466,10 +521,61 @@
     });
     aufwandAktualisieren();
     $('#reihenfolge').addEventListener('change', schaetzungAktualisieren);
+    $('#sicherheit').addEventListener('change', schaetzungAktualisieren);
     $('#verriegeln').addEventListener('click', verriegeln);
+
+    var verlauf = verlaufKarte();
+    if (verlauf) wurzel.appendChild(verlauf);
 
     schaetzungAktualisieren();
     pruefeBereit();
+  }
+
+  function artWechsel(welche) {
+    zustand.art = welche;
+    $('#art-zahl').classList.toggle('ist-aktiv', welche === 'zahl');
+    $('#art-foto').classList.toggle('ist-aktiv', welche === 'foto');
+    $('#art-bereich-zahl').classList.toggle('versteckt', welche !== 'zahl');
+    $('#art-bereich-foto').classList.toggle('versteckt', welche !== 'foto');
+    schaetzungAktualisieren();
+    pruefeBereit();
+  }
+
+  /* Bild einlesen und in Schärfestufen zerlegen. Gezeigt wird die gröbste
+   * Stufe - so sieht man vorher, wie wenig das erste Fragment verrät. */
+  async function bildVerarbeiten(ereignis) {
+    var datei = ereignis.target.files && ereignis.target.files[0];
+    if (!datei) return;
+    var ziel = util.leeren($('#bild-ergebnis'));
+    ziel.appendChild(el('p', { class: 'flaut', text: 'Bild wird zerlegt ...' }));
+    try {
+      var stufen = Number($('#bild-stufen').value);
+      var ergebnis = await T.foto.stufenBilder(datei, stufen, 1280);
+      ergebnis.datei = datei;
+      zustand.bild = ergebnis;
+      zustand.laenge = stufen;
+      util.leeren(ziel);
+      ziel.appendChild(el('div', { class: 'stufenreihe' }, ergebnis.stufen.map(function (stufe, i) {
+        return el('figure', { class: 'stufenbild' }, [
+          el('img', { src: stufe.bild, alt: 'Stufe ' + (i + 1) }),
+          el('figcaption', { text: (i + 1) + ' · ' + stufe.breite + ' px' })
+        ]);
+      })));
+      var kilobyte = Math.round(ergebnis.groesse / 1024);
+      ziel.appendChild(el('p', { class: 'flaut klein', text:
+        'Vollbild ' + ergebnis.vollBreite + ' × ' + ergebnis.vollHoehe + ' px, alle Stufen zusammen rund '
+        + kilobyte + ' kB verschlüsselt im Browser-Speicher.' }));
+      if (ergebnis.groesse > 3500000) {
+        ziel.appendChild(el('p', { class: 'warnung', text: 'Das ist zu groß für den Browser-Speicher. Nimm ein kleineres Bild oder weniger Stufen.' }));
+        zustand.bild = null;
+      }
+      pruefeBereit();
+      schaetzungAktualisieren();
+    } catch (fehler) {
+      util.leeren(ziel).appendChild(el('p', { class: 'warnung', text: 'Bild konnte nicht gelesen werden: ' + fehler.message }));
+      zustand.bild = null;
+      pruefeBereit();
+    }
   }
 
   function reiterWechsel(welcher) {
@@ -528,6 +634,10 @@
 
   async function verriegeln() {
     var konfig = konfigurationLesen();
+    var art = zustand.art;
+    var teile = art === 'foto'
+      ? zustand.bild.stufen.map(function (stufe) { return stufe.bild; })
+      : zustand.geheimnis.split('');
     var wurzel = util.leeren($('#buehne'));
     var kasten = el('section', { class: 'karte mittig' }, [
       el('h2', { text: 'Wird verriegelt' }),
@@ -537,7 +647,8 @@
     wurzel.appendChild(kasten);
     try {
       var tresor = await T.tresorLogik.erstellen({
-        geheimnis: zustand.geheimnis,
+        art: art,
+        teile: teile,
         konfig: konfig,
         beiFortschritt: function (m) {
           $('#schmiede-text').textContent = m.text;
@@ -545,8 +656,15 @@
         }
       });
       zustand.geheimnis = '';
+      zustand.bild = null;
+      teile = null;
       zustand.tresor = tresor;
-      T.speicher.sichern(tresor);
+      if (!T.speicher.sichern(tresor)) {
+        util.leeren(kasten).appendChild(el('p', { class: 'warnung', text:
+          'Der Tresor passt nicht in den Browser-Speicher. Nimm ein kleineres Bild oder weniger Stufen.' }));
+        zustand.tresor = null;
+        return;
+      }
       zeichneTresor();
     } catch (fehler) {
       util.leeren(kasten).appendChild(el('p', { class: 'warnung', text: 'Verriegeln fehlgeschlagen: ' + fehler.message }));
@@ -554,6 +672,18 @@
   }
 
   /* ---------------- Tresoransicht ---------------- */
+
+  function zeichneBildbuehne(tresor) {
+    var beste = T.tresorLogik.besteStufe(tresor);
+    return el('div', { class: 'bildbuehne' }, [
+      beste
+        ? el('img', { class: 'stufenbild-gross', src: beste.bild, alt: 'Freigegebene Schärfestufe' })
+        : el('div', { class: 'bildplatzhalter', text: '▦' }),
+      el('p', { class: 'flaut mittig-text', text: beste
+        ? 'Stufe ' + beste.stufe + ' von ' + tresor.laenge + ' freigegeben'
+        : 'Noch keine Stufe frei' })
+    ]);
+  }
 
   function zeichneZiffernband() {
     var sichtbar = T.tresorLogik.sichtbaresGeheimnis(zustand.tresor);
@@ -586,12 +716,12 @@
             modul.antwortGebunden ? el('span', { class: 'schluesselmarke', title: 'Antwort geht in den Schlüssel ein', text: ' 🔑' }) : null,
             aufgabe.frist ? el('span', { class: 'schluesselmarke', title: 'Geheime Frist', text: ' ⏳' }) : null
           ]);
-        }).concat([
+        }).concat(fragment.schloss ? [
           el('li', { class: fragment.offen ? 'ist-erledigt' : '' }, [
             el('span', { class: 'marke marke-zeit', text: 'Zeit' }),
             'Zeitschloss: ' + util.dauer(zustand.tresor.sekundenProSchloss) + ' Rechenzeit'
           ])
-        ]))
+        ] : []))
       ]);
     }));
   }
@@ -624,17 +754,26 @@
     }
 
     wurzel.appendChild(el('section', { class: 'karte band-karte' }, [
-      zeichneZiffernband(),
+      tresor.art === 'foto' ? zeichneBildbuehne(tresor) : zeichneZiffernband(),
       el('p', { class: 'flaut mittig-text', text: fertig
         ? 'Vollständig freigegeben.'
         : (tresor.fragmente.filter(function (f) { return f.offen; }).length) + ' von ' + tresor.laenge + ' Fragmenten frei' })
     ]));
 
     if (fertig) {
+      // Ergebnis in den Verlauf legen, bevor irgendetwas es überschreiben kann
+      if (!tresor.archiviert) {
+        tresor.archiviert = T.speicher.archivErgaenzen(T.tresorLogik.archivEintrag(tresor));
+        sichern(true);
+      }
+      var bild = tresor.art === 'foto' ? (T.tresorLogik.besteStufe(tresor) || {}).bild : null;
       wurzel.appendChild(el('section', { class: 'karte mittig' }, [
         el('h2', { text: 'Dein Geheimnis' }),
-        el('p', { class: 'grossezahl', text: T.tresorLogik.sichtbaresGeheimnis(tresor).join('') }),
-        el('p', { class: 'flaut', text: 'Erstellt ' + util.zeitpunkt(tresor.erstellt) + '.' }),
+        bild
+          ? el('img', { class: 'ergebnisbild', src: bild, alt: 'Das freigegebene Bild' })
+          : el('p', { class: 'grossezahl', text: T.tresorLogik.sichtbaresGeheimnis(tresor).join('') }),
+        bild ? el('a', { class: 'knopf', href: bild, download: 'tresor-bild.jpg' }, 'Bild sichern') : null,
+        el('p', { class: 'flaut', text: 'Erstellt ' + util.zeitpunkt(tresor.erstellt) + '. Das Ergebnis liegt jetzt auch im Verlauf.' }),
         el('button', { class: 'knopf gross', type: 'button', text: 'Neuen Tresor anlegen', onclick: neuAnlegen })
       ]));
     } else {
@@ -685,15 +824,23 @@
     ]));
 
     wurzel.appendChild(el('section', { class: 'karte flaut klein' }, [
-      el('p', { text: 'Zeitschlösser dieses Tresors: ' + tresor.fragmente[0].schloss.t.toLocaleString('de-DE')
-        + ' sequentielle Quadrierungen modulo einer 1024-Bit-Zahl, gemessen mit '
-        + tresor.rate.toLocaleString('de-DE') + ' Quadrierungen/s auf diesem Gerät.' }),
+      el('p', { text: tresor.fragmente[0].schloss
+        ? 'Zeitschlösser dieses Tresors: ' + tresor.fragmente[0].schloss.t.toLocaleString('de-DE')
+          + ' sequentielle Quadrierungen modulo einer 1024-Bit-Zahl, gemessen mit '
+          + (tresor.rate || 0).toLocaleString('de-DE') + ' Quadrierungen/s auf diesem Gerät.'
+        : 'Leichter Modus: kein Zeitschloss. Die Schlüsselanteile liegen offen im Browser-Speicher, '
+          + 'die Aufgaben sind Oberflächenhürden.' }),
       el('p', { text: gebundeneAufgaben(tresor)
         ? gebundeneAufgaben(tresor) + ' Aufgaben sind an den Schlüssel gebunden: ihre Lösung ist nicht gespeichert, nur ein Prüfwert mit '
           + (tresor.fragmente[0].iterationen || 0).toLocaleString('de-DE') + ' PBKDF2-Runden. Jeder Rateversuch kostet diese Rechnung.'
-        : 'Keine antwortgebundenen Aufgaben – die Aufgaben sind reine Oberflächenhürden, kryptografisch bindend ist nur die Rechenzeit.' }),
+        : tresor.fragmente[0].schloss
+          ? 'Keine antwortgebundenen Aufgaben – die Aufgaben sind reine Oberflächenhürden, kryptografisch bindend ist nur die Rechenzeit.'
+          : 'Keine antwortgebundenen Aufgaben und kein Zeitschloss – dieser Tresor ist reine Selbstbindung.' }),
       el('button', { class: 'knopf gefahr', type: 'button', text: 'Tresor löschen', onclick: tresorLoeschen })
     ]));
+
+    var verlauf = verlaufKarte();
+    if (verlauf) wurzel.appendChild(verlauf);
   }
 
   /* Wie lange der Notausgang dauert - bei blinden Schlössern ist das
@@ -815,8 +962,64 @@
     starten();
   }
 
+  /* ---------------- Verlauf ---------------- */
+
+  function verlaufKarte() {
+    var liste = T.speicher.archivLaden();
+    if (!liste.length) return null;
+    return el('section', { class: 'karte' }, [
+      el('h2', { text: 'Verlauf' }),
+      el('p', { class: 'flaut klein', text: 'Geöffnete Tresore liegen hier, bis du sie löschst – ein geschlossener Tab oder ein neuer Tresor nimmt das Ergebnis nicht mit. Unverschlüsselt, denn der Tresor war ja offen.' }),
+      el('ul', { class: 'verlaufliste' }, liste.map(function (eintrag) {
+        return el('li', { class: 'verlaufzeile' }, [
+          eintrag.art === 'foto'
+            ? el('img', { class: 'verlaufbild', src: eintrag.ergebnis, alt: 'Ergebnisbild' })
+            : el('span', { class: 'verlaufzahl', text: eintrag.ergebnis }),
+          el('div', { class: 'verlaufinfo' }, [
+            el('strong', { text: eintrag.art === 'foto' ? 'Bild, ' + eintrag.stufen + ' Stufen' : eintrag.ergebnis.length + '-stellige Zahl' }),
+            el('span', { class: 'flaut klein', text: 'geöffnet ' + util.zeitpunkt(eintrag.geoeffnet)
+              + ' · ' + (eintrag.sicherheit === 'leicht' ? 'leichter Modus' : 'mit Zeitschloss')
+              + (eintrag.notausgangBenutzt ? ' · über den Notausgang' : '') })
+          ]),
+          el('button', { class: 'knopf', type: 'button', text: 'ansehen',
+            onclick: function () { zeichneVerlaufEintrag(eintrag.id); } })
+        ]);
+      }))
+    ]);
+  }
+
+  function zeichneVerlaufEintrag(id) {
+    aufraeumen();
+    var eintrag = T.speicher.archivLaden().filter(function (e) { return e.id === id; })[0];
+    var wurzel = util.leeren($('#buehne'));
+    var zurueck = function () { if (zustand.tresor) zeichneTresor(); else zeichneEinrichten(); };
+    wurzel.appendChild(el('section', { class: 'karte' }, [
+      el('button', { class: 'knopf', type: 'button', text: '← zurück', onclick: zurueck })
+    ]));
+    if (!eintrag) {
+      wurzel.appendChild(el('section', { class: 'karte' }, [el('p', { class: 'warnung', text: 'Dieser Eintrag ist nicht mehr da.' })]));
+      return;
+    }
+    wurzel.appendChild(el('section', { class: 'karte mittig' }, [
+      el('h2', { text: eintrag.art === 'foto' ? 'Bild aus dem Verlauf' : 'Zahl aus dem Verlauf' }),
+      eintrag.art === 'foto'
+        ? el('img', { class: 'ergebnisbild', src: eintrag.ergebnis, alt: 'Ergebnisbild' })
+        : el('p', { class: 'grossezahl', text: eintrag.ergebnis }),
+      eintrag.art === 'foto'
+        ? el('a', { class: 'knopf', href: eintrag.ergebnis, download: 'tresor-bild.jpg' }, 'Bild sichern')
+        : null,
+      el('p', { class: 'flaut klein', text: 'Erstellt ' + util.zeitpunkt(eintrag.erstellt)
+        + ', geöffnet ' + util.zeitpunkt(eintrag.geoeffnet) + '.' }),
+      el('button', { class: 'knopf gefahr', type: 'button', text: 'Aus dem Verlauf löschen', onclick: function () {
+        if (!global.confirm('Diesen Eintrag endgültig löschen?')) return;
+        T.speicher.archivLoeschen(id);
+        zurueck();
+      } })
+    ]));
+  }
+
   function neuAnlegen() {
-    if (!global.confirm('Neuen Tresor anlegen? Der bestehende wird gelöscht.')) return;
+    if (!global.confirm('Neuen Tresor anlegen? Das Ergebnis bleibt im Verlauf, der Tresor selbst wird gelöscht.')) return;
     T.speicher.loeschen();
     zustand.tresor = null;
     zustand.geheimnis = '';
@@ -930,9 +1133,30 @@
         aufgabe.zustand.fristAbgelaufen = false;
         buehne.appendChild(el('p', { class: 'warnung', text: 'Die geheime Frist war abgelaufen. Neuer Anlauf, neue Frist.' }));
       }
+    } else if (!fragment.schloss) {
+      leichteFreigabe(buehne, fragment);
     } else {
       zeitschlossBuehne(buehne, fragment);
     }
+  }
+
+  /* Leichter Modus: kein Zeitschloss, das Fragment geht sofort auf. */
+  function leichteFreigabe(buehne, fragment) {
+    util.leeren(buehne);
+    buehne.appendChild(el('p', { class: 'aufgabe-titel', text: 'Fragment freigeben' }));
+    buehne.appendChild(el('p', { class: 'aufgabe-hinweis', text:
+      'Alle Aufgaben dieses Fragments sind erledigt. Dieser Tresor läuft ohne Zeitschloss, es geht also sofort weiter.' }));
+    var knopf = el('button', { class: 'knopf gross haupt', type: 'button', text: 'Freigeben' });
+    buehne.appendChild(knopf);
+    knopf.addEventListener('click', function () {
+      knopf.disabled = true;
+      T.tresorLogik.fragmentOeffnen(zustand.tresor, fragment, null).then(function () {
+        sichern(true);
+        zeichneTresor();
+      }).catch(function (fehler) {
+        buehne.appendChild(el('p', { class: 'warnung', text: 'Entschlüsseln fehlgeschlagen: ' + fehler.message }));
+      });
+    });
   }
 
   /* Gesperrte Aufgabe: Strafzeit absitzen. */

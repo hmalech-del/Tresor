@@ -313,3 +313,40 @@ select, input[type=file] {
   position: absolute; top: -3px; width: 2px; height: 16px;
   background: var(--blau); border-radius: 2px;
 }
+
+/* ---- Bild als Geheimnis ---- */
+
+.stufenreihe { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+.stufenbild { margin: 0; text-align: center; }
+.stufenbild img {
+  width: 72px; height: 72px; object-fit: cover; border-radius: 8px;
+  border: 1px solid var(--rand); background: var(--grund);
+}
+.stufenbild figcaption { font-size: 11px; color: var(--flaut); margin-top: 3px; }
+
+.bildbuehne { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.stufenbild-gross {
+  max-width: 100%; max-height: 320px; border-radius: 10px;
+  border: 1px solid var(--rand); background: var(--grund);
+}
+.bildplatzhalter {
+  width: 100%; height: 180px; display: flex; align-items: center; justify-content: center;
+  font-size: 48px; color: #3c4756; background: var(--grund);
+  border: 1px solid var(--rand); border-radius: 10px;
+}
+.ergebnisbild { max-width: 100%; max-height: 420px; border-radius: 10px; margin: 10px 0; }
+
+/* ---- Verlauf ---- */
+
+.verlaufliste { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.verlaufzeile {
+  display: flex; align-items: center; gap: 12px; padding: 8px;
+  border: 1px solid var(--rand); border-radius: 10px; background: var(--grund-hoch);
+}
+.verlaufbild { width: 48px; height: 48px; object-fit: cover; border-radius: 6px; }
+.verlaufzahl {
+  width: 48px; text-align: center; font-variant-numeric: tabular-nums;
+  color: var(--messing); font-size: 13px; letter-spacing: .04em; word-break: break-all;
+}
+.verlaufinfo { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.verlaufinfo strong { font-size: 14px; }

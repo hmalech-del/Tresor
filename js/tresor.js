@@ -19,6 +19,7 @@
       aufgabenProFragment: 2,
       rechenzeit: 2,
       reihenfolge: 'links',
+      sicherheit: 'rechenzeit',      // 'rechenzeit' = Zeitschloss, 'leicht' = nur Oberfläche
       strafe: 0,
       geheimeFrist: {
         aktiv: false,
@@ -31,6 +32,12 @@
       },
       notausgang: { minSekunden: 0, maxSekunden: 0, wartetage: 0 }
     };
+  }
+
+  function zufallsHex(bytes) {
+    var werte = new Uint8Array(bytes);
+    global.crypto.getRandomValues(werte);
+    return util.bytesZuHex(werte);
   }
 
   function aufRaster(schritte) {
@@ -157,7 +164,9 @@
         return teil + T.herausforderungen.hole(aufgabe.id).schaetzung(aufgabe.params);
       }, 0);
     }, 0);
-    summe += laenge * RECHENZEIT_STUFEN[util.grenze(konfig.rechenzeit, 1, 5) - 1];
+    if (konfig.sicherheit !== 'leicht') {
+      summe += laenge * RECHENZEIT_STUFEN[util.grenze(konfig.rechenzeit, 1, 5) - 1];
+    }
     var mitZeitfenster = plan.some(function (fragment) {
       return fragment.aufgaben.some(function (a) { return a.id === 'zeitfenster'; });
     });
@@ -169,23 +178,28 @@
    * gebundenen Aufgaben in den Schlüssel rechnen und die Ziffer damit
    * verschlüsseln. Danach sind Klartext und Lösungen weg. */
   async function erstellen(optionen) {
-    var geheimnis = String(optionen.geheimnis);
+    var art = optionen.art || 'zahl';
+    var teile = optionen.teile;                 // ein Stück Geheimnis je Fragment
     var konfig = optionen.konfig;
     var melde = optionen.beiFortschritt || function () {};
     var saat = T.neueSaat();
     var zufall = new T.Zufall(saat);
-    var laenge = geheimnis.length;
+    var laenge = teile.length;
+    var mitRechenzeit = konfig.sicherheit !== 'leicht';
 
-    melde({ phase: 'messen', text: 'Rechenleistung dieses Geräts messen ...' });
-    var rate = await T.zeitschloss.messen();
-
-    var sekundenProSchloss = RECHENZEIT_STUFEN[util.grenze(konfig.rechenzeit, 1, 5) - 1];
-    var schritte = Math.max(50000, Math.round(rate * sekundenProSchloss));
+    var rate = 0, sekundenProSchloss = 0, schritte = 0;
+    if (mitRechenzeit) {
+      melde({ phase: 'messen', text: 'Rechenleistung dieses Geräts messen ...' });
+      rate = await T.zeitschloss.messen();
+      sekundenProSchloss = RECHENZEIT_STUFEN[util.grenze(konfig.rechenzeit, 1, 5) - 1];
+      schritte = Math.max(50000, Math.round(rate * sekundenProSchloss));
+    }
 
     var plan = aufgabenPlan(zufall, konfig, laenge);
-    var positionen = konfig.reihenfolge === 'zufall'
-      ? zufall.mische(geheimnis.split('').map(function (_, i) { return i; }))
-      : geheimnis.split('').map(function (_, i) { return i; });
+    var reihe = teile.map(function (_, i) { return i; });
+    // Nur Ziffern lassen sich in beliebiger Reihenfolge freigeben; Bildstufen
+    // bauen aufeinander auf und kommen immer von grob nach fein.
+    var positionen = (art === 'zahl' && konfig.reihenfolge === 'zufall') ? zufall.mische(reihe) : reihe;
 
     var fragmente = [];
     for (var i = 0; i < laenge; i++) {
@@ -207,8 +221,15 @@
 
       var antwortSalz = T.krypto.neuesSalz();
       var material = await T.krypto.antwortMaterial(eintrag.loesungen, antwortSalz, T.krypto.ITERATIONEN);
-      var puzzle = await T.zeitschloss.erzeugen(schritte);
-      var paket = await T.krypto.verschluesseln(i, puzzle.b, geheimnis.charAt(positionen[i]), material);
+
+      /* Im leichten Modus gibt es kein Zeitschloss: Der Schlüsselanteil liegt
+       * offen daneben. Das kostet keinen Strom und hält niemanden auf, der den
+       * Speicher liest - die Aufgaben bleiben trotzdem eine Hürde, und
+       * antwortgebundene Rätsel wirken weiter. */
+      var schluessel = mitRechenzeit ? null : zufallsHex(32);
+      var puzzle = mitRechenzeit ? await T.zeitschloss.erzeugen(schritte) : null;
+      var geheimteil = teile[positionen[i]];
+      var paket = await T.krypto.verschluesseln(i, mitRechenzeit ? puzzle.b : schluessel, geheimteil, material);
 
       fragmente.push({
         index: i,
@@ -216,13 +237,14 @@
         aufgaben: eintrag.aufgaben,
         antwortSalz: antwortSalz,
         iterationen: T.krypto.ITERATIONEN,
-        schloss: { n: puzzle.n, a: puzzle.a, t: puzzle.t },   // b wird bewusst nicht gespeichert
+        schluessel: schluessel,                               // nur im leichten Modus
+        schloss: puzzle ? { n: puzzle.n, a: puzzle.a, t: puzzle.t } : null,   // b wird bewusst nicht gespeichert
         paket: paket,
-        stand: { erledigt: 0, x: puzzle.a },
+        stand: puzzle ? { erledigt: 0, x: puzzle.a } : { erledigt: 0, x: null },
         offen: false,
-        ziffer: null
+        inhalt: null
       });
-      puzzle.b = null;
+      if (puzzle) puzzle.b = null;
     }
 
     /* Notausgang: ein zweites, unabhängiges Zeitschloss über das ganze
@@ -237,7 +259,7 @@
     var exitKonfig = konfig.notausgang || {};
     var exitMin = Math.min(exitKonfig.minSekunden || 0, exitKonfig.maxSekunden || 0);
     var exitMax = Math.max(exitKonfig.minSekunden || 0, exitKonfig.maxSekunden || 0);
-    if (exitMax) {
+    if (exitMax && mitRechenzeit) {
       melde({ phase: 'notausgang', text: 'Notausgang schmieden ...', anteil: 1 });
       var untergrenze = aufRaster(rate * Math.max(exitMin, 1));
       var obergrenze = Math.max(untergrenze + PRUEFSCHRITT, aufRaster(rate * exitMax));
@@ -255,7 +277,7 @@
           obergrenze: obergrenze,
           pruefschritt: PRUEFSCHRITT
         },
-        paket: await T.krypto.verschluesseln('notausgang', exitPuzzle.b, geheimnis, null),
+        paket: await T.krypto.verschluesseln('notausgang', exitPuzzle.b, JSON.stringify(teile), null),
         stand: { erledigt: 0, x: exitPuzzle.a },
         benutzt: false
       };
@@ -278,7 +300,9 @@
 
     melde({ phase: 'fertig', text: 'Verriegelt.', anteil: 1 });
     return {
-      version: 2,
+      version: 3,
+      id: 't' + Date.now().toString(36) + '-' + Math.floor(Math.random() * 1e6).toString(36),
+      art: art,
       frist: frist,
       erstellt: Date.now(),
       saat: saat,
@@ -313,9 +337,18 @@
   function sichtbaresGeheimnis(tresor) {
     var zeichen = new Array(tresor.laenge).fill(null);
     tresor.fragmente.forEach(function (f) {
-      if (f.offen && f.ziffer !== null) zeichen[f.position] = f.ziffer;
+      if (f.offen && f.inhalt !== null) zeichen[f.position] = f.inhalt;
     });
     return zeichen;
+  }
+
+  /* Bild: die schärfste bereits freigegebene Stufe. */
+  function besteStufe(tresor) {
+    var bestes = null;
+    tresor.fragmente.forEach(function (f) {
+      if (f.offen && f.inhalt) bestes = { stufe: f.position + 1, bild: f.inhalt };
+    });
+    return bestes;
   }
 
   /* Ist das Zeitschloss geknackt, wird die Ziffer entschlüsselt. Die Antworten
@@ -327,26 +360,46 @@
     }).map(function (aufgabe) { return aufgabe.zustand.antwort; });
     var material = await T.krypto.antwortMaterial(
       antworten, fragment.antwortSalz, fragment.iterationen || T.krypto.ITERATIONEN);
-    fragment.ziffer = await T.krypto.entschluesseln(fragment.index, bHex, fragment.paket, material);
+    fragment.inhalt = await T.krypto.entschluesseln(
+      fragment.index, fragment.schluessel || bHex, fragment.paket, material);
     fragment.offen = true;
-    fragment.stand.erledigt = fragment.schloss.t;
+    if (fragment.schloss) fragment.stand.erledigt = fragment.schloss.t;
     fragment.aufgaben.forEach(function (aufgabe) {
       if (aufgabe.zustand && aufgabe.zustand.antwort) aufgabe.zustand.antwort = true;
     });
-    return fragment.ziffer;
+    return fragment.inhalt;
   }
 
   /* Notausgang geknackt: das ganze Geheimnis wird auf die Fragmente verteilt. */
   async function notausgangOeffnen(tresor, bHex) {
-    var geheimnis = await T.krypto.entschluesseln('notausgang', bHex, tresor.notausgang.paket, null);
+    var teile = JSON.parse(await T.krypto.entschluesseln('notausgang', bHex, tresor.notausgang.paket, null));
     tresor.fragmente.forEach(function (fragment) {
       if (fragment.offen) return;
-      fragment.ziffer = geheimnis.charAt(fragment.position);
+      fragment.inhalt = teile[fragment.position];
       fragment.offen = true;
-      fragment.stand.erledigt = fragment.schloss.t;
+      if (fragment.schloss) fragment.stand.erledigt = fragment.schloss.t;
     });
     tresor.notausgang.benutzt = true;
-    return geheimnis;
+    return teile;
+  }
+
+  /* Eintrag für den Verlauf: das Ergebnis, damit ein neuer Tresor oder ein
+   * geschlossener Tab es nicht mitnimmt. Bei Bildern wird nur die schärfste
+   * Stufe aufbewahrt. */
+  function archivEintrag(tresor) {
+    var ergebnis = tresor.art === 'foto'
+      ? (besteStufe(tresor) || {}).bild || ''
+      : sichtbaresGeheimnis(tresor).join('');
+    return {
+      id: tresor.id || ('t' + tresor.erstellt),
+      art: tresor.art || 'zahl',
+      erstellt: tresor.erstellt,
+      geoeffnet: Date.now(),
+      stufen: tresor.laenge,
+      sicherheit: (tresor.konfig || {}).sicherheit || 'rechenzeit',
+      notausgangBenutzt: !!(tresor.notausgang && tresor.notausgang.benutzt),
+      ergebnis: ergebnis
+    };
   }
 
   /* Ist die tresorweite Höchstzeit vorbei? Gilt nur, solange noch etwas
@@ -393,6 +446,8 @@
     offeneAufgabe: offeneAufgabe,
     alleOffen: alleOffen,
     sichtbaresGeheimnis: sichtbaresGeheimnis,
+    besteStufe: besteStufe,
+    archivEintrag: archivEintrag,
     fragmentOeffnen: fragmentOeffnen,
     notausgangOeffnen: notausgangOeffnen,
     strafzeit: strafzeit,

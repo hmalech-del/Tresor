@@ -4,6 +4,8 @@
   var T = global.Tresor || (global.Tresor = {});
   var SCHLUESSEL = 'tresor.v1';
   var ZULETZT = 'tresor.zuletzt-benutzt';
+  var ARCHIV = 'tresor.archiv.v1';
+  var ARCHIV_MAX = 12;
 
   function laden() {
     try {
@@ -35,8 +37,50 @@
     } catch (fehler) {}
   }
 
+  /* ---------------- Verlauf ----------------
+   * Geöffnete Tresore wandern hierher, damit ein geschlossener Tab oder ein
+   * neuer Tresor das Ergebnis nicht mitnimmt. Was hier liegt, ist bewusst
+   * unverschlüsselt - der Tresor war ja offen. */
+
+  function archivLaden() {
+    try { return JSON.parse(global.localStorage.getItem(ARCHIV) || '[]'); }
+    catch (fehler) { return []; }
+  }
+
+  function archivSichern(liste) {
+    try { global.localStorage.setItem(ARCHIV, JSON.stringify(liste)); return true; }
+    catch (fehler) { return false; }
+  }
+
+  function archivErgaenzen(eintrag) {
+    var liste = archivLaden().filter(function (alt) { return alt.id !== eintrag.id; });
+    liste.unshift(eintrag);
+    while (liste.length > ARCHIV_MAX) liste.pop();
+    // Bilder sind groß: notfalls ältere Einträge opfern, statt gar nichts zu sichern
+    while (liste.length && !archivSichern(liste)) liste.pop();
+    return liste.length > 0;
+  }
+
+  function archivLoeschen(id) {
+    archivSichern(archivLaden().filter(function (eintrag) { return eintrag.id !== id; }));
+  }
+
+  function platzbedarf() {
+    var summe = 0;
+    try {
+      for (var i = 0; i < global.localStorage.length; i++) {
+        var name = global.localStorage.key(i);
+        if (name.indexOf('tresor.') !== 0) continue;
+        summe += (global.localStorage.getItem(name) || '').length;
+      }
+    } catch (fehler) {}
+    return summe;
+  }
+
   T.speicher = {
     laden: laden, sichern: sichern, loeschen: loeschen,
-    zuletztBenutzt: zuletztBenutzt, merkeBenutzt: merkeBenutzt
+    zuletztBenutzt: zuletztBenutzt, merkeBenutzt: merkeBenutzt,
+    archivLaden: archivLaden, archivErgaenzen: archivErgaenzen,
+    archivLoeschen: archivLoeschen, platzbedarf: platzbedarf
   };
 })(typeof window !== 'undefined' ? window : globalThis);
