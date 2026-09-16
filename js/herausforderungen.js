@@ -412,16 +412,43 @@
       var p = kontext.params;
       var b = buehne(kontext, 'Gleichmaß',
         'Schiebe den Regler von links nach rechts - genau ' + util.dauer(p.sekunden) + ' lang, ohne zu hetzen und ohne stehen zu bleiben.');
+
+      /* Alles, was man im Blick behalten muss, liegt ueber dem Regler: Der
+       * Daumen verdeckt sonst genau die Stelle, auf die es ankommt. */
+      var status = el('div', { class: 'taktstatus', text: 'bereit' });
+      var fenster = el('i', { class: 'taktfenster' });
+      var marke = el('i', { class: 'taktmarke' });
+      var bahn = el('div', { class: 'taktbahn' }, [fenster, marke]);
       var regler = el('input', { type: 'range', min: '0', max: '1000', value: '0', class: 'gleichmass' });
+      b.koerper.appendChild(status);
+      b.koerper.appendChild(bahn);
       b.koerper.appendChild(regler);
-      var spur = el('div', { class: 'sollspur' }, [el('i')]);
-      b.koerper.appendChild(spur);
       var fortschritt = balken(b.koerper, 'noch nicht gestartet');
       var laeuft = false, verstrichen = 0;
 
+      function zeichneBahn(ist, soll) {
+        var von = util.grenze(soll - p.toleranz, 0, 1);
+        var bis = util.grenze(soll + p.toleranz, 0, 1);
+        fenster.style.left = (von * 100) + '%';
+        fenster.style.width = ((bis - von) * 100) + '%';
+        marke.style.left = (util.grenze(ist, 0, 1) * 100) + '%';
+      }
+
+      function setzeStatus(ist, soll) {
+        var abstand = ist - soll;
+        var anteil = Math.abs(abstand) / p.toleranz;
+        var text, art;
+        if (anteil < 0.5) { text = 'im Takt'; art = 'gut'; }
+        else if (abstand > 0) { text = anteil < 0.85 ? 'etwas zu schnell' : 'zu schnell!'; art = anteil < 0.85 ? 'warnung' : 'fehler'; }
+        else { text = anteil < 0.85 ? 'etwas zu langsam' : 'zu langsam!'; art = anteil < 0.85 ? 'warnung' : 'fehler'; }
+        status.textContent = text;
+        status.className = 'taktstatus ist-' + art;
+      }
+
       function zurueck(grund) {
         laeuft = false; verstrichen = 0; regler.value = '0';
-        spur.firstChild.style.left = '0%';
+        status.textContent = 'bereit'; status.className = 'taktstatus';
+        zeichneBahn(0, 0);
         b.sag(grund + ' Von vorn.', 'fehler');
         if (kontext.fehlschlag(grund)) return;
         fortschritt.setze(0); fortschritt.text('noch nicht gestartet');
@@ -431,14 +458,17 @@
         if (!laeuft && Number(regler.value) > 0) { laeuft = true; b.sag('Ruhig weiter.', 'laeuft'); }
       });
 
+      zeichneBahn(0, 0);
+
       var stopp = takt(function (delta) {
         var ist = Number(regler.value) / 1000;
         if (!laeuft) return;
         verstrichen += delta;
         var soll = verstrichen / p.sekunden;
-        spur.firstChild.style.left = util.grenze(soll, 0, 1) * 100 + '%';
+        zeichneBahn(ist, soll);
+        setzeStatus(ist, soll);
         fortschritt.setze(ist);
-        fortschritt.text('Abweichung ' + Math.round(Math.abs(ist - soll) * 100) + ' %');
+        fortschritt.text('noch ' + util.dauer(Math.max(0, p.sekunden - verstrichen)));
         if (soll > 1.0 + p.toleranz) { zurueck('Zu langsam.'); return; }
         if (ist - soll > p.toleranz) { zurueck('Zu schnell.'); return; }
         if (soll - ist > p.toleranz && verstrichen > 1.5) { zurueck('Zu langsam.'); return; }
@@ -647,7 +677,6 @@
 
   dimensionRegistrieren({ id: 'geduld', name: 'Geduld', beschreibung: 'Aushalten, stillhalten, warten können.', fertig: true });
   dimensionRegistrieren({ id: 'zeit', name: 'Zeit', beschreibung: 'Sperrfristen, Tageszeiten, echte Rechenzeit.', fertig: true });
-  dimensionRegistrieren({ id: 'konzentration', name: 'Konzentration', beschreibung: 'Simon, N-Back, Stroop.', fertig: false });
 
   T.herausforderungen = {
     katalog: katalog,

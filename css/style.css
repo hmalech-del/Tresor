@@ -1,15 +1,20 @@
 :root {
-  --grund: #11151c;
-  --grund-hoch: #171d26;
-  --karte: #1c232e;
-  --rand: #2b3542;
-  --text: #e8edf4;
-  --flaut: #9aa8ba;
-  --messing: #d9a441;
-  --messing-hell: #f0c46a;
-  --gruen: #57c08a;
-  --rot: #e2685f;
-  --blau: #6aa6e8;
+  /* Tresortür-Palette: tiefes Stahlblau, Neon-Cyan für die Mechanik,
+     Gold ausschließlich für das Geheimnis selbst. */
+  --grund: #08111a;
+  --grund-hoch: #101c28;
+  --karte: #122030;
+  --rand: #24384b;
+  --text: #e4f1f8;
+  --flaut: #8ca4b8;
+  --neon: #2fe3e8;
+  --neon-hell: #8af6f9;
+  --neon-schleier: rgba(47, 227, 232, .16);
+  --gold: #f2b544;
+  --gold-hell: #ffd27a;
+  --gruen: #3fd6a0;
+  --rot: #ff6f6b;
+  --blau: #5aa9ff;
   --radius: 14px;
 }
 
@@ -17,7 +22,9 @@
 
 body {
   margin: 0;
-  background: radial-gradient(1200px 600px at 50% -200px, #1b2430, var(--grund));
+  background:
+    radial-gradient(900px 420px at 50% -120px, rgba(47, 227, 232, .10), transparent 70%),
+    radial-gradient(1200px 700px at 50% -220px, #12263a, var(--grund));
   color: var(--text);
   font: 16px/1.55 "Segoe UI", Roboto, -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
   min-height: 100vh;
@@ -29,7 +36,8 @@ body {
   font-size: 30px;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--messing);
+  color: var(--neon-hell);
+  text-shadow: 0 0 18px rgba(47, 227, 232, .55), 0 0 42px rgba(47, 227, 232, .25);
 }
 .kopf-inhalt p { margin: 6px 0 0; }
 
@@ -73,22 +81,22 @@ body {
   cursor: pointer;
   transition: border-color .15s, background .15s, transform .05s;
 }
-.knopf:hover:not(:disabled) { border-color: var(--messing); }
+.knopf:hover:not(:disabled) { border-color: var(--neon); }
 .knopf:active:not(:disabled) { transform: translateY(1px); }
 .knopf:disabled { opacity: .45; cursor: not-allowed; }
 .knopf.gross { padding: 14px 24px; font-size: 16px; width: 100%; max-width: 340px; }
-.knopf.haupt { background: var(--messing); border-color: var(--messing); color: #20170a; font-weight: 600; }
-.knopf.haupt:hover:not(:disabled) { background: var(--messing-hell); }
+.knopf.haupt { background: var(--neon); border-color: var(--neon); color: #06212a; font-weight: 600; }
+.knopf.haupt:hover:not(:disabled) { background: var(--neon-hell); }
 .knopf.gefahr { border-color: rgba(226, 104, 95, .5); color: #f0a7a1; margin-top: 10px; }
 
-input[type=range] { width: 100%; accent-color: var(--messing); }
+input[type=range] { width: 100%; accent-color: var(--neon); }
 select, input[type=file] {
   background: var(--grund-hoch); color: var(--text);
   border: 1px solid var(--rand); border-radius: 8px; padding: 8px 10px; font-size: 15px;
 }
 .feld { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; margin-bottom: 14px; }
 .feld label { grid-column: 1 / -1; font-size: 14px; color: var(--flaut); }
-.feld output { font-variant-numeric: tabular-nums; color: var(--messing); min-width: 70px; text-align: right; }
+.feld output { font-variant-numeric: tabular-nums; color: var(--neon); min-width: 70px; text-align: right; }
 .nebenlabel { display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 14px; color: var(--flaut); }
 
 .reiter { display: flex; gap: 8px; margin: 12px 0; }
@@ -96,7 +104,7 @@ select, input[type=file] {
   flex: 1; padding: 9px; border-radius: 9px; cursor: pointer;
   background: var(--grund-hoch); border: 1px solid var(--rand); color: var(--flaut); font-size: 15px;
 }
-.reiter-knopf.ist-aktiv { color: var(--text); border-color: var(--messing); background: rgba(217, 164, 65, .1); }
+.reiter-knopf.ist-aktiv { color: var(--text); border-color: var(--neon); background: rgba(47, 227, 232, .1); }
 
 /* ---- Ziffern ---- */
 
@@ -107,7 +115,7 @@ select, input[type=file] {
   border: 1px solid var(--rand); border-radius: 10px;
   font-variant-numeric: tabular-nums;
 }
-.zifferfeld:focus { outline: none; border-color: var(--messing); }
+.zifferfeld:focus { outline: none; border-color: var(--neon); }
 .zifferfeld.ist-unsicher { border-color: var(--rot); }
 
 .fotoziffer { display: flex; flex-direction: column; align-items: center; gap: 6px; }
@@ -123,12 +131,14 @@ select, input[type=file] {
 }
 .bandziffer.ist-zu { color: #4a5768; background: var(--grund); }
 .bandziffer.ist-offen {
-  color: #20170a; background: linear-gradient(180deg, var(--messing-hell), var(--messing));
-  border-color: var(--messing); font-weight: 700;
+  color: #2a1d05; background: linear-gradient(180deg, var(--gold-hell), var(--gold));
+  border-color: var(--gold); font-weight: 700;
+  box-shadow: 0 0 18px rgba(242, 181, 68, .35);
   animation: auftauchen .5s ease-out;
 }
 @keyframes auftauchen { from { transform: rotateX(90deg); opacity: 0; } to { transform: none; opacity: 1; } }
-.grossezahl { font-size: 44px; letter-spacing: .18em; color: var(--messing); font-variant-numeric: tabular-nums; margin: 10px 0; }
+.grossezahl { font-size: 44px; letter-spacing: .18em; color: var(--gold); font-variant-numeric: tabular-nums; margin: 10px 0;
+  text-shadow: 0 0 22px rgba(242, 181, 68, .35); }
 
 /* ---- Dimensionen ---- */
 
@@ -142,7 +152,7 @@ select, input[type=file] {
 .dimension-kopf .zaehler { margin-left: auto; font-size: 12px; color: var(--flaut); }
 .dimension-karte p { margin: 6px 0 0; font-size: 14px; }
 .stufenzeile { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; margin-top: 10px; font-size: 14px; }
-.stufenzeile output { color: var(--messing); }
+.stufenzeile output { color: var(--neon); }
 .typenliste { margin: 10px 0 0; padding-left: 18px; font-size: 13px; color: var(--flaut); }
 .typenliste li { margin: 2px 0; }
 
@@ -150,11 +160,11 @@ select, input[type=file] {
   display: flex; flex-direction: column; gap: 2px; align-items: center;
   border: 1px dashed var(--rand); border-radius: 12px; padding: 14px; margin-top: 4px;
 }
-.schaetzkasten strong { font-size: 22px; color: var(--messing); }
+.schaetzkasten strong { font-size: 22px; color: var(--neon); }
 
 /* ---- Aufgaben ---- */
 
-.aufgabenkarte { border-color: var(--messing); box-shadow: 0 0 0 1px rgba(217,164,65,.15), 0 14px 40px rgba(0,0,0,.35); }
+.aufgabenkarte { border-color: var(--neon); box-shadow: 0 0 0 1px rgba(47,227,232,.18), 0 14px 40px rgba(0,0,0,.35); }
 .aufgaben-kopf { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 10px; }
 .aufgaben-buehne { min-height: 240px; display: flex; flex-direction: column; }
 .aufgabe-titel { margin: 0 0 4px; font-size: 19px; font-weight: 600; }
@@ -166,7 +176,7 @@ select, input[type=file] {
 .aufgabe-meldung.ist-laeuft { color: var(--blau); }
 
 .balken { width: 100%; max-width: 420px; height: 10px; background: var(--grund); border: 1px solid var(--rand); border-radius: 99px; overflow: hidden; }
-.balken i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--messing), var(--messing-hell)); transition: width .1s linear; }
+.balken i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--neon), var(--neon-hell)); transition: width .1s linear; }
 .balken-text { font-size: 13px; color: var(--flaut); font-variant-numeric: tabular-nums; }
 
 .halteknopf {
@@ -175,11 +185,11 @@ select, input[type=file] {
   font-size: 18px; letter-spacing: .15em; cursor: pointer; touch-action: none; user-select: none;
   transition: transform .1s, border-color .15s, background .15s;
 }
-.halteknopf.ist-aktiv { border-color: var(--messing); background: rgba(217,164,65,.14); transform: scale(.96); }
+.halteknopf.ist-aktiv { border-color: var(--neon); background: rgba(47,227,232,.14); transform: scale(.96); }
 
 .atemkreis {
   width: 180px; height: 180px; border-radius: 50%;
-  border: 2px solid var(--messing); background: rgba(217,164,65,.08);
+  border: 2px solid var(--neon); background: rgba(47,227,232,.10);
   display: flex; align-items: center; justify-content: center;
   transform: scale(.55); transition: transform .12s linear;
   cursor: pointer; touch-action: none; user-select: none;
@@ -192,15 +202,35 @@ select, input[type=file] {
   font-size: 20px; letter-spacing: .1em; cursor: pointer; touch-action: none;
   transition: background .08s, color .08s, border-color .08s;
 }
-.signalfeld.ist-an { background: var(--messing); border-color: var(--messing-hell); color: #20170a; font-weight: 700; }
+.signalfeld.ist-an { background: var(--neon); border-color: var(--neon-hell); color: #06212a; font-weight: 700; }
 
-.gleichmass { max-width: 420px; }
-.sollspur { position: relative; width: 100%; max-width: 420px; height: 6px; }
-.sollspur i { position: absolute; top: 0; width: 3px; height: 10px; background: var(--blau); border-radius: 2px; transition: left .1s linear; }
+/* Gleichmaß: Sollfenster und Ist-Marke liegen über dem Regler, damit der
+   Daumen sie nicht verdeckt. */
+.taktstatus {
+  font-size: 20px; letter-spacing: .04em; color: var(--flaut); min-height: 26px;
+}
+.taktstatus.ist-gut { color: var(--gruen); }
+.taktstatus.ist-warnung { color: var(--gold); }
+.taktstatus.ist-fehler { color: var(--rot); }
+.taktbahn {
+  position: relative; width: 100%; max-width: 420px; height: 30px;
+  background: var(--grund); border: 1px solid var(--rand); border-radius: 10px; overflow: hidden;
+}
+.taktfenster {
+  position: absolute; top: 0; bottom: 0; left: 0; width: 0;
+  background: rgba(87, 192, 138, .22); border-left: 1px solid rgba(87, 192, 138, .6);
+  border-right: 1px solid rgba(87, 192, 138, .6);
+}
+.taktmarke {
+  position: absolute; top: 0; bottom: 0; width: 4px; margin-left: -2px;
+  background: var(--text); border-radius: 2px;
+}
+.gleichmass { max-width: 420px; height: 34px; }
+.gleichmass::-webkit-slider-thumb { height: 34px; width: 34px; }
 
 .blindfeld { font-size: 28px; letter-spacing: .5em; color: #3c4756; }
 
-.countdown { font-size: 40px; font-variant-numeric: tabular-nums; letter-spacing: .05em; color: var(--messing); text-align: center; }
+.countdown { font-size: 40px; font-variant-numeric: tabular-nums; letter-spacing: .05em; color: var(--neon); text-align: center; }
 
 .checkliste { list-style: none; padding: 0; margin: 4px 0 0; font-size: 13px; color: var(--flaut); text-align: center; }
 
@@ -208,7 +238,7 @@ select, input[type=file] {
 
 .fragmentliste { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
 .fragment { border: 1px solid var(--rand); border-radius: 12px; padding: 10px 12px; background: var(--grund-hoch); }
-.fragment.ist-aktuell { border-color: var(--messing); }
+.fragment.ist-aktuell { border-color: var(--neon); }
 .fragment.ist-offen { opacity: .65; }
 .fragment-kopf { display: flex; justify-content: space-between; align-items: baseline; }
 .fragment-kopf .status { font-size: 12px; color: var(--flaut); }
@@ -232,10 +262,10 @@ select, input[type=file] {
   border: 1px solid var(--rand); border-radius: 10px; padding: 12px 14px; font-size: 18px;
   letter-spacing: .06em;
 }
-.antwortfeld:focus { outline: none; border-color: var(--messing); }
+.antwortfeld:focus { outline: none; border-color: var(--neon); }
 
-.chiffre { font-size: 30px; letter-spacing: .3em; color: var(--messing); text-align: center; word-break: break-word; }
-.morse { font-size: 24px; letter-spacing: .12em; color: var(--messing); text-align: center; font-family: "Courier New", monospace; word-break: break-word; }
+.chiffre { font-size: 30px; letter-spacing: .3em; color: var(--neon); text-align: center; word-break: break-word; }
+.morse { font-size: 24px; letter-spacing: .12em; color: var(--neon); text-align: center; font-family: "Courier New", monospace; word-break: break-word; }
 .morsetabelle {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 2px 8px;
   font-size: 12px; color: var(--flaut); font-family: "Courier New", monospace; width: 100%;
@@ -244,19 +274,19 @@ select, input[type=file] {
 
 .bedingungen, .aussagen, .gleichungen { margin: 0; padding-left: 20px; font-size: 15px; line-height: 1.7; align-self: flex-start; }
 .gleichungen { list-style: none; padding-left: 0; font-size: 19px; letter-spacing: .05em; }
-.frage { font-size: 24px; color: var(--messing); letter-spacing: .05em; }
+.frage { font-size: 24px; color: var(--neon); letter-spacing: .05em; }
 
 .folge { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 .folgeglied {
   min-width: 56px; padding: 10px 6px; text-align: center; border-radius: 10px;
   background: var(--grund); border: 1px solid var(--rand); font-size: 20px; font-variant-numeric: tabular-nums;
 }
-.folgeglied.ist-gesucht { border-color: var(--messing); color: var(--messing); }
+.folgeglied.ist-gesucht { border-color: var(--neon); color: var(--neon); }
 
 .mastermind-liste { list-style: none; margin: 0; padding: 0; width: 100%; max-width: 300px; font-variant-numeric: tabular-nums; }
 .mastermind-liste li { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid var(--rand); }
 .mastermind-code { letter-spacing: .32em; font-size: 18px; }
-.mastermind-wertung { color: var(--messing); letter-spacing: .12em; }
+.mastermind-wertung { color: var(--neon); letter-spacing: .12em; }
 
 /* ---- Glück ---- */
 
@@ -268,8 +298,8 @@ select, input[type=file] {
 }
 .muenze {
   width: 96px; height: 96px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  font-size: 40px; color: #20170a; background: linear-gradient(160deg, var(--messing-hell), var(--messing));
-  border: 2px solid var(--messing-hell);
+  font-size: 40px; color: #2a1d05; background: linear-gradient(160deg, var(--gold-hell), var(--gold));
+  border: 2px solid var(--gold-hell);
 }
 .wahlzeile { display: flex; gap: 10px; }
 .kartentisch { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; width: 100%; max-width: 320px; }
@@ -277,24 +307,24 @@ select, input[type=file] {
   aspect-ratio: 2 / 3; border-radius: 8px; background: var(--grund-hoch); color: var(--flaut);
   border: 1px solid var(--rand); font-size: 20px; cursor: pointer;
 }
-.spielkarte.ist-gewinn { background: var(--messing); color: #20170a; border-color: var(--messing-hell); }
+.spielkarte.ist-gewinn { background: var(--gold); color: #2a1d05; border-color: var(--gold-hell); }
 .spielkarte.ist-niete { background: var(--grund); color: #4a5768; }
 
 .rad { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; }
-.radzeiger { color: var(--messing); font-size: 18px; }
+.radzeiger { color: var(--neon); font-size: 18px; }
 .radfelder { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
 .radfeld {
   min-width: 52px; padding: 10px 8px; text-align: center; border-radius: 8px;
   background: var(--grund); border: 1px solid var(--rand); font-size: 14px; color: var(--flaut);
 }
-.radfeld.ist-frei { border-color: var(--messing); color: var(--messing); }
-.radfeld.ist-aktiv { background: var(--messing); color: #20170a; border-color: var(--messing-hell); }
+.radfeld.ist-frei { border-color: var(--neon); color: var(--neon); }
+.radfeld.ist-aktiv { background: var(--neon); color: #06212a; border-color: var(--neon-hell); }
 
 /* ---- Zeitregeln ---- */
 
 .schalterzeile { display: flex; align-items: center; gap: 10px; margin: 14px 0 4px; cursor: pointer; }
 .doppelregler { display: flex; flex-direction: column; gap: 2px; }
-.fristmarke { color: var(--messing); font-size: 12px; }
+.fristmarke { color: var(--neon); font-size: 12px; }
 .schluesselmarke { font-size: 12px; }
 .notausgang-karte {
   border-style: dashed;
@@ -305,11 +335,11 @@ select, input[type=file] {
 .notausgang-karte .countdown { margin: 0; }
 .marke-glueck { color: #d08ad6; border-color: rgba(208,138,214,.4); }
 .marke-logik { color: #7fc7c0; border-color: rgba(127,199,192,.4); }
-.marke-raetsel { color: var(--messing); border-color: rgba(217,164,65,.4); }
+.marke-raetsel { color: var(--gold); border-color: rgba(242,181,68,.45); }
 
-.frist-karte { border-color: rgba(217, 164, 65, .35); }
-.frist-karte h2 { color: var(--messing); }
-.fristzeit { font-variant-numeric: tabular-nums; color: var(--messing); font-size: 20px; }
+.frist-karte { border-color: rgba(47, 227, 232, .35); }
+.frist-karte h2 { color: var(--neon); }
+.fristzeit { font-variant-numeric: tabular-nums; color: var(--neon); font-size: 20px; }
 
 .aufwandzeile { margin: 6px 0 0; grid-column: 1 / -1; }
 .schalterzeile.klein { margin: 10px 0 0; font-size: 13px; }
@@ -352,7 +382,52 @@ select, input[type=file] {
 .verlaufbild { width: 48px; height: 48px; object-fit: cover; border-radius: 6px; }
 .verlaufzahl {
   width: 48px; text-align: center; font-variant-numeric: tabular-nums;
-  color: var(--messing); font-size: 13px; letter-spacing: .04em; word-break: break-all;
+  color: var(--neon); font-size: 13px; letter-spacing: .04em; word-break: break-all;
 }
 .verlaufinfo { display: flex; flex-direction: column; flex: 1; min-width: 0; }
 .verlaufinfo strong { font-size: 14px; }
+
+/* ---- Konzentration ---- */
+
+.simongitter {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  width: 100%; max-width: 300px;
+}
+.simonfeld {
+  aspect-ratio: 1; border-radius: 14px; border: 2px solid var(--rand);
+  cursor: pointer; touch-action: none; opacity: .45; transition: opacity .12s, transform .12s, box-shadow .12s;
+}
+.simonfeld.ist-rot { background: #7a2b2b; }
+.simonfeld.ist-blau { background: #1f4d8a; }
+.simonfeld.ist-gruen { background: #1f6b52; }
+.simonfeld.ist-gelb { background: #7d6520; }
+.simonfeld.ist-an { opacity: 1; transform: scale(1.04); box-shadow: 0 0 24px rgba(255,255,255,.28); }
+
+.nbackzeichen {
+  width: 150px; height: 150px; display: flex; align-items: center; justify-content: center;
+  font-size: 64px; font-weight: 700; letter-spacing: .05em;
+  background: var(--grund); border: 1px solid var(--rand); border-radius: 16px; color: var(--text);
+  transition: border-color .15s, color .15s;
+}
+.nbackzeichen.ist-neu { border-color: var(--neon); color: var(--neon-hell); }
+
+.stroopwort {
+  font-size: 46px; font-weight: 800; letter-spacing: .08em; min-height: 60px;
+  display: flex; align-items: center;
+}
+.stroopwort.ist-rot { color: #ff6b6b; }
+.stroopwort.ist-blau { color: #5aa9ff; }
+.stroopwort.ist-gruen { color: #3fd6a0; }
+.stroopwort.ist-gelb { color: #f2d04a; }
+.stroopzeile { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; max-width: 320px; }
+.stroopknopf { width: 100%; }
+
+.zahlengitter { display: grid; gap: 6px; width: 100%; max-width: 320px; }
+.zahlenfeld {
+  aspect-ratio: 1; border-radius: 8px; border: 1px solid var(--rand);
+  background: var(--grund-hoch); color: var(--text); font-size: 17px;
+  font-variant-numeric: tabular-nums; cursor: pointer; touch-action: none;
+}
+.zahlenfeld.ist-weg { opacity: .28; border-color: transparent; background: var(--grund); }
+
+.marke-konzentration { color: #c49bff; border-color: rgba(196,155,255,.4); }

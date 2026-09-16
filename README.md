@@ -7,6 +7,11 @@ Stück wieder heraus – gegen Geduld, gegen Wartezeit und gegen echte Rechenzei
 Alles läuft im Browser: keine Server, kein Konto, keine Übertragung.
 Eine statische Seite, kein Build-Schritt, keine Abhängigkeiten.
 
+Die Oberfläche hält sich an eine Tresortür-Palette: tiefes Stahlblau als Grund,
+Neon-Cyan für alles Mechanische – Schlösser, Fortschritt, Knöpfe – und Gold
+ausschließlich für das Geheimnis selbst, also für freigegebene Ziffern und das
+fertige Ergebnis.
+
 ---
 
 ## Der Ablauf
@@ -192,7 +197,7 @@ Fragmente werden automatisch eine Stufe härter.
 | **Nichts tun** | Bildschirm offen lassen – jede Berührung, jeder Tabwechsel setzt zurück |
 | **Atemtakt** | Dem Atemrhythmus folgen und an jedem Wendepunkt tippen |
 | **Wachbleiben** | Auf unregelmäßige Signale innerhalb eines kurzen Fensters reagieren |
-| **Gleichmaß** | Einen Regler in vorgegebener Zeit gleichmäßig durchschieben |
+| **Gleichmaß** | Einen Regler in vorgegebener Zeit gleichmäßig durchschieben – Sollfenster und Statusanzeige liegen *über* dem Regler, damit der Daumen sie nicht verdeckt |
 | **Zeitgefühl** | Eine Dauer ohne Uhr auf wenige Prozent genau schätzen |
 
 ### Zeit
@@ -239,12 +244,23 @@ nachweislich **eindeutig** ist – bei Lügner und Waage per Durchprobieren alle
 Belegungen, beim Zahlenrätsel durch Sammeln von Bedingungen, bis genau ein
 Kandidat übrig bleibt.
 
-### Geplant
+### Konzentration
 
-Konzentration (Simon, N-Back, Stroop) ist in der Oberfläche vorgesehen. Eine
-neue Aufgabe ist ein Objekt mit vier Funktionen und einem
-`registrieren(...)`-Aufruf – gebundene Aufgaben liefern zusätzlich `loesung`
-und `normalisiere`, der Tresor streicht die Lösung vor dem Speichern:
+Nichts davon ist schwer – aber nebenbei geht es nicht.
+
+| Aufgabe | Worum es geht |
+|---|---|
+| **Tonfolge** | Simon: eine mit jeder Runde wachsende Folge nachtippen |
+| **N-Back** | Im Buchstabenstrom erkennen, wenn sich etwas nach n Schritten wiederholt |
+| **Stroop** | Die Schriftfarbe antippen, nicht das Wort |
+| **Zahlenjagd** | Schulte-Tabelle: 1 bis n² der Reihe nach finden, gegen die Uhr |
+
+### Eine eigene Aufgabe hinzufügen
+
+Alle sechs Dimensionen sind besetzt; weitere Aufgaben brauchen nur ein Objekt
+mit vier Funktionen und einen `registrieren(...)`-Aufruf – gebundene Aufgaben
+liefern zusätzlich `loesung` und `normalisiere`, der Tresor streicht die Lösung
+vor dem Speichern:
 
 ```js
 registrieren({
@@ -384,6 +400,7 @@ unverändert.
 | `js/aufgaben-glueck.js` | Würfel, Münze, Ziehung, Glücksrad |
 | `js/aufgaben-logik.js` | Zahlenfolge, Lügner, Waage, Mastermind |
 | `js/aufgaben-raetsel.js` | Chiffre, Morse, Anagramm, Zahlenrätsel |
+| `js/aufgaben-konzentration.js` | Tonfolge, N-Back, Stroop, Zahlenjagd |
 | `js/woerter.js` | Wortvorrat ohne Umlaute |
 | `js/tresor.js` | Aufgabenplan, Verriegeln, Freigabe |
 | `js/foto.js` | Ziffernerkennung im Bild, Zerlegung in Schärfestufen |
