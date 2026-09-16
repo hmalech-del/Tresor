@@ -68,6 +68,13 @@
     return ableiten('material|' + antworten.join('\u001f'), salzHex, iterationen, 32);
   }
 
+  /* Prüfwert einer Zeitschloss-Lösung: SHA-256 über die Hex-Zeichen.
+   * Der Worker rechnet denselben Wert synchron nach, um blind zu erkennen,
+   * wann er angekommen ist. */
+  async function pruefwert(text) {
+    return util.bytesZuHex(await sha256(textBytes(text)));
+  }
+
   async function fragmentSchluessel(index, bHex, material) {
     var roh = await sha256(verbinde(
       textBytes('tresor-fragment|' + index + '|'),
@@ -103,6 +110,7 @@
     neuesSalz: neuesSalz,
     antwortPruefung: antwortPruefung,
     antwortMaterial: antwortMaterial,
+    pruefwert: pruefwert,
     verschluesseln: verschluesseln,
     entschluesseln: entschluesseln,
     ITERATIONEN: ITERATIONEN,

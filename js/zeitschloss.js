@@ -66,10 +66,19 @@
           ablehnen(new Error(m.meldung));
         }
       };
-      ich.worker.postMessage({
-        cmd: 'loesen', n: ich.puzzle.n, x: ich.x,
-        erledigt: ich.erledigt, ziel: ich.puzzle.t
-      });
+      if (ich.puzzle.pruef) {
+        // blind: die Schrittzahl ist nirgends gespeichert
+        ich.worker.postMessage({
+          cmd: 'loesenBlind', n: ich.puzzle.n, x: ich.x, erledigt: ich.erledigt,
+          pruef: ich.puzzle.pruef, obergrenze: ich.puzzle.obergrenze,
+          pruefschritt: ich.puzzle.pruefschritt
+        });
+      } else {
+        ich.worker.postMessage({
+          cmd: 'loesen', n: ich.puzzle.n, x: ich.x,
+          erledigt: ich.erledigt, ziel: ich.puzzle.t
+        });
+      }
     });
     return ich.versprechen;
   };
@@ -88,7 +97,7 @@
   };
 
   Loeser.prototype.stand = function () {
-    return { erledigt: this.erledigt, x: this.x, ziel: this.puzzle.t };
+    return { erledigt: this.erledigt, x: this.x, ziel: this.puzzle.t || this.puzzle.obergrenze };
   };
 
   T.zeitschloss = { messen: messen, erzeugen: erzeugen, Loeser: Loeser, BITS: BITS };

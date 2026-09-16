@@ -6,7 +6,8 @@
   var util = T.util;
 
   var RECHENZEIT_STUFEN = [10, 45, 180, 600, 1800];        // Sekunden echter Rechenarbeit
-  var NOTAUSGANG_STUFEN = [0, 300, 1800, 7200, 28800];     // 0 = aus
+  var NOTAUSGANG_WERTE = [300, 900, 1800, 3600, 7200, 10800, 18000, 28800, 43200, 86400];
+  var PRUEFSCHRITT = 250000;                               // Raster der Blindprüfung
   var STRAFZEIT_BASIS = [0, 20, 60];                       // aus, mild, hart
   var FRIST_WERTE = [300, 900, 1800, 3600, 7200, 10800, 18000, 28800,
                      43200, 86400, 172800, 259200, 604800];   // Auswahl für absolute Spannen
@@ -28,8 +29,20 @@
         maxFaktor: 3,
         folge: 'aufgaben'           // 'aufgaben' oder 'alles' (Rechenzeit verfällt mit)
       },
-      notausgang: { stufe: 0, wartetage: 0 }
+      notausgang: { minSekunden: 0, maxSekunden: 0, wartetage: 0 }
     };
+  }
+
+  function aufRaster(schritte) {
+    return Math.max(PRUEFSCHRITT, Math.round(schritte / PRUEFSCHRITT) * PRUEFSCHRITT);
+  }
+
+  /* Gleichverteilter Anteil aus dem Zufallsgenerator des Systems - die Ziehung
+   * der Notausgang-Dauer soll nicht vorhersagbar sein. */
+  function zufallsAnteil() {
+    var werte = new Uint32Array(1);
+    global.crypto.getRandomValues(werte);
+    return werte[0] / 4294967296;
   }
 
   function strafzeit(konfig, fehlversuche) {
@@ -213,22 +226,41 @@
     }
 
     /* Notausgang: ein zweites, unabhängiges Zeitschloss über das ganze
-     * Geheimnis. Es kennt keine Aufgaben - es kostet nur Rechenzeit. */
+     * Geheimnis. Es kennt keine Aufgaben - es kostet nur Rechenzeit.
+     *
+     * Die Schrittzahl wird zufällig aus der eingestellten Spanne gezogen und
+     * NICHT gespeichert. Abgelegt wird nur SHA-256 der Lösung: Der Rechner
+     * quadriert und merkt am Prüfwert selbst, wann er angekommen ist. Damit
+     * weiß niemand vorher, wie lange es dauert - weder du noch die App noch
+     * jemand, der den Speicher ausliest. Bekannt ist nur die Spanne. */
     var notausgang = null;
-    var notausgangSekunden = NOTAUSGANG_STUFEN[util.grenze((konfig.notausgang || {}).stufe || 0, 0, 4)];
-    if (notausgangSekunden) {
+    var exitKonfig = konfig.notausgang || {};
+    var exitMin = Math.min(exitKonfig.minSekunden || 0, exitKonfig.maxSekunden || 0);
+    var exitMax = Math.max(exitKonfig.minSekunden || 0, exitKonfig.maxSekunden || 0);
+    if (exitMax) {
       melde({ phase: 'notausgang', text: 'Notausgang schmieden ...', anteil: 1 });
-      var exitSchritte = Math.max(50000, Math.round(rate * notausgangSekunden));
+      var untergrenze = aufRaster(rate * Math.max(exitMin, 1));
+      var obergrenze = Math.max(untergrenze + PRUEFSCHRITT, aufRaster(rate * exitMax));
+      var exitSchritte = aufRaster(untergrenze + zufallsAnteil() * (obergrenze - untergrenze));
+      exitSchritte = Math.min(Math.max(exitSchritte, untergrenze), obergrenze);
       var exitPuzzle = await T.zeitschloss.erzeugen(exitSchritte);
       notausgang = {
-        sekunden: notausgangSekunden,
-        frei: Date.now() + (konfig.notausgang.wartetage || 0) * 86400000,
-        schloss: { n: exitPuzzle.n, a: exitPuzzle.a, t: exitPuzzle.t },
+        blind: true,
+        rahmen: [exitMin, exitMax],
+        frei: Date.now() + (exitKonfig.wartetage || 0) * 86400000,
+        schloss: {
+          n: exitPuzzle.n, a: exitPuzzle.a,
+          pruef: await T.krypto.pruefwert(exitPuzzle.b),
+          untergrenze: untergrenze,
+          obergrenze: obergrenze,
+          pruefschritt: PRUEFSCHRITT
+        },
         paket: await T.krypto.verschluesseln('notausgang', exitPuzzle.b, geheimnis, null),
         stand: { erledigt: 0, x: exitPuzzle.a },
         benutzt: false
       };
       exitPuzzle.b = null;
+      exitSchritte = null;
     }
 
     /* Geheime Höchstzeit für den ganzen Tresor: jetzt gezogen, ab jetzt laufend. */
@@ -366,7 +398,8 @@
     strafzeit: strafzeit,
     neueFrist: neueFrist,
     RECHENZEIT_STUFEN: RECHENZEIT_STUFEN,
-    NOTAUSGANG_STUFEN: NOTAUSGANG_STUFEN,
+    NOTAUSGANG_WERTE: NOTAUSGANG_WERTE,
+    PRUEFSCHRITT: PRUEFSCHRITT,
     STRAFZEIT_BASIS: STRAFZEIT_BASIS
   };
 })(typeof window !== 'undefined' ? window : globalThis);

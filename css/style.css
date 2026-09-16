@@ -307,3 +307,9 @@ select, input[type=file] {
 
 .aufwandzeile { margin: 6px 0 0; grid-column: 1 / -1; }
 .schalterzeile.klein { margin: 10px 0 0; font-size: 13px; }
+
+.balken { position: relative; }
+.balken-marke {
+  position: absolute; top: -3px; width: 2px; height: 16px;
+  background: var(--blau); border-radius: 2px;
+}
