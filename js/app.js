@@ -26,6 +26,7 @@
   }
 
   function aufraeumen() {
+    if (zustand.fristUhr) { clearInterval(zustand.fristUhr); zustand.fristUhr = null; }
     if (zustand.aufraeumen) { try { zustand.aufraeumen(); } catch (fehler) {} zustand.aufraeumen = null; }
     if (zustand.loeser) { zustand.loeser.anhalten(); zustand.loeser = null; }
   }
@@ -55,6 +56,13 @@
       feld.addEventListener('keydown', function (e) {
         if (e.key === 'Backspace' && !feld.value && feld.previousSibling) feld.previousSibling.focus();
       });
+    });
+  }
+
+  function zeitOptionen(vorgabe) {
+    return T.tresorLogik.FRIST_WERTE.map(function (sekunden) {
+      return el('option', { value: String(sekunden), selected: sekunden === vorgabe ? 'selected' : null },
+        util.dauer(sekunden));
     });
   }
 
@@ -88,7 +96,15 @@
       rechenzeit: Number($('#rechenzeit').value),
       reihenfolge: $('#reihenfolge').value,
       strafe: Number($('#strafzeit').value),
-      geheimeFrist: { aktiv: $('#frist-aktiv').checked, minFaktor: minFaktor, maxFaktor: maxFaktor },
+      geheimeFrist: {
+        aktiv: $('#frist-aktiv').checked,
+        bezug: $('#frist-bezug').value,
+        minSekunden: Number($('#frist-min-zeit').value),
+        maxSekunden: Number($('#frist-max-zeit').value),
+        minFaktor: minFaktor,
+        maxFaktor: maxFaktor,
+        folge: $('#frist-folge').value
+      },
       notausgang: { stufe: Number($('#notausgang').value), wartetage: Number($('#notausgang-frist').value) }
     };
   }
@@ -114,7 +130,12 @@
       + (schaetzung.gebundeneAufgaben ? ' · ' + schaetzung.gebundeneAufgaben + ' Aufgaben gehen in die Schlüssel ein' : '')
       + (schaetzung.mitZeitfenster ? ' · enthält ein Zeitfenster, das an eine Tageszeit gebunden ist' : '')
       + (konfig.strafe ? ' · Strafzeiten aktiv' : '')
-      + (konfig.geheimeFrist.aktiv ? ' · geheime Frist aktiv' : '');
+      + (konfig.geheimeFrist.aktiv
+          ? ' · geheime Höchstzeit ' + (konfig.geheimeFrist.bezug === 'tresor'
+              ? 'zwischen ' + util.dauer(Math.min(konfig.geheimeFrist.minSekunden, konfig.geheimeFrist.maxSekunden))
+                + ' und ' + util.dauer(Math.max(konfig.geheimeFrist.minSekunden, konfig.geheimeFrist.maxSekunden))
+              : 'je Aufgabe')
+          : '');
   }
 
   function zeichneEinrichten() {
@@ -194,16 +215,45 @@
       el('p', { class: 'flaut klein', text: 'Jeder weitere Fehlversuch derselben Aufgabe kostet das 1,7-Fache, höchstens 30 Minuten. Die Aufgabe ist währenddessen gesperrt.' }),
       el('label', { class: 'schalterzeile' }, [
         el('input', { type: 'checkbox', id: 'frist-aktiv' }),
-        el('span', { text: 'Geheime Frist pro Aufgabe' })
+        el('span', { text: 'Geheime Höchstzeit' })
       ]),
-      el('p', { class: 'flaut klein', text: 'Beim Verriegeln wird je Aufgabe eine unsichtbare Höchstdauer gezogen – ein zufälliges Vielfaches der geschätzten Dauer. Läuft sie ab, beginnt die Aufgabe von vorn und es wird eine neue Frist gezogen.' }),
-      el('div', { class: 'feld', id: 'frist-bereich' }, [
-        el('label', { text: 'Rahmen der Frist' }),
-        el('div', { class: 'doppelregler' }, [
-          el('input', { type: 'range', min: '10', max: '30', value: '12', id: 'frist-min' }),
-          el('input', { type: 'range', min: '15', max: '60', value: '30', id: 'frist-max' })
+      el('p', { class: 'flaut klein', text: 'Beim Verriegeln wird eine Höchstzeit zufällig aus deiner Spanne gezogen. Angezeigt werden nur die Spanne und die verstrichene Zeit – der gezogene Wert nicht.' }),
+      el('div', { id: 'frist-bereich' }, [
+        el('div', { class: 'feld' }, [
+          el('label', { for: 'frist-bezug', text: 'Wofür gilt sie?' }),
+          el('select', { id: 'frist-bezug' }, [
+            el('option', { value: 'tresor' }, 'für den ganzen Tresor'),
+            el('option', { value: 'aufgabe' }, 'für jede einzelne Aufgabe')
+          ])
         ]),
-        el('output', { id: 'frist-anzeige', text: '1,2× bis 3,0×' })
+        el('div', { id: 'frist-absolut' }, [
+          el('div', { class: 'feld' }, [
+            el('label', { for: 'frist-min-zeit', text: 'Mindestens' }),
+            el('select', { id: 'frist-min-zeit' }, zeitOptionen(3600))
+          ]),
+          el('div', { class: 'feld' }, [
+            el('label', { for: 'frist-max-zeit', text: 'Höchstens' }),
+            el('select', { id: 'frist-max-zeit' }, zeitOptionen(18000))
+          ]),
+          el('p', { class: 'flaut klein', id: 'frist-spanne-hinweis', text: '' })
+        ]),
+        el('div', { id: 'frist-relativ', class: 'versteckt' }, [
+          el('div', { class: 'feld' }, [
+            el('label', { text: 'Vielfaches der geschätzten Dauer' }),
+            el('div', { class: 'doppelregler' }, [
+              el('input', { type: 'range', min: '10', max: '30', value: '12', id: 'frist-min' }),
+              el('input', { type: 'range', min: '15', max: '60', value: '30', id: 'frist-max' })
+            ]),
+            el('output', { id: 'frist-anzeige', text: '1,2× bis 3,0×' })
+          ])
+        ]),
+        el('div', { class: 'feld' }, [
+          el('label', { for: 'frist-folge', text: 'Wenn die Zeit abläuft' }),
+          el('select', { id: 'frist-folge' }, [
+            el('option', { value: 'aufgaben' }, 'Aufgaben fallen auf Anfang zurück'),
+            el('option', { value: 'alles' }, 'zusätzlich verfällt die Rechenzeit')
+          ])
+        ])
       ]),
       el('div', { class: 'feld' }, [
         el('label', { for: 'notausgang', text: 'Notausgang (Rechenzeit über alles)' }),
@@ -291,11 +341,26 @@
     });
     $('#strafzeit').addEventListener('change', schaetzungAktualisieren);
     $('#notausgang').addEventListener('change', schaetzungAktualisieren);
+    function fristAnsichtAktualisieren() {
+      var aufTresor = $('#frist-bezug').value === 'tresor';
+      $('#frist-absolut').classList.toggle('versteckt', !aufTresor);
+      $('#frist-relativ').classList.toggle('versteckt', aufTresor);
+      var min = Number($('#frist-min-zeit').value), max = Number($('#frist-max-zeit').value);
+      $('#frist-spanne-hinweis').textContent = min >= max
+        ? 'Mindestens muss kleiner als höchstens sein – die Werte werden beim Verriegeln getauscht.'
+        : 'Gezogen wird irgendwo zwischen ' + util.dauer(min) + ' und ' + util.dauer(max) + ', ab dem Verriegeln.';
+      schaetzungAktualisieren();
+    }
     $('#frist-aktiv').addEventListener('change', function () {
       $('#frist-bereich').classList.toggle('versteckt', !this.checked);
       schaetzungAktualisieren();
     });
     $('#frist-bereich').classList.add('versteckt');
+    $('#frist-bezug').addEventListener('change', fristAnsichtAktualisieren);
+    $('#frist-min-zeit').addEventListener('change', fristAnsichtAktualisieren);
+    $('#frist-max-zeit').addEventListener('change', fristAnsichtAktualisieren);
+    $('#frist-folge').addEventListener('change', schaetzungAktualisieren);
+    fristAnsichtAktualisieren();
     [$('#frist-min'), $('#frist-max')].forEach(function (regler) {
       regler.addEventListener('input', function () {
         var min = Number($('#frist-min').value) / 10, max = Number($('#frist-max').value) / 10;
@@ -445,8 +510,29 @@
   function zeichneTresor() {
     aufraeumen();
     var tresor = zustand.tresor;
+
+    // Läuft eine tresorweite Höchstzeit ab - auch bei geschlossener App?
+    if (T.tresorLogik.fristAbgelaufen(tresor)) {
+      var bericht = T.tresorLogik.fristAusloesen(tresor);
+      zustand.fristMeldung = 'Die geheime Höchstzeit ist abgelaufen. '
+        + bericht.fragmente + (bericht.fragmente === 1 ? ' verschlossenes Fragment fällt' : ' verschlossene Fragmente fallen')
+        + ' auf Anfang zurück'
+        + (bericht.aufgaben ? ' (' + bericht.aufgaben + ' erledigte Aufgaben)' : '')
+        + (bericht.rechenzeitVerfallen && bericht.schritte
+            ? ', dazu verfallen ' + bericht.schritte.toLocaleString('de-DE') + ' Rechenschritte' : '')
+        + '. Eine neue Höchstzeit läuft ab jetzt.';
+      sichern(true);
+    }
+
     var wurzel = util.leeren($('#buehne'));
     var fertig = T.tresorLogik.alleOffen(tresor);
+
+    if (zustand.fristMeldung) {
+      wurzel.appendChild(el('section', { class: 'karte' }, [
+        el('p', { class: 'warnung', text: zustand.fristMeldung })
+      ]));
+      zustand.fristMeldung = null;
+    }
 
     wurzel.appendChild(el('section', { class: 'karte band-karte' }, [
       zeichneZiffernband(),
@@ -466,6 +552,26 @@
       var aufgabenKarte = el('section', { class: 'karte aufgabenkarte', id: 'aufgabenkarte' });
       wurzel.appendChild(aufgabenKarte);
       starteAktuelles(aufgabenKarte);
+    }
+
+    if (!fertig && tresor.frist && tresor.frist.sekunden) {
+      var rahmen = tresor.frist.rahmen || [tresor.frist.sekunden, tresor.frist.sekunden];
+      var verstrichen = el('strong', { class: 'fristzeit', text: '–' });
+      wurzel.appendChild(el('section', { class: 'karte frist-karte' }, [
+        el('h2', { text: '⏳ Geheime Höchstzeit' }),
+        el('p', { class: 'flaut', text: 'Irgendwo zwischen ' + util.dauer(rahmen[0]) + ' und ' + util.dauer(rahmen[1])
+          + ' – gezogen beim Verriegeln, nicht angezeigt. Die Uhr läuft auch bei geschlossener App.' }),
+        el('p', {}, ['verstrichen: ', verstrichen]),
+        el('p', { class: 'flaut klein', text: 'Bei Ablauf fallen alle noch verschlossenen Fragmente auf Anfang zurück'
+          + ((tresor.konfig.geheimeFrist || {}).folge === 'alles' ? ' und die bereits geleistete Rechenzeit verfällt' : '')
+          + '. Geöffnete Ziffern bleiben offen.'
+          + (tresor.frist.abgelaufen ? ' Bisher abgelaufen: ' + tresor.frist.abgelaufen + '×.' : '') })
+      ]));
+      zustand.fristUhr = setInterval(function () {
+        if (T.tresorLogik.fristAbgelaufen(tresor)) { zeichneTresor(); return; }
+        verstrichen.textContent = util.dauer((Date.now() - tresor.frist.start) / 1000);
+      }, 1000);
+      verstrichen.textContent = util.dauer((Date.now() - tresor.frist.start) / 1000);
     }
 
     if (!fertig && tresor.notausgang && !tresor.notausgang.benutzt) {

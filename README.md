@@ -182,13 +182,27 @@ Drei Schalter, die quer über alle Dimensionen wirken:
 * **Strafzeit bei Fehlversuch** (aus / mild ab 20 s / hart ab 60 s). Jeder
   weitere Fehlversuch derselben Aufgabe kostet das 1,7-Fache, gedeckelt bei
   30 Minuten. Die Aufgabe ist währenddessen gesperrt und zeigt einen Countdown.
-* **Geheime Frist pro Aufgabe.** Beim Verriegeln wird je Aufgabe eine
-  unsichtbare Höchstdauer gezogen: ein zufälliges Vielfaches der geschätzten
-  Dauer, innerhalb eines von dir gesetzten Rahmens (z. B. 1,2× bis 3,0×).
-  Angezeigt wird nur ⏳. Läuft sie ab, beginnt die Aufgabe von vorn, es gibt
-  Strafzeit – und es wird **eine neue Frist gezogen**, damit der zweite Anlauf
-  nicht dieselbe Grenze hat. Der Startzeitpunkt wird gespeichert, ein Reload
-  schenkt also keine Zeit.
+* **Geheime Höchstzeit.** Beim Verriegeln wird eine Höchstzeit *zufällig
+  gezogen* und nicht angezeigt – sichtbar sind nur die Spanne, die du gesetzt
+  hast, und die verstrichene Zeit. Zwei Bezüge:
+
+  * **Ganzer Tresor** (Standard): eine absolute Spanne, z. B. „mindestens 1 h,
+    höchstens 5 h". Die Uhr startet beim Verriegeln und läuft weiter, während
+    die App zu ist. Läuft sie ab, fallen **alle noch verschlossenen Fragmente
+    auf Anfang zurück** – erledigte Aufgaben, eingegebene Antworten und
+    laufende Sperrfristen sind weg, und wahlweise verfällt auch die bereits
+    geleistete Rechenzeit. Bereits geöffnete Ziffern bleiben offen: die Frist
+    kostet Arbeit, niemals das Geheimnis. Danach wird sofort eine **neue**
+    Höchstzeit gezogen.
+  * **Je Aufgabe**: ein zufälliges Vielfaches der geschätzten Dauer (z. B. 1,2×
+    bis 3,0×), angezeigt nur als ⏳. Bei Ablauf beginnt die Aufgabe von vorn,
+    es gibt Strafzeit, und es wird neu gezogen. Der Startzeitpunkt wird
+    gespeichert, ein Reload schenkt also keine Zeit.
+
+  Den Notausgang rührt der Ablauf nicht an – sonst könnte eine verpasste Frist
+  den Tresor unlösbar machen. „Geheim" heißt hier: nicht angezeigt. Im
+  `localStorage` steht der gezogene Wert, wie alles andere auch.
+
 * **Notausgang** – die Exit-Strategie. Ein zweites, unabhängiges Zeitschloss
   über das *ganze* Geheimnis: keine Aufgaben, keine Sperrfristen, nur
   Rechenzeit (5 min bis 8 h, frei wählbar). Damit steht fest, wie lange du dich

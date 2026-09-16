@@ -8,6 +8,8 @@
   var RECHENZEIT_STUFEN = [10, 45, 180, 600, 1800];        // Sekunden echter Rechenarbeit
   var NOTAUSGANG_STUFEN = [0, 300, 1800, 7200, 28800];     // 0 = aus
   var STRAFZEIT_BASIS = [0, 20, 60];                       // aus, mild, hart
+  var FRIST_WERTE = [300, 900, 1800, 3600, 7200, 10800, 18000, 28800,
+                     43200, 86400, 172800, 259200, 604800];   // Auswahl für absolute Spannen
 
   function standardKonfiguration() {
     return {
@@ -17,7 +19,15 @@
       rechenzeit: 2,
       reihenfolge: 'links',
       strafe: 0,
-      geheimeFrist: { aktiv: false, minFaktor: 1.2, maxFaktor: 3 },
+      geheimeFrist: {
+        aktiv: false,
+        bezug: 'tresor',            // 'tresor' = absolute Spanne, 'aufgabe' = Vielfaches der Schätzung
+        minSekunden: 3600,
+        maxSekunden: 18000,
+        minFaktor: 1.2,
+        maxFaktor: 3,
+        folge: 'aufgaben'           // 'aufgaben' oder 'alles' (Rechenzeit verfällt mit)
+      },
       notausgang: { stufe: 0, wartetage: 0 }
     };
   }
@@ -28,13 +38,23 @@
     return Math.min(1800, Math.round(basis * Math.pow(1.7, Math.max(0, fehlversuche - 1))));
   }
 
-  /* Geheime Frist: ein Vielfaches der geschätzten Dauer, zufällig gezogen und
-   * nirgends angezeigt. Bei Ablauf wird neu gezogen, damit der zweite Versuch
-   * nicht dieselbe Grenze hat. */
+  /* Geheime Frist. Zwei Spielarten:
+   *
+   *   bezug 'tresor'  - eine absolute Höchstzeit für den ganzen Tresor, gezogen
+   *                     aus der eingestellten Spanne (z. B. 1 h bis 5 h).
+   *   bezug 'aufgabe' - ein Vielfaches der geschätzten Dauer, je Aufgabe.
+   *
+   * Der gezogene Wert wird nirgends angezeigt. Bei Ablauf wird neu gezogen,
+   * damit der nächste Anlauf nicht dieselbe Grenze hat. */
   function neueFrist(konfig, sekundenSchaetzung, zufallszahl) {
     var f = konfig.geheimeFrist;
     if (!f || !f.aktiv) return 0;
     var anteil = typeof zufallszahl === 'number' ? zufallszahl : Math.random();
+    if (f.bezug === 'tresor') {
+      var min = Math.min(f.minSekunden, f.maxSekunden);
+      var max = Math.max(f.minSekunden, f.maxSekunden);
+      return Math.max(10, Math.round(min + anteil * (max - min)));
+    }
     return Math.max(20, Math.round(sekundenSchaetzung * (f.minFaktor + anteil * (f.maxFaktor - f.minFaktor))));
   }
 
@@ -87,7 +107,7 @@
           zustand: {},
           erledigt: false
         };
-        if (modul.dimension !== 'zeit') {
+        if (modul.dimension !== 'zeit' && (konfig.geheimeFrist || {}).bezug === 'aufgabe') {
           var frist = neueFrist(konfig, modul.schaetzung(params), zufall.zahl());
           if (frist) aufgabe.frist = frist;
         }
@@ -211,9 +231,23 @@
       exitPuzzle.b = null;
     }
 
+    /* Geheime Höchstzeit für den ganzen Tresor: jetzt gezogen, ab jetzt laufend. */
+    var frist = null;
+    var fristKonfig = konfig.geheimeFrist || {};
+    if (fristKonfig.aktiv && fristKonfig.bezug === 'tresor') {
+      frist = {
+        sekunden: neueFrist(konfig, 0),
+        start: Date.now(),
+        rahmen: [Math.min(fristKonfig.minSekunden, fristKonfig.maxSekunden),
+                 Math.max(fristKonfig.minSekunden, fristKonfig.maxSekunden)],
+        abgelaufen: 0
+      };
+    }
+
     melde({ phase: 'fertig', text: 'Verriegelt.', anteil: 1 });
     return {
       version: 2,
+      frist: frist,
       erstellt: Date.now(),
       saat: saat,
       laenge: laenge,
@@ -283,7 +317,43 @@
     return geheimnis;
   }
 
+  /* Ist die tresorweite Höchstzeit vorbei? Gilt nur, solange noch etwas
+   * verschlossen ist - ein fertiger Tresor kennt keine Frist mehr. */
+  function fristAbgelaufen(tresor, jetzt) {
+    var f = tresor.frist;
+    if (!f || !f.sekunden || alleOffen(tresor)) return false;
+    return (jetzt || Date.now()) >= f.start + f.sekunden * 1000;
+  }
+
+  /* Höchstzeit verstrichen: alle noch verschlossenen Fragmente fallen auf
+   * Anfang zurück. Geöffnete Ziffern bleiben geöffnet - die Frist kostet
+   * Arbeit, niemals das Geheimnis. */
+  function fristAusloesen(tresor) {
+    var folge = (tresor.konfig.geheimeFrist || {}).folge || 'aufgaben';
+    var bericht = { fragmente: 0, aufgaben: 0, schritte: 0, rechenzeitVerfallen: folge === 'alles' };
+    tresor.fragmente.forEach(function (fragment) {
+      if (fragment.offen) return;
+      bericht.fragmente++;
+      fragment.aufgaben.forEach(function (aufgabe) {
+        if (aufgabe.erledigt) bericht.aufgaben++;
+        aufgabe.erledigt = false;
+        aufgabe.zustand = {};
+      });
+      if (folge === 'alles' && fragment.stand.erledigt) {
+        bericht.schritte += fragment.stand.erledigt;
+        fragment.stand = { erledigt: 0, x: fragment.schloss.a };
+      }
+    });
+    tresor.frist.sekunden = neueFrist(tresor.konfig, 0);
+    tresor.frist.start = Date.now();
+    tresor.frist.abgelaufen = (tresor.frist.abgelaufen || 0) + 1;
+    return bericht;
+  }
+
   T.tresorLogik = {
+    fristAbgelaufen: fristAbgelaufen,
+    fristAusloesen: fristAusloesen,
+    FRIST_WERTE: FRIST_WERTE,
     standardKonfiguration: standardKonfiguration,
     geschaetzteDauer: geschaetzteDauer,
     erstellen: erstellen,
