@@ -222,3 +222,81 @@ select, input[type=file] {
 @media (min-width: 620px) {
   .dimension-gitter { grid-template-columns: 1fr 1fr; }
 }
+
+/* ---- Antworten und Rätsel ---- */
+
+.antwort-beschriftung { margin: 4px 0 0; font-size: 13px; }
+.antwortzeile { display: flex; gap: 8px; width: 100%; max-width: 420px; }
+.antwortfeld {
+  flex: 1; background: var(--grund); color: var(--text);
+  border: 1px solid var(--rand); border-radius: 10px; padding: 12px 14px; font-size: 18px;
+  letter-spacing: .06em;
+}
+.antwortfeld:focus { outline: none; border-color: var(--messing); }
+
+.chiffre { font-size: 30px; letter-spacing: .3em; color: var(--messing); text-align: center; word-break: break-word; }
+.morse { font-size: 24px; letter-spacing: .12em; color: var(--messing); text-align: center; font-family: "Courier New", monospace; word-break: break-word; }
+.morsetabelle {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 2px 8px;
+  font-size: 12px; color: var(--flaut); font-family: "Courier New", monospace; width: 100%;
+}
+.morsetabelle b { color: var(--text); }
+
+.bedingungen, .aussagen, .gleichungen { margin: 0; padding-left: 20px; font-size: 15px; line-height: 1.7; align-self: flex-start; }
+.gleichungen { list-style: none; padding-left: 0; font-size: 19px; letter-spacing: .05em; }
+.frage { font-size: 24px; color: var(--messing); letter-spacing: .05em; }
+
+.folge { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.folgeglied {
+  min-width: 56px; padding: 10px 6px; text-align: center; border-radius: 10px;
+  background: var(--grund); border: 1px solid var(--rand); font-size: 20px; font-variant-numeric: tabular-nums;
+}
+.folgeglied.ist-gesucht { border-color: var(--messing); color: var(--messing); }
+
+.mastermind-liste { list-style: none; margin: 0; padding: 0; width: 100%; max-width: 300px; font-variant-numeric: tabular-nums; }
+.mastermind-liste li { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid var(--rand); }
+.mastermind-code { letter-spacing: .32em; font-size: 18px; }
+.mastermind-wertung { color: var(--messing); letter-spacing: .12em; }
+
+/* ---- Glück ---- */
+
+.wuerfelreihe { display: flex; gap: 12px; }
+.wuerfel {
+  width: 76px; height: 76px; border-radius: 14px; background: var(--grund-hoch);
+  border: 2px solid var(--rand); display: flex; align-items: center; justify-content: center;
+  font-size: 36px; font-variant-numeric: tabular-nums;
+}
+.muenze {
+  width: 96px; height: 96px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 40px; color: #20170a; background: linear-gradient(160deg, var(--messing-hell), var(--messing));
+  border: 2px solid var(--messing-hell);
+}
+.wahlzeile { display: flex; gap: 10px; }
+.kartentisch { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; width: 100%; max-width: 320px; }
+.spielkarte {
+  aspect-ratio: 2 / 3; border-radius: 8px; background: var(--grund-hoch); color: var(--flaut);
+  border: 1px solid var(--rand); font-size: 20px; cursor: pointer;
+}
+.spielkarte.ist-gewinn { background: var(--messing); color: #20170a; border-color: var(--messing-hell); }
+.spielkarte.ist-niete { background: var(--grund); color: #4a5768; }
+
+.rad { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; }
+.radzeiger { color: var(--messing); font-size: 18px; }
+.radfelder { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.radfeld {
+  min-width: 52px; padding: 10px 8px; text-align: center; border-radius: 8px;
+  background: var(--grund); border: 1px solid var(--rand); font-size: 14px; color: var(--flaut);
+}
+.radfeld.ist-frei { border-color: var(--messing); color: var(--messing); }
+.radfeld.ist-aktiv { background: var(--messing); color: #20170a; border-color: var(--messing-hell); }
+
+/* ---- Zeitregeln ---- */
+
+.schalterzeile { display: flex; align-items: center; gap: 10px; margin: 14px 0 4px; cursor: pointer; }
+.doppelregler { display: flex; flex-direction: column; gap: 2px; }
+.fristmarke { color: var(--messing); font-size: 12px; }
+.schluesselmarke { font-size: 12px; }
+.notausgang-karte { border-style: dashed; }
+.marke-glueck { color: #d08ad6; border-color: rgba(208,138,214,.4); }
+.marke-logik { color: #7fc7c0; border-color: rgba(127,199,192,.4); }
+.marke-raetsel { color: var(--messing); border-color: rgba(217,164,65,.4); }

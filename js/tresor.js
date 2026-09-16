@@ -5,16 +5,37 @@
   var T = global.Tresor || (global.Tresor = {});
   var util = T.util;
 
-  var RECHENZEIT_STUFEN = [10, 45, 180, 600, 1800];   // Sekunden echter Rechenarbeit
+  var RECHENZEIT_STUFEN = [10, 45, 180, 600, 1800];        // Sekunden echter Rechenarbeit
+  var NOTAUSGANG_STUFEN = [0, 300, 1800, 7200, 28800];     // 0 = aus
+  var STRAFZEIT_BASIS = [0, 20, 60];                       // aus, mild, hart
 
   function standardKonfiguration() {
     return {
-      dimensionen: ['geduld', 'zeit'],
-      stufen: { geduld: 3, zeit: 2 },
+      dimensionen: ['geduld', 'zeit', 'raetsel'],
+      stufen: { geduld: 3, zeit: 2, raetsel: 2 },
       aufgabenProFragment: 2,
       rechenzeit: 2,
-      reihenfolge: 'links'
+      reihenfolge: 'links',
+      strafe: 0,
+      geheimeFrist: { aktiv: false, minFaktor: 1.2, maxFaktor: 3 },
+      notausgang: { stufe: 0, wartetage: 0 }
     };
+  }
+
+  function strafzeit(konfig, fehlversuche) {
+    var basis = STRAFZEIT_BASIS[util.grenze(konfig.strafe || 0, 0, 2)];
+    if (!basis) return 0;
+    return Math.min(1800, Math.round(basis * Math.pow(1.7, Math.max(0, fehlversuche - 1))));
+  }
+
+  /* Geheime Frist: ein Vielfaches der geschätzten Dauer, zufällig gezogen und
+   * nirgends angezeigt. Bei Ablauf wird neu gezogen, damit der zweite Versuch
+   * nicht dieselbe Grenze hat. */
+  function neueFrist(konfig, sekundenSchaetzung, zufallszahl) {
+    var f = konfig.geheimeFrist;
+    if (!f || !f.aktiv) return 0;
+    var anteil = typeof zufallszahl === 'number' ? zufallszahl : Math.random();
+    return Math.max(20, Math.round(sekundenSchaetzung * (f.minFaktor + anteil * (f.maxFaktor - f.minFaktor))));
   }
 
   /* Aufgabenplan: zieht reihum aus einem gemischten Topf, damit sich innerhalb
@@ -44,48 +65,76 @@
       return topf.vorrat[topf.zeiger++];
     }
 
-    var plan = [], topfZeiger = 0, benutzt = [];
-    for (var f = 0; f < anzahlFragmente; f++) {
-      var aufgaben = [];
-      for (var a = 0; a < konfig.aufgabenProFragment; a++) {
-        var topf = toepfe[topfZeiger++ % toepfe.length];
+    /* Manche Generatoren (Lügner, Zahlenrätsel, Waage) liefern nur dann etwas,
+     * wenn das Rätsel eindeutig ist. Dann wird eben neu gezogen. */
+    function baueAufgabe(topf, stufe) {
+      for (var runde = 0; runde < 12; runde++) {
         var id = zieh(topf);
         var modul = T.herausforderungen.hole(id);
+        if (!modul) continue;
+        var params = modul.erzeuge(zufall, stufe);
+        if (!params) continue;
+        var loesung = null;
+        if (modul.antwortGebunden) {
+          loesung = modul.normalisiere(params.loesung);
+          delete params.loesung;
+          if (!loesung) continue;
+        }
+        var aufgabe = {
+          id: id,
+          dimension: topf.dimension,
+          params: params,
+          zustand: {},
+          erledigt: false
+        };
+        if (modul.dimension !== 'zeit') {
+          var frist = neueFrist(konfig, modul.schaetzung(params), zufall.zahl());
+          if (frist) aufgabe.frist = frist;
+        }
+        return { aufgabe: aufgabe, loesung: loesung };
+      }
+      return null;
+    }
+
+    var plan = [], topfZeiger = 0, benutzt = [];
+    for (var f = 0; f < anzahlFragmente; f++) {
+      var aufgaben = [], loesungen = [];
+      for (var a = 0; a < konfig.aufgabenProFragment; a++) {
+        var topf = toepfe[topfZeiger++ % toepfe.length];
         var stufe = konfig.stufen[topf.dimension] || 3;
         // spätere Fragmente dürfen eine Stufe härter sein
         var effektiv = util.grenze(stufe + (f >= anzahlFragmente - 2 ? 1 : 0), 1, 5);
-        aufgaben.push({
-          id: id,
-          dimension: topf.dimension,
-          params: modul.erzeuge(zufall, effektiv),
-          zustand: {},
-          erledigt: false
-        });
-        benutzt.push(id);
+        var gebaut = baueAufgabe(topf, effektiv);
+        if (!gebaut) continue;
+        aufgaben.push(gebaut.aufgabe);
+        if (gebaut.loesung) loesungen.push(gebaut.loesung);
+        benutzt.push(gebaut.aufgabe.id);
       }
-      plan.push(aufgaben);
+      plan.push({ aufgaben: aufgaben, loesungen: loesungen });
     }
     if (T.speicher && !nurVorschau) T.speicher.merkeBenutzt(benutzt);
     return plan;
   }
 
-  function geschaetzteDauer(konfig, laenge, rate) {
+  function geschaetzteDauer(konfig, laenge) {
     var zufall = new T.Zufall(4242);
     var plan = aufgabenPlan(zufall, konfig, laenge, true);
-    var summe = plan.reduce(function (gesamt, aufgaben) {
-      return gesamt + aufgaben.reduce(function (teil, aufgabe) {
+    var summe = plan.reduce(function (gesamt, fragment) {
+      return gesamt + fragment.aufgaben.reduce(function (teil, aufgabe) {
         return teil + T.herausforderungen.hole(aufgabe.id).schaetzung(aufgabe.params);
       }, 0);
     }, 0);
     summe += laenge * RECHENZEIT_STUFEN[util.grenze(konfig.rechenzeit, 1, 5) - 1];
-    var mitZeitfenster = plan.some(function (aufgaben) {
-      return aufgaben.some(function (a) { return a.id === 'zeitfenster'; });
+    var mitZeitfenster = plan.some(function (fragment) {
+      return fragment.aufgaben.some(function (a) { return a.id === 'zeitfenster'; });
     });
-    return { sekunden: summe, mitZeitfenster: mitZeitfenster };
+    var gebundene = plan.reduce(function (summe2, fragment) { return summe2 + fragment.loesungen.length; }, 0);
+    return { sekunden: summe, mitZeitfenster: mitZeitfenster, gebundeneAufgaben: gebundene };
   }
 
-  /* Verriegeln: für jedes Fragment ein Zeitschloss schmieden und die Ziffer
-   * damit verschlüsseln. Danach ist der Klartext weg. */
+  /* Verriegeln: für jedes Fragment ein Zeitschloss schmieden, die Antworten der
+   * gebundenen Aufgaben in den Schlüssel rechnen und die Ziffer damit
+   * verschlüsseln. Danach sind Klartext und Lösungen weg. */
   async function erstellen(optionen) {
     var geheimnis = String(optionen.geheimnis);
     var konfig = optionen.konfig;
@@ -108,32 +157,71 @@
     var fragmente = [];
     for (var i = 0; i < laenge; i++) {
       melde({ phase: 'schmieden', text: 'Zeitschloss ' + (i + 1) + ' von ' + laenge + ' schmieden ...', anteil: i / laenge });
+      var eintrag = plan[i] || { aufgaben: [], loesungen: [] };
+
+      // Prüfwerte für jede gebundene Antwort - die Antwort selbst wird verworfen
+      var gebunden = 0;
+      for (var a = 0; a < eintrag.aufgaben.length; a++) {
+        var modul = T.herausforderungen.hole(eintrag.aufgaben[a].id);
+        if (!modul.antwortGebunden) continue;
+        var salz = T.krypto.neuesSalz();
+        eintrag.aufgaben[a].pruefung = {
+          salz: salz,
+          hash: await T.krypto.antwortPruefung(eintrag.loesungen[gebunden], salz, T.krypto.ITERATIONEN)
+        };
+        gebunden++;
+      }
+
+      var antwortSalz = T.krypto.neuesSalz();
+      var material = await T.krypto.antwortMaterial(eintrag.loesungen, antwortSalz, T.krypto.ITERATIONEN);
       var puzzle = await T.zeitschloss.erzeugen(schritte);
-      var paket = await T.krypto.verschluesseln(i, puzzle.b, geheimnis.charAt(positionen[i]));
+      var paket = await T.krypto.verschluesseln(i, puzzle.b, geheimnis.charAt(positionen[i]), material);
+
       fragmente.push({
         index: i,
         position: positionen[i],
-        aufgaben: plan[i] || [],
+        aufgaben: eintrag.aufgaben,
+        antwortSalz: antwortSalz,
+        iterationen: T.krypto.ITERATIONEN,
         schloss: { n: puzzle.n, a: puzzle.a, t: puzzle.t },   // b wird bewusst nicht gespeichert
         paket: paket,
         stand: { erledigt: 0, x: puzzle.a },
-        aktiviert: false,
         offen: false,
         ziffer: null
       });
       puzzle.b = null;
     }
 
+    /* Notausgang: ein zweites, unabhängiges Zeitschloss über das ganze
+     * Geheimnis. Es kennt keine Aufgaben - es kostet nur Rechenzeit. */
+    var notausgang = null;
+    var notausgangSekunden = NOTAUSGANG_STUFEN[util.grenze((konfig.notausgang || {}).stufe || 0, 0, 4)];
+    if (notausgangSekunden) {
+      melde({ phase: 'notausgang', text: 'Notausgang schmieden ...', anteil: 1 });
+      var exitSchritte = Math.max(50000, Math.round(rate * notausgangSekunden));
+      var exitPuzzle = await T.zeitschloss.erzeugen(exitSchritte);
+      notausgang = {
+        sekunden: notausgangSekunden,
+        frei: Date.now() + (konfig.notausgang.wartetage || 0) * 86400000,
+        schloss: { n: exitPuzzle.n, a: exitPuzzle.a, t: exitPuzzle.t },
+        paket: await T.krypto.verschluesseln('notausgang', exitPuzzle.b, geheimnis, null),
+        stand: { erledigt: 0, x: exitPuzzle.a },
+        benutzt: false
+      };
+      exitPuzzle.b = null;
+    }
+
     melde({ phase: 'fertig', text: 'Verriegelt.', anteil: 1 });
     return {
-      version: 1,
+      version: 2,
       erstellt: Date.now(),
       saat: saat,
       laenge: laenge,
       konfig: konfig,
       rate: rate,
       sekundenProSchloss: sekundenProSchloss,
-      fragmente: fragmente
+      fragmente: fragmente,
+      notausgang: notausgang
     };
   }
 
@@ -164,13 +252,35 @@
     return zeichen;
   }
 
-  /* Ist das Zeitschloss geknackt, wird die Ziffer entschlüsselt und im Tresor
-   * abgelegt. Der Rest des Tresors bleibt zu. */
+  /* Ist das Zeitschloss geknackt, wird die Ziffer entschlüsselt. Die Antworten
+   * der gebundenen Aufgaben gehen in den Schlüssel ein und werden danach
+   * gelöscht - im Speicher bleibt nur die Ziffer. */
   async function fragmentOeffnen(tresor, fragment, bHex) {
-    fragment.ziffer = await T.krypto.entschluesseln(fragment.index, bHex, fragment.paket);
+    var antworten = fragment.aufgaben.filter(function (aufgabe) {
+      return aufgabe.pruefung && aufgabe.zustand && aufgabe.zustand.antwort;
+    }).map(function (aufgabe) { return aufgabe.zustand.antwort; });
+    var material = await T.krypto.antwortMaterial(
+      antworten, fragment.antwortSalz, fragment.iterationen || T.krypto.ITERATIONEN);
+    fragment.ziffer = await T.krypto.entschluesseln(fragment.index, bHex, fragment.paket, material);
     fragment.offen = true;
     fragment.stand.erledigt = fragment.schloss.t;
+    fragment.aufgaben.forEach(function (aufgabe) {
+      if (aufgabe.zustand && aufgabe.zustand.antwort) aufgabe.zustand.antwort = true;
+    });
     return fragment.ziffer;
+  }
+
+  /* Notausgang geknackt: das ganze Geheimnis wird auf die Fragmente verteilt. */
+  async function notausgangOeffnen(tresor, bHex) {
+    var geheimnis = await T.krypto.entschluesseln('notausgang', bHex, tresor.notausgang.paket, null);
+    tresor.fragmente.forEach(function (fragment) {
+      if (fragment.offen) return;
+      fragment.ziffer = geheimnis.charAt(fragment.position);
+      fragment.offen = true;
+      fragment.stand.erledigt = fragment.schloss.t;
+    });
+    tresor.notausgang.benutzt = true;
+    return geheimnis;
   }
 
   T.tresorLogik = {
@@ -182,6 +292,11 @@
     alleOffen: alleOffen,
     sichtbaresGeheimnis: sichtbaresGeheimnis,
     fragmentOeffnen: fragmentOeffnen,
-    RECHENZEIT_STUFEN: RECHENZEIT_STUFEN
+    notausgangOeffnen: notausgangOeffnen,
+    strafzeit: strafzeit,
+    neueFrist: neueFrist,
+    RECHENZEIT_STUFEN: RECHENZEIT_STUFEN,
+    NOTAUSGANG_STUFEN: NOTAUSGANG_STUFEN,
+    STRAFZEIT_BASIS: STRAFZEIT_BASIS
   };
 })(typeof window !== 'undefined' ? window : globalThis);

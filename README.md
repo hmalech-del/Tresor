@@ -13,8 +13,9 @@ Eine statische Seite, kein Build-Schritt, keine Abhängigkeiten.
 
 1. **Geheimnis festlegen** – 3 bis 8 Ziffern eintippen oder ein Foto der Zahl
    aufnehmen; die Ziffern werden im Bild erkannt und lassen sich korrigieren.
-2. **Schwierigkeit wählen** – welche Dimensionen (Geduld, Zeit …), wie intensiv,
-   wie viele Aufgaben pro Fragment, wie viel Rechenzeit pro Zeitschloss.
+2. **Schwierigkeit wählen** – welche Dimensionen (Geduld, Zeit, Glück, Logik,
+   Rätsel), wie intensiv, wie viele Aufgaben pro Fragment, wie viel Rechenzeit
+   pro Zeitschloss, dazu Strafzeiten, geheime Fristen und Notausgang.
    Die Seite zeigt laufend den voraussichtlichen Gesamtaufwand.
 3. **Verriegeln** – die App schmiedet pro Ziffer ein Zeitschloss, verschlüsselt
    die Ziffer damit und wirft den Klartext weg.
@@ -48,17 +49,43 @@ GCM-Tag sofort auf.
 Der Rechenfortschritt wird laufend gesichert: Tab schließen, später
 weitermachen – die bereits verbrauchte Rechenzeit bleibt erhalten.
 
+## Antwortgebundene Aufgaben
+
+Logik- und Rätselaufgaben sind mehr als Bedienoberfläche: ihre Lösung wird beim
+Verriegeln **nicht gespeichert**, sondern in den Schlüssel gerechnet.
+
+```
+material_i    = PBKDF2-SHA256( antworten_i, salz_i, 400 000 Runden )
+schluessel_i  = SHA-256( "tresor-fragment" | i | b_i | material_i )
+```
+
+Gespeichert wird pro Aufgabe nur ein Prüfwert mit **eigenem Salz**, damit die
+Eingabe sofort Rückmeldung bekommt, ohne das Schlüsselmaterial zu verraten. Ein
+Rateversuch kostet dadurch eine volle PBKDF2-Ableitung (rund 0,3 s), und die
+Ratebereiche aller gebundenen Aufgaben eines Fragments multiplizieren sich.
+
+Die Antworten liegen im Klartext nur solange im Speicher, wie das Fragment in
+Arbeit ist; sobald es sich öffnet, werden sie durch ein `true` ersetzt.
+
 ### Was das schützt – und was nicht
 
 * **Echt** ist die Rechenzeit. Sie kostet jeden gleich viel, auch jemanden mit
   dem Entwicklerwerkzeug im Browser.
-* **Nicht kryptografisch** sind die Geduldsaufgaben und die Sperrfristen: Sie
-  sind Bedienoberfläche. Wer `localStorage` liest und selbst rechnet, kann sie
-  überspringen. Gegen Zurückstellen der Systemuhr wehrt sich die Sperrfrist,
-  mehr aber nicht.
+* **Teuer, aber nicht unmöglich** ist das Erraten gebundener Antworten. Der
+  Haken: Die Rätsel sind für Menschen gemacht, und ein Programm *löst* die
+  meisten davon schneller, als es sie erraten würde – eine Verschiebechiffre
+  mit Wörterbuch in Millisekunden. Die Bindung hebt die Untergrenze gegen
+  Durchprobieren, ersetzt aber kein Passwort.
+* **Mastermind ist nicht gebunden**: Für die Rückmeldung muss der Code zur
+  Laufzeit bekannt sein, steht also im Speicher. Im Fahrplan sind gebundene
+  Aufgaben mit 🔑 markiert.
+* **Nicht kryptografisch** sind Geduld, Glück, Sperrfristen, Strafzeiten und
+  geheime Fristen: Sie sind Bedienoberfläche. Wer `localStorage` liest und
+  selbst rechnet, kann sie überspringen. Gegen Zurückstellen der Systemuhr
+  wehrt sich die Sperrfrist, mehr aber nicht.
 * Der Tresor ist ein Selbstbindungs-Werkzeug, kein Schutz gegen Angreifer mit
   Zugriff auf das Gerät. **Löschen heißt löschen** – ohne Zeitschloss-Lösung
-  gibt es keinen Ersatzweg zur Zahl.
+  und ohne Antworten gibt es keinen Ersatzweg zur Zahl.
 
 ---
 
@@ -88,13 +115,47 @@ Fragmente werden automatisch eine Stufe härter.
 | **Rückmeldungen** | Mehrmals vorbeischauen, mit Mindestabstand dazwischen |
 | **Zeitschloss** | Die echte Rechenarbeit – immer die letzte Hürde vor der Ziffer |
 
+### Glück
+
+Können hilft hier nichts – nur Aushalten. Zusammen mit Strafzeiten wird daraus
+eine Geduldsprobe mit offenem Ausgang.
+
+| Aufgabe | Worum es geht |
+|---|---|
+| **Würfelserie** | Mehrere hohe Würfe hintereinander, ein schlechter reißt die Serie |
+| **Münzserie** | Mehrere Münzwürfe in Folge richtig raten |
+| **Ziehung** | Unter verdeckten Karten die richtige finden, danach wird neu gemischt |
+| **Glücksrad** | Drehen, bis genau das eine freigebende Feld kommt |
+
+### Logik
+
+| Aufgabe | Worum es geht | 🔑 |
+|---|---|---|
+| **Zahlenfolge** | Die Folge um ein Glied weiterführen | ja |
+| **Lügner** | Wer sagt die Wahrheit? Eine Zählaussage bricht die Symmetrie | ja |
+| **Waage** | Aus Gleichungen einen Wert erschließen, Antwort immer zweistellig | ja |
+| **Mastermind** | Zahlencode aus ●/○-Rückmeldungen erschließen | nein |
+
+### Rätsel
+
+| Aufgabe | Worum es geht | 🔑 |
+|---|---|---|
+| **Verschiebechiffre** | Ein verschobenes Wort zurückdrehen | ja |
+| **Morsezeichen** | Ein gemorstes Wort entziffern, Tabelle bis Intensität 3 | ja |
+| **Anagramm** | Buchstabensalat entwirren | ja |
+| **Zahlenrätsel** | Die einzige Zahl finden, auf die alle Bedingungen passen | ja |
+
+Lügner, Waage und Zahlenrätsel werden so lange neu gewürfelt, bis das Rätsel
+nachweislich **eindeutig** ist – bei Lügner und Waage per Durchprobieren aller
+Belegungen, beim Zahlenrätsel durch Sammeln von Bedingungen, bis genau ein
+Kandidat übrig bleibt.
+
 ### Geplant
 
-Logik (Mastermind, Zahlenfolgen, Lügner und Wahrheitssager), Rätsel (Chiffren,
-Anagramme, Morse) und Konzentration (Simon, N-Back, Stroop) sind in der
-Oberfläche bereits vorgesehen. Eine neue Aufgabe ist ein Objekt mit vier
-Funktionen und einem `registrieren(...)`-Aufruf in
-[`js/herausforderungen.js`](js/herausforderungen.js):
+Konzentration (Simon, N-Back, Stroop) ist in der Oberfläche vorgesehen. Eine
+neue Aufgabe ist ein Objekt mit vier Funktionen und einem
+`registrieren(...)`-Aufruf – gebundene Aufgaben liefern zusätzlich `loesung`
+und `normalisiere`, der Tresor streicht die Lösung vor dem Speichern:
 
 ```js
 registrieren({
@@ -111,6 +172,30 @@ registrieren({
 
 Mehr muss der Tresor nicht wissen – Auswahl, Fahrplan, Fortschritt und
 Speicherung laufen über die Registry.
+
+---
+
+## Zeitregeln
+
+Drei Schalter, die quer über alle Dimensionen wirken:
+
+* **Strafzeit bei Fehlversuch** (aus / mild ab 20 s / hart ab 60 s). Jeder
+  weitere Fehlversuch derselben Aufgabe kostet das 1,7-Fache, gedeckelt bei
+  30 Minuten. Die Aufgabe ist währenddessen gesperrt und zeigt einen Countdown.
+* **Geheime Frist pro Aufgabe.** Beim Verriegeln wird je Aufgabe eine
+  unsichtbare Höchstdauer gezogen: ein zufälliges Vielfaches der geschätzten
+  Dauer, innerhalb eines von dir gesetzten Rahmens (z. B. 1,2× bis 3,0×).
+  Angezeigt wird nur ⏳. Läuft sie ab, beginnt die Aufgabe von vorn, es gibt
+  Strafzeit – und es wird **eine neue Frist gezogen**, damit der zweite Anlauf
+  nicht dieselbe Grenze hat. Der Startzeitpunkt wird gespeichert, ein Reload
+  schenkt also keine Zeit.
+* **Notausgang** – die Exit-Strategie. Ein zweites, unabhängiges Zeitschloss
+  über das *ganze* Geheimnis: keine Aufgaben, keine Sperrfristen, nur
+  Rechenzeit (5 min bis 8 h, frei wählbar). Damit steht fest, wie lange du dich
+  höchstens aussperren kannst. Optional lässt er sich für 1, 3 oder 7 Tage
+  sperren – diese Wartefrist ist allerdings nur eine Sperre der Oberfläche,
+  im Gegensatz zur Rechenzeit dahinter. Er läuft in einer eigenen Ansicht,
+  damit nie zwei Zeitschlösser um dieselbe CPU streiten.
 
 ---
 
@@ -171,10 +256,14 @@ unverändert.
 | `js/util.js` | DOM-Helfer, Zeitformate, Hex |
 | `js/rng.js` | Zufallsstrom mit Saat |
 | `js/speicher.js` | `localStorage`, Gedächtnis für benutzte Aufgabentypen |
-| `js/krypto.js` | Schlüsselableitung, AES-256-GCM pro Fragment |
+| `js/krypto.js` | Schlüsselableitung, PBKDF2-Antwortbindung, AES-256-GCM |
 | `js/worker-timelock.js` | Primzahlen, Puzzle-Erzeugung, sequentielles Quadrieren |
 | `js/zeitschloss.js` | Hülle um den Worker, pausierbarer Löser |
-| `js/herausforderungen.js` | Registry und alle Aufgaben |
+| `js/herausforderungen.js` | Registry, gemeinsame Bausteine, Geduld und Zeit |
+| `js/aufgaben-glueck.js` | Würfel, Münze, Ziehung, Glücksrad |
+| `js/aufgaben-logik.js` | Zahlenfolge, Lügner, Waage, Mastermind |
+| `js/aufgaben-raetsel.js` | Chiffre, Morse, Anagramm, Zahlenrätsel |
+| `js/woerter.js` | Wortvorrat ohne Umlaute |
 | `js/tresor.js` | Aufgabenplan, Verriegeln, Freigabe |
 | `js/foto.js` | Ziffernerkennung im Bild |
 | `js/app.js` | Oberfläche und Ablauf |

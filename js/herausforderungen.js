@@ -15,10 +15,18 @@
 
   var katalog = {};
   var reihenfolge = [];
+  var dimensionen = [];
 
   function registrieren(modul) {
     katalog[modul.id] = modul;
     reihenfolge.push(modul.id);
+  }
+
+  /* Dimensionen melden sich selbst an; die Reihenfolge bestimmt die Anzeige. */
+  function dimensionRegistrieren(dimension) {
+    var vorhanden = dimensionen.filter(function (d) { return d.id === dimension.id; })[0];
+    if (vorhanden) { Object.keys(dimension).forEach(function (k) { vorhanden[k] = dimension[k]; }); return; }
+    dimensionen.push(dimension);
   }
 
   function nachDimension(dimension) {
@@ -43,6 +51,37 @@
         meldung.className = 'aufgabe-meldung' + (art ? ' ist-' + art : '');
       }
     };
+  }
+
+  /* Eingabefeld fuer Aufgaben, deren Antwort in den Schluessel eingeht. */
+  function antwortFeld(kontext, koerper, beschriftung, optionen) {
+    optionen = optionen || {};
+    var feld = el('input', {
+      type: 'text', class: 'antwortfeld', autocomplete: 'off', autocapitalize: 'off',
+      spellcheck: 'false', placeholder: optionen.platzhalter || '',
+      inputmode: optionen.ziffern ? 'numeric' : 'text'
+    });
+    var knopf = el('button', { class: 'knopf', type: 'button', text: 'Prüfen' });
+    var zeile = el('div', { class: 'antwortzeile' }, [feld, knopf]);
+    koerper.appendChild(el('p', { class: 'antwort-beschriftung flaut', text: beschriftung }));
+    koerper.appendChild(zeile);
+
+    var laeuft = false;
+    async function absenden() {
+      var wert = feld.value.trim();
+      if (!wert || laeuft) return;
+      laeuft = true; knopf.disabled = true; knopf.textContent = 'prüfe ...';
+      var richtig = await kontext.pruefeAntwort(wert);
+      laeuft = false; knopf.disabled = false; knopf.textContent = 'Prüfen';
+      if (richtig) return;                      // die App blendet die Aufgabe ab
+      feld.select();
+      if (optionen.beiFehler) optionen.beiFehler();
+      kontext.fehlschlag('Falsch.');
+    }
+    knopf.addEventListener('click', absenden);
+    feld.addEventListener('keydown', function (e) { if (e.key === 'Enter') absenden(); });
+    setTimeout(function () { feld.focus(); }, 50);
+    return feld;
   }
 
   function balken(koerper, beschriftung) {
@@ -115,6 +154,7 @@
         haelt = false;
         knopf.classList.remove('ist-aktiv');
         b.sag(grund + ' Bei ' + Math.round((verstrichen / p.sekunden) * 100) + ' %. Noch mal.', 'fehler');
+        if (kontext.fehlschlag(grund)) return;
         verstrichen = 0;
         fortschritt.setze(0);
         fortschritt.text('');
@@ -167,6 +207,7 @@
         starten.disabled = false;
         starten.textContent = 'Noch einmal';
         b.sag(grund + ' Bei ' + util.dauer(verstrichen) + '. Von vorn.', 'fehler');
+        if (kontext.fehlschlag(grund)) return;
         verstrichen = 0; fortschritt.setze(0); fortschritt.text('');
       }
 
@@ -240,6 +281,7 @@
 
       function fehlschlag(grund) {
         b.sag(grund + ' Zurück auf Anfang.', 'fehler');
+        if (kontext.fehlschlag(grund)) return;
         zyklus = 0; phase = 'bereit'; zeitInPhase = 0; wendeOffen = false;
         text.textContent = 'Start';
         kreis.style.transform = 'scale(0.55)';
@@ -336,6 +378,7 @@
             fortschritt.setze(treffer / noetig);
             fortschritt.text(treffer + ' von ' + noetig);
             b.sag('Signal verpasst - ein Signal mehr.', 'fehler');
+            if (kontext.fehlschlag('Signal verpasst.')) return;
             bisSignal = zufall.bereich(p.minAbstand, p.maxAbstand);
           }
           return;
@@ -380,6 +423,7 @@
         laeuft = false; verstrichen = 0; regler.value = '0';
         spur.firstChild.style.left = '0%';
         b.sag(grund + ' Von vorn.', 'fehler');
+        if (kontext.fehlschlag(grund)) return;
         fortschritt.setze(0); fortschritt.text('noch nicht gestartet');
       }
 
@@ -442,6 +486,7 @@
         var richtung = abweichung < 0 ? 'zu früh' : 'zu spät';
         var staerke = Math.abs(abweichung) > 0.35 ? 'deutlich ' : Math.abs(abweichung) > 0.18 ? '' : 'knapp ';
         b.sag(staerke + richtung + '. Noch einmal.', 'fehler');
+        kontext.fehlschlag('Daneben geschätzt.');
       });
 
       return function () {};
@@ -600,17 +645,18 @@
     }
   });
 
+  dimensionRegistrieren({ id: 'geduld', name: 'Geduld', beschreibung: 'Aushalten, stillhalten, warten können.', fertig: true });
+  dimensionRegistrieren({ id: 'zeit', name: 'Zeit', beschreibung: 'Sperrfristen, Tageszeiten, echte Rechenzeit.', fertig: true });
+  dimensionRegistrieren({ id: 'konzentration', name: 'Konzentration', beschreibung: 'Simon, N-Back, Stroop.', fertig: false });
+
   T.herausforderungen = {
     katalog: katalog,
     liste: function () { return reihenfolge.map(function (id) { return katalog[id]; }); },
     nachDimension: nachDimension,
     hole: function (id) { return katalog[id]; },
-    dimensionen: [
-      { id: 'geduld', name: 'Geduld', beschreibung: 'Aushalten, stillhalten, warten können.', fertig: true },
-      { id: 'zeit', name: 'Zeit', beschreibung: 'Sperrfristen, Tageszeiten, echte Rechenzeit.', fertig: true },
-      { id: 'logik', name: 'Logik', beschreibung: 'Mastermind, Zahlenfolgen, Lügner und Wahrheitssager.', fertig: false },
-      { id: 'raetsel', name: 'Rätsel', beschreibung: 'Chiffren, Anagramme, Morse.', fertig: false },
-      { id: 'konzentration', name: 'Konzentration', beschreibung: 'Simon, N-Back, Stroop.', fertig: false }
-    ]
+    registrieren: registrieren,
+    dimensionRegistrieren: dimensionRegistrieren,
+    dimensionen: dimensionen,
+    werkzeug: { buehne: buehne, balken: balken, takt: takt, ton: ton, jitter: jitter, proStufe: proStufe, antwortFeld: antwortFeld }
   };
 })(typeof window !== 'undefined' ? window : globalThis);
