@@ -1,0 +1,90 @@
+/* Bequeme Hülle um den Zeitschloss-Worker. */
+(function (global) {
+  'use strict';
+  var T = global.Tresor || (global.Tresor = {});
+  var BITS = 1024;
+  var PFAD = 'js/worker-timelock.js';
+
+  function einmal(nachricht, aufTyp, beiFortschritt) {
+    return new Promise(function (erfuellen, ablehnen) {
+      var worker = new Worker(PFAD);
+      worker.onmessage = function (ereignis) {
+        var m = ereignis.data;
+        if (m.typ === 'fehler') { worker.terminate(); ablehnen(new Error(m.meldung)); return; }
+        if (m.typ === 'fortschritt' || m.typ === 'gestoppt') { if (beiFortschritt) beiFortschritt(m); return; }
+        if (m.typ === aufTyp) { worker.terminate(); erfuellen(m); }
+      };
+      worker.onerror = function (fehler) { worker.terminate(); ablehnen(new Error(fehler.message || 'Worker-Fehler')); };
+      worker.postMessage(nachricht);
+    });
+  }
+
+  /* Quadrierungen pro Sekunde auf diesem Gerät. */
+  async function messen() {
+    var antwort = await einmal({ cmd: 'messen', bits: BITS }, 'messung');
+    return antwort.rate;
+  }
+
+  /* Neues Puzzle, das ungefähr `sekunden` Rechenzeit kostet. */
+  async function erzeugen(schritte) {
+    var antwort = await einmal({ cmd: 'erzeugen', bits: BITS, schritte: schritte }, 'erzeugt');
+    return antwort.puzzle;
+  }
+
+  /* Laufender Löser. Kann pausiert werden und gibt seinen Zwischenstand heraus,
+   * damit verbrauchte Rechenzeit einen Reload überlebt. */
+  function Loeser(puzzle, stand, beiFortschritt) {
+    this.puzzle = puzzle;
+    this.erledigt = (stand && stand.erledigt) || 0;
+    this.x = (stand && stand.x) || puzzle.a;
+    this.beiFortschritt = beiFortschritt || function () {};
+    this.worker = null;
+    this.laeuft = false;
+  }
+
+  Loeser.prototype.starten = function () {
+    var ich = this;
+    if (ich.laeuft) return ich.versprechen;
+    ich.laeuft = true;
+    ich.versprechen = new Promise(function (erfuellen, ablehnen) {
+      ich.worker = new Worker(PFAD);
+      ich.worker.onmessage = function (ereignis) {
+        var m = ereignis.data;
+        if (m.typ === 'fortschritt') {
+          ich.erledigt = m.erledigt; ich.x = m.x;
+          ich.beiFortschritt(ich.stand());
+        } else if (m.typ === 'gestoppt') {
+          ich.erledigt = m.erledigt; ich.x = m.x;
+          ich.laeuft = false;
+          ich.worker.terminate(); ich.worker = null;
+          ich.beiFortschritt(ich.stand());
+          erfuellen(null);
+        } else if (m.typ === 'fertig') {
+          ich.erledigt = m.erledigt; ich.laeuft = false;
+          ich.worker.terminate(); ich.worker = null;
+          erfuellen(m.b);
+        } else if (m.typ === 'fehler') {
+          ich.laeuft = false;
+          ich.worker.terminate(); ich.worker = null;
+          ablehnen(new Error(m.meldung));
+        }
+      };
+      ich.worker.postMessage({
+        cmd: 'loesen', n: ich.puzzle.n, x: ich.x,
+        erledigt: ich.erledigt, ziel: ich.puzzle.t
+      });
+    });
+    return ich.versprechen;
+  };
+
+  Loeser.prototype.anhalten = function () {
+    if (this.worker) this.worker.postMessage({ cmd: 'stopp' });
+    return this.versprechen || Promise.resolve(null);
+  };
+
+  Loeser.prototype.stand = function () {
+    return { erledigt: this.erledigt, x: this.x, ziel: this.puzzle.t };
+  };
+
+  T.zeitschloss = { messen: messen, erzeugen: erzeugen, Loeser: Loeser, BITS: BITS };
+})(typeof window !== 'undefined' ? window : globalThis);

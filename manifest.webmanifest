@@ -1,0 +1,10 @@
+{
+  "name": "Tresor - Geheimnis auf Raten",
+  "short_name": "Tresor",
+  "description": "Eine Zahl einsperren und nur über Geduld, Zeit und Rechenarbeit wieder herausbekommen.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#11151c",
+  "theme_color": "#11151c",
+  "lang": "de"
+}

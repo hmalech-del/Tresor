@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Tresor · Geheimnis auf Raten</title>
+  <meta name="description" content="Eine Zahl einsperren und nur über Geduld, Zeit und Rechenarbeit wieder herausbekommen.">
+  <meta name="theme-color" content="#11151c">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="kopf">
+    <div class="kopf-inhalt">
+      <h1>Tresor</h1>
+      <p class="flaut">Ein Geheimnis, das sich nur Stück für Stück hergibt.</p>
+    </div>
+  </header>
+
+  <main id="buehne" class="buehne"></main>
+
+  <footer class="fuss flaut klein">
+    <p>Alles bleibt auf diesem Gerät: keine Server, kein Konto, keine Übertragung.
+       Die Ziffern liegen einzeln AES-verschlüsselt im Browser-Speicher, die Schlüssel
+       entstehen erst beim Lösen der Zeitschlösser.</p>
+  </footer>
+
+  <script src="js/util.js"></script>
+  <script src="js/rng.js"></script>
+  <script src="js/speicher.js"></script>
+  <script src="js/krypto.js"></script>
+  <script src="js/zeitschloss.js"></script>
+  <script src="js/herausforderungen.js"></script>
+  <script src="js/tresor.js"></script>
+  <script src="js/foto.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
