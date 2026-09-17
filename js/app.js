@@ -15,6 +15,7 @@
     loeser: null,
     exitLoeser: null,
     exitAnzeige: null,
+    passMaterial: null,            // nur im Arbeitsspeicher, nie gesichert
     letzteSicherung: 0,
     fotoErgebnis: null
   };
@@ -135,10 +136,21 @@
       ? !!zustand.bild
       : /^\d+$/.test(zustand.geheimnis) && zustand.geheimnis.length === zustand.laenge;
     var dimensionen = aktiveDimensionen();
-    knopf.disabled = !(vollstaendig && dimensionen.length);
+    var passAn = $('#passphrase-aktiv') && $('#passphrase-aktiv').checked;
+    var pass = passAn ? $('#passphrase').value : '';
+    var passWdh = passAn ? $('#passphrase-wdh').value : '';
+    var passOk = !passAn || (pass.length >= 4 && pass === passWdh);
+    if (passAn) {
+      $('#passphrase-hinweis').textContent = !pass.length ? 'Noch keine Passphrase.'
+        : pass.length < 4 ? 'Zu kurz - nimm lieber einen ganzen Satz.'
+        : pass !== passWdh ? 'Die beiden Eingaben stimmen noch nicht überein.'
+        : 'Passt. Schreib sie dir auf, bevor du verriegelst.';
+    }
+    knopf.disabled = !(vollstaendig && dimensionen.length && passOk);
     $('#bereit-hinweis').textContent = !vollstaendig
       ? (zustand.art === 'foto' ? 'Es fehlt noch ein Bild.' : 'Es fehlen noch Ziffern.')
-      : !dimensionen.length ? 'Wähle mindestens eine Dimension.' : '';
+      : !dimensionen.length ? 'Wähle mindestens eine Dimension.'
+      : !passOk ? 'Die Passphrase ist noch nicht vollständig.' : '';
   }
 
   function aktiveDimensionen() {
@@ -160,6 +172,7 @@
       rechenzeit: Number($('#rechenzeit').value),
       reihenfolge: $('#reihenfolge').value,
       sicherheit: $('#sicherheit').value,
+      mitPassphrase: $('#passphrase-aktiv').checked,
       strafe: Number($('#strafzeit').value),
       erinnerungen: $('#erinnerungen').checked,
       geheimeFrist: {
@@ -459,6 +472,25 @@
         ])
       ]),
       el('p', { class: 'flaut klein', id: 'sicherheit-hinweis', text: '' }),
+      el('label', { class: 'schalterzeile' }, [
+        el('input', { type: 'checkbox', id: 'passphrase-aktiv' }),
+        el('span', { text: 'Zusätzlich mit einer Passphrase verschließen' })
+      ]),
+      el('div', { id: 'passphrase-felder', class: 'versteckt' }, [
+        el('div', { class: 'antwortzeile' }, [
+          el('input', { type: 'password', id: 'passphrase', class: 'antwortfeld',
+            autocomplete: 'new-password', placeholder: 'Passphrase' })
+        ]),
+        el('div', { class: 'antwortzeile' }, [
+          el('input', { type: 'password', id: 'passphrase-wdh', class: 'antwortfeld',
+            autocomplete: 'new-password', placeholder: 'noch einmal' })
+        ]),
+        el('p', { class: 'warnung', text:
+          'Die Passphrase geht in jeden Schlüssel ein und wird nirgends gespeichert - auch nicht in einer Sicherung. '
+          + 'Ohne sie kommt niemand an das Geheimnis, auch nicht über den Notausgang, und auch du nicht. '
+          + 'Vergessen heißt verloren.' }),
+        el('p', { class: 'flaut klein', id: 'passphrase-hinweis', text: '' })
+      ]),
       el('div', { class: 'feld', id: 'rechenzeit-feld' }, [
         el('label', { for: 'rechenzeit', text: 'Zeitschloss (echte Rechenzeit je Fragment)' }),
         el('input', { type: 'range', min: '1', max: '5', value: '2', id: 'rechenzeit' }),
@@ -583,6 +615,14 @@
     aufwandAktualisieren();
     $('#reihenfolge').addEventListener('change', schaetzungAktualisieren);
     $('#sicherheit').addEventListener('change', schaetzungAktualisieren);
+    $('#passphrase-aktiv').addEventListener('change', function () {
+      $('#passphrase-felder').classList.toggle('versteckt', !this.checked);
+      pruefeBereit();
+      schaetzungAktualisieren();
+    });
+    [$('#passphrase'), $('#passphrase-wdh')].forEach(function (feld) {
+      feld.addEventListener('input', pruefeBereit);
+    });
     $('#verriegeln').addEventListener('click', verriegeln);
 
     wurzel.appendChild(sicherungsKarte());
@@ -696,6 +736,8 @@
 
   async function verriegeln() {
     var konfig = konfigurationLesen();
+    // vor dem Leeren der Bühne auslesen - danach gibt es die Felder nicht mehr
+    var passphrase = konfig.mitPassphrase ? $('#passphrase').value : '';
     var art = zustand.art;
     var teile = art === 'foto'
       ? zustand.bild.stufen.map(function (stufe) { return stufe.bild; })
@@ -712,6 +754,7 @@
         art: art,
         teile: teile,
         konfig: konfig,
+        passphrase: passphrase,
         beiFortschritt: function (m) {
           $('#schmiede-text').textContent = m.text;
           if (typeof m.anteil === 'number') $('#schmiede-balken').style.width = (m.anteil * 100) + '%';
@@ -720,6 +763,10 @@
       zustand.geheimnis = '';
       zustand.bild = null;
       teile = null;
+      if (passphrase) {
+        zustand.passMaterial = await T.tresorLogik.passphraseMaterial(tresor, passphrase);
+        passphrase = null;
+      }
       zustand.tresor = tresor;
       if (!T.speicher.sichern(tresor)) {
         util.leeren(kasten).appendChild(el('p', { class: 'warnung', text:
@@ -838,6 +885,8 @@
         el('p', { class: 'flaut', text: 'Erstellt ' + util.zeitpunkt(tresor.erstellt) + '. Das Ergebnis liegt jetzt auch im Verlauf.' }),
         el('button', { class: 'knopf gross', type: 'button', text: 'Neuen Tresor anlegen', onclick: neuAnlegen })
       ]));
+    } else if (T.tresorLogik.brauchtPassphrase(tresor) && !zustand.passMaterial) {
+      wurzel.appendChild(passphraseKarte());
     } else {
       var aufgabenKarte = el('section', { class: 'karte aufgabenkarte', id: 'aufgabenkarte' });
       wurzel.appendChild(aufgabenKarte);
@@ -901,6 +950,10 @@
         : tresor.fragmente[0].schloss
           ? 'Keine antwortgebundenen Aufgaben – die Aufgaben sind reine Oberflächenhürden, kryptografisch bindend ist nur die Rechenzeit.'
           : 'Keine antwortgebundenen Aufgaben und kein Zeitschloss – dieser Tresor ist reine Selbstbindung.' }),
+      T.tresorLogik.brauchtPassphrase(tresor)
+        ? el('p', { text: 'Zusätzlich mit einer Passphrase verschlossen: Sie geht über PBKDF2 in jeden '
+            + 'Fragmentschlüssel und in den Notausgang ein und liegt nirgends - weder hier noch in einer Sicherung.' })
+        : null,
       el('button', { class: 'knopf gefahr', type: 'button', text: 'Tresor löschen', onclick: tresorLoeschen })
     ]));
 
@@ -967,7 +1020,7 @@
     zustand.exitLoeser.starten().then(function (b) {
       zustand.exitLoeser = null;
       if (!b) { exitAnzeigeAktualisieren(); sichern(true); return; }
-      return T.tresorLogik.notausgangOeffnen(tresor, b).then(function () {
+      return T.tresorLogik.notausgangOeffnen(tresor, b, zustand.passMaterial).then(function () {
         exit.mitlaufen = false;
         sichern(true);
         zeichneTresor();
@@ -1051,7 +1104,7 @@
       oeffnen.addEventListener('click', function () {
         if (oeffnen.disabled) return;
         oeffnen.disabled = true;
-        T.tresorLogik.notausgangOeffnen(tresor, null).then(function () {
+        T.tresorLogik.notausgangOeffnen(tresor, null, zustand.passMaterial).then(function () {
           sichern(true);
           zeichneTresor();
         }).catch(function (fehler) {
@@ -1105,6 +1158,48 @@
   }
 
 
+  /* Passphrase-Schloss: ohne sie geht in diesem Tresor gar nichts - weder
+   * Aufgaben noch Notausgang. Gemerkt wird nur das abgeleitete Material, und
+   * nur im Arbeitsspeicher dieser Sitzung. */
+  function passphraseKarte() {
+    var karte = el('section', { class: 'karte aufgabenkarte' }, [
+      el('p', { class: 'aufgabe-titel', text: 'Passphrase' }),
+      el('p', { class: 'aufgabe-hinweis', text:
+        'Dieser Tresor ist zusätzlich mit einer Passphrase verschlossen. Sie geht in jeden Schlüssel ein; '
+        + 'ohne sie helfen weder Aufgaben noch Rechenzeit noch der Notausgang.' })
+    ]);
+    var feld = el('input', { type: 'password', class: 'antwortfeld', autocomplete: 'current-password',
+      placeholder: 'Passphrase' });
+    var knopf = el('button', { class: 'knopf haupt', type: 'button', text: 'Aufschließen' });
+    var meldung = el('p', { class: 'aufgabe-meldung', text: '' });
+    karte.appendChild(el('div', { class: 'antwortzeile' }, [feld, knopf]));
+    karte.appendChild(meldung);
+    karte.appendChild(el('p', { class: 'flaut klein', text:
+      'Nur für diese Sitzung gemerkt - nach einem Neuladen fragt der Tresor wieder.' }));
+
+    async function pruefen() {
+      if (!feld.value) return;
+      knopf.disabled = true;
+      meldung.className = 'aufgabe-meldung';
+      meldung.textContent = 'wird geprüft ...';
+      var richtig = await T.tresorLogik.passphrasePruefen(zustand.tresor, feld.value);
+      if (!richtig) {
+        knopf.disabled = false;
+        meldung.className = 'aufgabe-meldung ist-fehler';
+        meldung.textContent = 'Das war sie nicht.';
+        feld.select();
+        return;
+      }
+      zustand.passMaterial = await T.tresorLogik.passphraseMaterial(zustand.tresor, feld.value);
+      feld.value = '';
+      zeichneTresor();
+    }
+    knopf.addEventListener('click', pruefen);
+    feld.addEventListener('keydown', function (e) { if (e.key === 'Enter') pruefen(); });
+    setTimeout(function () { feld.focus(); }, 50);
+    return karte;
+  }
+
   /* ---------------- Sicherung ----------------
    *
    * Ein Tresor lebt sonst ausschließlich im Browser-Speicher dieses Geräts:
@@ -1131,7 +1226,9 @@
       karte.appendChild(el('p', { class: 'flaut klein', text:
         'Eine Kopie dieses Tresors als Datei - mit allem, was dazugehört: Aufgaben, Zeitschlösser, '
         + 'Rechenfortschritt und laufende Fristen. Beim Einlesen auf einem anderen Gerät geht es dort '
-        + 'weiter, wo du hier aufgehört hast.' }));
+        + 'weiter, wo du hier aufgehört hast.'
+        + (T.tresorLogik.brauchtPassphrase(tresor)
+            ? ' Die Passphrase steckt nicht in der Datei - ohne sie ist auch die Sicherung wertlos.' : '') }));
       if (offen) {
         karte.appendChild(el('p', { class: 'warnung', text:
           'Achtung: ' + offen + (offen === 1 ? ' Fragment ist' : ' Fragmente sind') + ' bereits offen und '
@@ -1428,7 +1525,7 @@
     buehne.appendChild(knopf);
     knopf.addEventListener('click', function () {
       knopf.disabled = true;
-      T.tresorLogik.fragmentOeffnen(zustand.tresor, fragment, null).then(function () {
+      T.tresorLogik.fragmentOeffnen(zustand.tresor, fragment, null, zustand.passMaterial).then(function () {
         sichern(true);
         zeichneTresor();
       }).catch(function (fehler) {
@@ -1512,7 +1609,7 @@
       zustand.loeser.starten().then(function (b) {
         if (!b) { laeuft = false; knopf.textContent = 'Weiterrechnen'; zeichneStand(fragment.stand.erledigt); sichern(true); return; }
         zustand.loeser = null;
-        return T.tresorLogik.fragmentOeffnen(zustand.tresor, fragment, b).then(function () {
+        return T.tresorLogik.fragmentOeffnen(zustand.tresor, fragment, b, zustand.passMaterial).then(function () {
           sichern(true);
           zeichneTresor();
         });

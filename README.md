@@ -49,6 +49,31 @@ Sichern.
 
 ---
 
+## Passphrase: der Schlüsselteil, der nirgends liegt
+
+Optional lässt sich ein Tresor zusätzlich mit einer Passphrase verschließen.
+Sie geht über PBKDF2 (400 000 Runden) in **jeden** Fragmentschlüssel ein – und
+in den Notausgang, sonst wäre er die Hintertür:
+
+```
+passMaterial  = PBKDF2( "passphrase|" ‖ passphrase, passSalz, 400 000 )
+schluessel_i  = SHA-256( "tresor-fragment" | i | b_i | material_i | passMaterial )
+```
+
+Damit ändert sich die Lage grundlegend: Ohne Passphrase nützt der Zugriff auf
+den Browser-Speicher nichts mehr – auch nicht im Modus ohne Rechenzeit, wo
+sonst alles offen danebenliegt. Gespeichert werden nur zwei Salze und ein
+Prüfwert (mit eigenem Salz, damit er nichts über das Material verrät);
+Durchprobieren kostet pro Versuch eine volle PBKDF2-Ableitung.
+
+Die App fragt sie beim Öffnen des Tresors einmal pro Sitzung ab, merkt sich nur
+das abgeleitete Material im Arbeitsspeicher und fragt nach jedem Neuladen
+erneut. **In einer Sicherung steckt sie nicht** – ohne sie ist auch die Datei
+wertlos. Und, in der Oberfläche genauso deutlich: Vergessen heißt verloren, da
+hilft auch der Notausgang nicht.
+
+---
+
 ## Zwei Sicherheitsstufen
 
 | Modus | Was die Fragmente schützt | Notausgang | Kosten |

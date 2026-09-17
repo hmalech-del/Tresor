@@ -97,23 +97,42 @@
 
   /* Zeitgeber für alle Aufgaben.
    *
-   * Zwei Eigenheiten mobiler Geräte werden hier abgefangen: Im Hintergrund
-   * (Bildschirm aus, anderer Tab) liefert requestAnimationFrame gar nichts,
-   * und beim Zurückkommen käme sonst ein Riesensprung an - also wird jeder
-   * Schritt gedeckelt. Und solange das Dokument versteckt ist, zählt gar
-   * keine Zeit: Eine Aufgabe soll nicht weiterlaufen, während niemand
-   * hinsieht. */
+   * Zwei Eigenheiten mobiler Geräte werden hier abgefangen. Erstens liefert
+   * requestAnimationFrame im Hintergrund gar nichts - beim Zurückkommen käme
+   * sonst die ganze verstrichene Zeit als ein Riesenschritt an. Zweitens soll
+   * eine Aufgabe nicht weiterlaufen, während niemand hinsieht: Auf dem Handy
+   * geht der Bildschirm sonst mitten in einer Geduldsübung aus.
+   *
+   * Gemessen wird deshalb echte Zeit abzüglich der Zeit, in der das Dokument
+   * versteckt war. Ein pauschaler Deckel pro Bild wäre das falsche Mittel: Er
+   * würde Aufgaben in die Länge ziehen, sobald das Gerät nur wenige Bilder pro
+   * Sekunde schafft. Die zwei Sekunden unten sind reine Notbremse für den
+   * Fall, dass eine Pause ganz ohne Sichtwechsel passiert. */
   function takt(rueckruf) {
-    var laeuft = true, letzte = performance.now();
+    var laeuft = true;
+    var letzte = performance.now();
+    var verstecktAb = 0;
+    var versteckteZeit = 0;
+
+    function sichtwechsel() {
+      if (document.hidden) { verstecktAb = performance.now(); return; }
+      if (verstecktAb) { versteckteZeit += performance.now() - verstecktAb; verstecktAb = 0; }
+    }
+    document.addEventListener('visibilitychange', sichtwechsel);
+
     function schritt(jetzt) {
       if (!laeuft) return;
-      var delta = Math.min(0.25, (jetzt - letzte) / 1000);
+      var delta = (jetzt - letzte - versteckteZeit) / 1000;
+      versteckteZeit = 0;
       letzte = jetzt;
-      if (!document.hidden) rueckruf(delta, jetzt);
+      if (!document.hidden && delta > 0) rueckruf(Math.min(delta, 2), jetzt);
       if (laeuft) requestAnimationFrame(schritt);
     }
     requestAnimationFrame(schritt);
-    return function () { laeuft = false; };
+    return function () {
+      laeuft = false;
+      document.removeEventListener('visibilitychange', sichtwechsel);
+    };
   }
 
   function ton(frequenz, dauer) {

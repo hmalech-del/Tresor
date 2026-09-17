@@ -206,6 +206,17 @@
     var laenge = teile.length;
     var mitRechenzeit = rechenzeitModus(konfig);
 
+    /* Passphrase, falls gesetzt: Material einmal ableiten, Salze und Prüfwert
+     * merken - die Passphrase selbst wird nirgends gespeichert. */
+    var passSalz = null, passPruefSalz = null, passPruef = null, passMat = null;
+    if (optionen.passphrase) {
+      melde({ phase: 'passphrase', text: 'Passphrase verrechnen ...' });
+      passSalz = T.krypto.neuesSalz();
+      passPruefSalz = T.krypto.neuesSalz();
+      passMat = await T.krypto.passMaterial(optionen.passphrase, passSalz, T.krypto.ITERATIONEN);
+      passPruef = await T.krypto.passPruefung(optionen.passphrase, passPruefSalz, T.krypto.ITERATIONEN);
+    }
+
     var rate = 0, sekundenProSchloss = 0, schritte = 0;
     if (mitRechenzeit) {
       melde({ phase: 'messen', text: 'Rechenleistung dieses Geräts messen ...' });
@@ -248,7 +259,7 @@
       var schluessel = mitRechenzeit ? null : zufallsHex(32);
       var puzzle = mitRechenzeit ? await T.zeitschloss.erzeugen(schritte) : null;
       var geheimteil = teile[positionen[i]];
-      var paket = await T.krypto.verschluesseln(i, mitRechenzeit ? puzzle.b : schluessel, geheimteil, material);
+      var paket = await T.krypto.verschluesseln(i, mitRechenzeit ? puzzle.b : schluessel, geheimteil, material, passMat);
 
       fragmente.push({
         index: i,
@@ -314,7 +325,7 @@
             pruef: await T.krypto.pruefwert(blindPuzzle.b),
             untergrenze: untergrenze, obergrenze: obergrenze, pruefschritt: PRUEFSCHRITT
           },
-          paket: await T.krypto.verschluesseln('notausgang', blindPuzzle.b, JSON.stringify(teile), null),
+          paket: await T.krypto.verschluesseln('notausgang', blindPuzzle.b, JSON.stringify(teile), null, passMat),
           stand: { erledigt: 0, x: blindPuzzle.a },
           benutzt: false
         };
@@ -327,7 +338,7 @@
           art: 'rechenzeit', modus: exitModus, blind: false, mitlaufen: false,
           rahmen: [exitMin, exitMax], sekunden: gezogen, frei: 0,
           schloss: { n: offenesPuzzle.n, a: offenesPuzzle.a, t: offeneSchritte },
-          paket: await T.krypto.verschluesseln('notausgang', offenesPuzzle.b, JSON.stringify(teile), null),
+          paket: await T.krypto.verschluesseln('notausgang', offenesPuzzle.b, JSON.stringify(teile), null, passMat),
           stand: { erledigt: 0, x: offenesPuzzle.a },
           benutzt: false
         };
@@ -343,7 +354,7 @@
           frei: Date.now() + gezogen * 1000,
           gesehen: Date.now(),
           schluessel: exitSchluessel,
-          paket: await T.krypto.verschluesseln('notausgang', exitSchluessel, JSON.stringify(teile), null),
+          paket: await T.krypto.verschluesseln('notausgang', exitSchluessel, JSON.stringify(teile), null, passMat),
           benutzt: false
         };
       }
@@ -364,8 +375,12 @@
     }
 
     melde({ phase: 'fertig', text: 'Verriegelt.', anteil: 1 });
+    passMat = null;
     return {
       version: 3,
+      passSalz: passSalz,
+      passPruefSalz: passPruefSalz,
+      passPruef: passPruef,
       id: 't' + Date.now().toString(36) + '-' + Math.floor(Math.random() * 1e6).toString(36),
       art: art,
       frist: frist,
@@ -419,14 +434,14 @@
   /* Ist das Zeitschloss geknackt, wird die Ziffer entschlüsselt. Die Antworten
    * der gebundenen Aufgaben gehen in den Schlüssel ein und werden danach
    * gelöscht - im Speicher bleibt nur die Ziffer. */
-  async function fragmentOeffnen(tresor, fragment, bHex) {
+  async function fragmentOeffnen(tresor, fragment, bHex, passMat) {
     var antworten = fragment.aufgaben.filter(function (aufgabe) {
       return aufgabe.pruefung && aufgabe.zustand && aufgabe.zustand.antwort;
     }).map(function (aufgabe) { return aufgabe.zustand.antwort; });
     var material = await T.krypto.antwortMaterial(
       antworten, fragment.antwortSalz, fragment.iterationen || T.krypto.ITERATIONEN);
     fragment.inhalt = await T.krypto.entschluesseln(
-      fragment.index, fragment.schluessel || bHex, fragment.paket, material);
+      fragment.index, fragment.schluessel || bHex, fragment.paket, material, passMat);
     fragment.offen = true;
     if (fragment.schloss) fragment.stand.erledigt = fragment.schloss.t;
     fragment.aufgaben.forEach(function (aufgabe) {
@@ -457,9 +472,9 @@
     return Date.now() >= (exit.frei || 0);
   }
 
-  async function notausgangOeffnen(tresor, bHex) {
+  async function notausgangOeffnen(tresor, bHex, passMat) {
     var teile = JSON.parse(await T.krypto.entschluesseln(
-      'notausgang', tresor.notausgang.schluessel || bHex, tresor.notausgang.paket, null));
+      'notausgang', tresor.notausgang.schluessel || bHex, tresor.notausgang.paket, null, passMat));
     tresor.fragmente.forEach(function (fragment) {
       if (fragment.offen) return;
       fragment.inhalt = teile[fragment.position];
@@ -522,7 +537,24 @@
     return bericht;
   }
 
+  function brauchtPassphrase(tresor) { return !!(tresor && tresor.passSalz); }
+
+  /* Stimmt die Passphrase? Kostet absichtlich eine volle PBKDF2-Ableitung. */
+  async function passphrasePruefen(tresor, passphrase) {
+    if (!brauchtPassphrase(tresor)) return true;
+    var pruef = await T.krypto.passPruefung(passphrase, tresor.passPruefSalz, T.krypto.ITERATIONEN);
+    return pruef === tresor.passPruef;
+  }
+
+  async function passphraseMaterial(tresor, passphrase) {
+    if (!brauchtPassphrase(tresor)) return null;
+    return T.krypto.passMaterial(passphrase, tresor.passSalz, T.krypto.ITERATIONEN);
+  }
+
   T.tresorLogik = {
+    brauchtPassphrase: brauchtPassphrase,
+    passphrasePruefen: passphrasePruefen,
+    passphraseMaterial: passphraseMaterial,
     fristAbgelaufen: fristAbgelaufen,
     fristAusloesen: fristAusloesen,
     FRIST_WERTE: FRIST_WERTE,

@@ -75,17 +75,33 @@
     return util.bytesZuHex(await sha256(textBytes(text)));
   }
 
-  async function fragmentSchluessel(index, bHex, material) {
+  /* Passphrase als dritte Zutat.
+   *
+   * Ohne sie hängt alles am Gerät: Wer den Browser-Speicher liest, muss beim
+   * Zeitschloss nur rechnen und im Modus ohne Rechenzeit gar nichts. Mit ihr
+   * fehlt ihm ein Stück Schlüssel, das nirgends liegt. Der Prüfwert daneben
+   * benutzt ein eigenes Salz, damit er nichts über das Material verrät -
+   * durchprobieren kostet damit pro Versuch eine volle PBKDF2-Ableitung. */
+  async function passMaterial(passphrase, salzHex, iterationen) {
+    return ableiten('passphrase|' + passphrase, salzHex, iterationen, 32);
+  }
+
+  async function passPruefung(passphrase, salzHex, iterationen) {
+    return util.bytesZuHex(await ableiten('passphrase-pruefung|' + passphrase, salzHex, iterationen, 16));
+  }
+
+  async function fragmentSchluessel(index, bHex, material, passMat) {
     var roh = await sha256(verbinde(
       textBytes('tresor-fragment|' + index + '|'),
       util.hexZuBytes(bHex),
-      material || new Uint8Array(0)
+      material || new Uint8Array(0),
+      passMat || new Uint8Array(0)
     ));
     return subtle.importKey('raw', roh, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
   }
 
-  async function verschluesseln(index, bHex, klartext, material) {
-    var schluessel = await fragmentSchluessel(index, bHex, material);
+  async function verschluesseln(index, bHex, klartext, material, passMat) {
+    var schluessel = await fragmentSchluessel(index, bHex, material, passMat);
     var iv = new Uint8Array(12);
     global.crypto.getRandomValues(iv);
     var chiffrat = new Uint8Array(await subtle.encrypt(
@@ -95,8 +111,8 @@
     return { iv: util.bytesZuHex(iv), ct: util.bytesZuHex(chiffrat) };
   }
 
-  async function entschluesseln(index, bHex, paket, material) {
-    var schluessel = await fragmentSchluessel(index, bHex, material);
+  async function entschluesseln(index, bHex, paket, material, passMat) {
+    var schluessel = await fragmentSchluessel(index, bHex, material, passMat);
     var klar = await subtle.decrypt(
       { name: 'AES-GCM', iv: util.hexZuBytes(paket.iv), additionalData: textBytes('fragment' + index) },
       schluessel, util.hexZuBytes(paket.ct)
@@ -110,6 +126,8 @@
     neuesSalz: neuesSalz,
     antwortPruefung: antwortPruefung,
     antwortMaterial: antwortMaterial,
+    passMaterial: passMaterial,
+    passPruefung: passPruefung,
     pruefwert: pruefwert,
     verschluesseln: verschluesseln,
     entschluesseln: entschluesseln,
