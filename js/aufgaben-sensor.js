@@ -378,9 +378,16 @@
    * wegdriften - sonst wäre "in die Tasche stecken und stehenbleiben" die
    * Lösung. */
 
-  var HAND_UNTEN = 0.045;      // darunter liegt es auf etwas
-  var HAND_FENSTER = 40;       // Messwerte im gleitenden Fenster (gut 1 s)
-  var HAND_DRIFT = 22;         // Grad, die die Neigung insgesamt wandern darf
+  var HAND_UNTEN = 0.03;       // darunter liegt es auf etwas
+  var HAND_FENSTER = 90;       // Messwerte im gleitenden Fenster (gut 1,5 s)
+  var HAND_DRIFT = 35;         // Grad, um die die Neigung wandern darf
+  var HAND_DRIFT_FOLGT = 0.004;// wie schnell der Bezug der Neigung nachzieht
+  var HAND_HYSTERESE = 1.4;    // Verlassen kostet mehr als Drinbleiben
+  var HAND_SCHONZEIT = 0.6;    // Sekunden ausserhalb, bevor es etwas kostet
+  var HAND_EINMESSEN = 4;      // Sekunden Kalibrierung
+  var HAND_SPIELRAUM = 2.2;    // Vielfaches der eigenen Ruhe, das erlaubt ist
+  var HAND_DECKEL = 2;         // ... hoechstens so viel ueber der Vorgabe
+  var HAND_ABSOLUT = 1.3;      // ... und nie hoeher als das: darueber ist es Bewegung
 
   H.registrieren({
     id: 'ruhigehand',
@@ -392,11 +399,11 @@
     erzeuge: function (zufall, stufe) {
       return {
         sekunden: jitter(zufall, proStufe(stufe, [20, 40, 75, 130, 210]), 0.2),
-        obergrenze: proStufe(stufe, [0.85, 0.65, 0.5, 0.38, 0.28]),
+        obergrenze: proStufe(stufe, [1.6, 1.2, 0.9, 0.7, 0.55]),
         strafe: strafFaktor(stufe)
       };
     },
-    schaetzung: function (p) { return Math.round(p.sekunden * 1.7) + 25; },
+    schaetzung: function (p) { return Math.round(p.sekunden * 1.7) + 30; },
     beschreibe: function (p) { return util.dauer(p.sekunden) + ' ruhig in der Hand halten'; },
     starte: function (kontext) {
       var p = kontext.params;
@@ -417,19 +424,46 @@
           ]));
           var zeiger = skala.querySelector('.ruhezeiger');
           var zone = skala.querySelector('.ruhezone');
-          // Die Zone sitzt zwischen Unter- und Obergrenze; die Skala reicht
-          // bis zum Doppelten der Obergrenze.
-          var spanne = p.obergrenze * 2;
-          zone.style.left = (HAND_UNTEN / spanne * 100) + '%';
-          zone.style.width = ((p.obergrenze - HAND_UNTEN) / spanne * 100) + '%';
-
+          var messwert = el('p', { class: 'flaut klein sensorwerte', text: '' });
+          b.koerper.appendChild(messwert);
           var fortschritt = balken(b.koerper, '');
-          var fenster = [], verstrichen = 0, drin = false, grund = '';
-          var beta0 = null, gamma0 = null, beta = 0, gamma = 0;
+
+          /* Gehaltene Zeit ueberlebt einen Neustart - wie bei den Schritten.
+           * Drei Minuten stillhalten und dann ein verlorener Tab waeren eine
+           * Strafe fuer nichts. */
+          var verstrichen = kontext.zustand.stand || 0;
+          var gesichert = verstrichen;
+
+          var fenster = [], drin = false, grund = '', draussenSeit = 0;
+          var beta = 0, gamma = 0, betaBezug = null, gammaBezug = null;
+
+          /* Obergrenze: Die Vorgabe ist nur der Startwert. Wie stark ein
+           * Geraet rauscht und wie ruhig eine Hand ist, geht weit
+           * auseinander - ein fester Absolutwert trifft entweder das eine
+           * oder das andere. Die ersten Sekunden messen deshalb, wie ruhig
+           * DIESE Hand auf DIESEM Geraet ist, und die Grenze wird danach
+           * gesetzt. Sie kann dabei nur steigen, nie unter die Vorgabe
+           * fallen, und ist nach oben gedeckelt: Wer beim Einmessen wackelt,
+           * kauft sich nicht beliebig frei. */
+          var grenze = p.obergrenze;
+          var einmessen = [];
+          var fertigEingemessen = false;
+
+          function spanne() { return grenze * 2; }
+          function zoneZeichnen() {
+            zone.style.left = (HAND_UNTEN / spanne() * 100) + '%';
+            zone.style.width = ((grenze - HAND_UNTEN) / spanne() * 100) + '%';
+          }
+          zoneZeichnen();
 
           var abNeigung = T.sensoren.neigung(function (w) {
             beta = w.beta; gamma = w.gamma;
-            if (beta0 === null) { beta0 = beta; gamma0 = gamma; }
+            if (betaBezug === null) { betaBezug = beta; gammaBezug = gamma; return; }
+            /* Der Bezug zieht langsam nach. Ein Arm sinkt ueber Minuten ab,
+             * ohne dass das eine Bewegung waere; ein Umgreifen dagegen
+             * passiert zu schnell, als dass der Bezug mitkaeme. */
+            betaBezug += (beta - betaBezug) * HAND_DRIFT_FOLGT;
+            gammaBezug += (gamma - gammaBezug) * HAND_DRIFT_FOLGT;
           });
 
           var abBewegung = T.sensoren.beschleunigung(function (w) {
@@ -442,24 +476,79 @@
               return s + (v - mittel) * (v - mittel);
             }, 0) / fenster.length);
 
-            zeiger.style.left = util.grenze(streuung / spanne, 0, 1) * 100 + '%';
-            var gedriftet = beta0 !== null
-              && (Math.abs(beta - beta0) > HAND_DRIFT || Math.abs(gamma - gamma0) > HAND_DRIFT);
+            if (!fertigEingemessen) {
+              einmessen.push(streuung);
+              zeiger.style.left = util.grenze(streuung / spanne(), 0, 1) * 100 + '%';
+              return;
+            }
+
+            zeiger.style.left = util.grenze(streuung / spanne(), 0, 1) * 100 + '%';
+            messwert.textContent = 'Ruhe ' + streuung.toFixed(2) + ' von höchstens ' + grenze.toFixed(2);
+
+            var gedriftet = betaBezug !== null
+              && (Math.abs(beta - betaBezug) > HAND_DRIFT || Math.abs(gamma - gammaBezug) > HAND_DRIFT);
+            /* Hysterese: Wer drin ist, bleibt drin, bis er deutlich
+             * ausschlaegt. Ohne das flackert der Zustand genau an der Grenze,
+             * und das fuehlt sich unfair an - zu Recht. */
+            var obenRaus = drin ? streuung > grenze * HAND_HYSTERESE : streuung > grenze;
 
             if (streuung < HAND_UNTEN) { drin = false; grund = 'Das liegt auf etwas. In die Hand nehmen.'; }
-            else if (streuung > p.obergrenze) { drin = false; grund = 'Zu unruhig.'; }
+            else if (obenRaus) { drin = false; grund = 'Zu unruhig.'; }
             else if (gedriftet) { drin = false; grund = 'Die Neigung wandert weg - ruhig halten, nicht mitgehen.'; }
             else { drin = true; grund = ''; }
             skala.classList.toggle('ist-gut', drin);
           });
 
+          var laeuft = 0;
           var stopp = takt(function (delta) {
-            verstrichen = util.grenze(verstrichen + (drin ? delta : -delta * 2), 0, p.sekunden);
+            laeuft += delta;
+
+            if (!fertigEingemessen) {
+              b.sag('Halt es ruhig. Ich messe dich ein.', '');
+              fortschritt.setze(util.grenze(laeuft / HAND_EINMESSEN, 0, 1));
+              fortschritt.text('einmessen ...');
+              if (laeuft < HAND_EINMESSEN || einmessen.length < 5) return;
+              /* Median statt Mittel: Ein einzelnes Zucken beim Einmessen
+               * soll die Grenze nicht verschieben. */
+              var sortiert = einmessen.slice().sort(function (x, y) { return x - y; });
+              var median = sortiert[Math.floor(sortiert.length / 2)];
+              /* Der Deckel muss absolut sein, nicht nur relativ. Wer beim
+               * Einmessen herumlaeuft, hebt sonst die Grenze so weit, dass
+               * Herumlaufen als ruhige Hand durchgeht - genau das hat der
+               * erste Entwurf getan. Ueber HAND_ABSOLUT ist es Bewegung,
+               * egal wie eingemessen wurde. */
+              var deckel = Math.max(p.obergrenze, Math.min(p.obergrenze * HAND_DECKEL, HAND_ABSOLUT));
+              grenze = util.grenze(median * HAND_SPIELRAUM, p.obergrenze, deckel);
+              fertigEingemessen = true;
+              zoneZeichnen();
+              return;
+            }
+
+            /* Schonzeit: Ein kurzer Ausschlag - Schlucken, ein Zucken -
+             * kostet noch nichts. Erst wer laenger daneben liegt, verliert. */
+            if (drin) { draussenSeit = 0; verstrichen += delta; }
+            else {
+              draussenSeit += delta;
+              if (draussenSeit > HAND_SCHONZEIT) verstrichen -= delta;
+            }
+            verstrichen = util.grenze(verstrichen, 0, p.sekunden);
+
+            if (Math.abs(verstrichen - gesichert) > 2) {
+              gesichert = verstrichen;
+              kontext.zustand.stand = verstrichen;
+              kontext.speichern();
+            }
+
             fortschritt.setze(verstrichen / p.sekunden);
             fortschritt.text(util.uhrwerk(Math.max(0, p.sekunden - verstrichen)) + ' übrig');
-            if (fenster.length < HAND_FENSTER) { b.sag('Messe ein ...', ''); return; }
-            b.sag(drin ? 'Genau so. Nicht nachlassen.' : grund, drin ? 'gut' : 'fehler');
-            if (verstrichen >= p.sekunden) { stopp(); abNeigung(); abBewegung(); ton(660, 0.3); kontext.fertig(); }
+            b.sag(drin ? 'Genau so. Nicht nachlassen.'
+              : draussenSeit > HAND_SCHONZEIT ? grund : 'Fang dich wieder.',
+              drin ? 'gut' : 'fehler');
+            if (verstrichen >= p.sekunden) {
+              stopp(); abNeigung(); abBewegung();
+              delete kontext.zustand.stand;
+              ton(660, 0.3); kontext.fertig();
+            }
           });
 
           return function () { stopp(); abNeigung(); abBewegung(); };

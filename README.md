@@ -371,6 +371,8 @@ Konzentration und Geduld.
 | **Schritte** | Geduld | Eine Strecke zu Fuß gehen; gezählt wird der Takt der Bewegung |
 | **Ruhige Hand** | Geduld | Das Gerät in der Hand halten und ruhig bleiben – abgelegt zählt nicht |
 
+Zur ruhigen Hand siehe [Toleranz messen statt raten](#toleranz-messen-statt-raten).
+
 Details – warum das an die Fähigkeit und nicht an das Gerät gebunden ist, und
 was passiert, wenn der Sensor fehlt – stehen unter
 [Sensoraufgaben und der Ersatzweg](#sensoraufgaben-und-der-ersatzweg).
@@ -461,6 +463,41 @@ es beim Ersatzweg; sonst könnte man ihn als Reserve nebenherlaufen lassen.
 Beim Einlesen einer Sicherung prüft die App vorher, ob noch offene
 Sensoraufgaben drinstehen, und sagt im Bestätigungsdialog, was das auf diesem
 Gerät kosten würde.
+
+### Toleranz messen statt raten
+
+Die ruhige Hand unterscheidet Tisch, Hand und Bewegung an der Streuung der
+Beschleunigung über ein gleitendes Fenster von 1,5 s. Der erste Entwurf setzte
+dafür feste Absolutwerte – und war auf echter Hardware zu streng. Vier Ursachen,
+vier Korrekturen:
+
+**Der Drift-Bezug fror beim ersten Messwert ein.** Ein Arm sinkt über Minuten
+ab, ohne dass das eine Bewegung wäre; nach zwei Minuten waren die erlaubten 22°
+unvermeidlich überschritten. Der Bezug zieht jetzt langsam nach (Zeitkonstante
+rund 4 s), die Grenze liegt bei 35°. Langsames Absinken ist erlaubt, ruckartiges
+Umgreifen nicht – dafür ist es zu schnell, als dass der Bezug mitkäme.
+
+**Feste Obergrenzen treffen nicht.** Wie stark ein Gerät rauscht und wie ruhig
+eine Hand ist, geht weit auseinander. Die ersten vier Sekunden messen deshalb,
+wie ruhig *diese* Hand auf *diesem* Gerät ist, und setzen die Grenze auf das
+2,2-Fache davon (Median, damit ein einzelnes Zucken sie nicht verschiebt). Sie
+kann dabei nur steigen, nie unter die Vorgabe fallen.
+
+Der Deckel dafür muss **absolut** sein, nicht nur relativ: Im ersten Anlauf
+durfte die Grenze auf das Vierfache der Vorgabe steigen, und dann ging
+Herumlaufen als ruhige Hand durch – der Test hat genau das gezeigt. Über 1,3
+ist es Bewegung, wie auch immer eingemessen wurde.
+
+**Kein Flackern an der Grenze.** Wer drin ist, bleibt drin, bis er das
+1,4-Fache der Grenze überschreitet. Ohne diese Hysterese kippt der Zustand
+genau an der Kante hin und her, und das fühlt sich unfair an – zu Recht.
+
+**Schonzeit statt Sofortstrafe.** Ein kurzer Ausschlag kostet nichts; erst nach
+0,6 s außerhalb läuft der Fortschritt zurück, und zwar einfach statt doppelt so
+schnell. Gehaltene Zeit überlebt außerdem einen Neustart, wie bei den Schritten.
+
+Der aktuelle Messwert steht als Zahl unter der Skala („Ruhe 0,28 von höchstens
+0,90"), damit sich Klagen über Strenge nachrechnen lassen statt schätzen.
 
 ### Teilfortschritt und die geheime Frist
 
