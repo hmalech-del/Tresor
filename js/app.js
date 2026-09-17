@@ -496,6 +496,14 @@
             return el('option', { value: String(n), selected: n === 5 ? 'selected' : null }, String(n) + ' Stufen');
           }))
         ]),
+        el('div', { class: 'feld' }, [
+          el('label', { for: 'bild-vorletzte', text: 'Wie viel die vorletzte Stufe zeigt' }),
+          el('input', { type: 'range', min: '0', max: '6', value: '3', id: 'bild-vorletzte' }),
+          el('output', { id: 'bild-vorletzte-anzeige', text: '1/8' })
+        ]),
+        el('p', { class: 'flaut klein', text:
+          'Das letzte Fragment macht den Sprung auf das ganze Bild. Wie weit es davor noch weg ist, '
+          + 'hängt davon ab, wie groß dein Motiv im Bild steht - sieh es dir unten an.' }),
         el('div', { id: 'bild-ergebnis' })
       ])
     ]);
@@ -750,6 +758,10 @@
     $('#art-zahl').addEventListener('click', function () { artWechsel('zahl'); });
     $('#art-foto').addEventListener('click', function () { artWechsel('foto'); });
     $('#bilddatei').addEventListener('change', bildVerarbeiten);
+    $('#bild-vorletzte').addEventListener('input', function () {
+      $('#bild-vorletzte-anzeige').textContent = '1/' + VORLETZTE_TEILER[Number(this.value)];
+      if (zustand.bild && zustand.bild.datei) bildVerarbeiten({ target: { files: [zustand.bild.datei] } });
+    });
     $('#bild-stufen').addEventListener('change', function () {
       if (zustand.bild && zustand.bild.datei) bildVerarbeiten({ target: { files: [zustand.bild.datei] } });
       schaetzungAktualisieren();
@@ -911,6 +923,18 @@
     pruefeBereit();
   }
 
+  /* Die einstellbaren Anteile der vorletzten Stufe. Sechs Ziffern ueber die
+   * ganze Breite sind auch bei einem Achtel noch zu lesen; ein Motiv, das
+   * klein im Bild steht, ist bei der Haelfte schon verschwunden. Deshalb ein
+   * weiter Bereich statt eines gut gemeinten Festwerts. */
+  var VORLETZTE_TEILER = [3, 4, 6, 8, 12, 16, 24];
+
+  function vorletzteAnteil() {
+    var regler = $('#bild-vorletzte');
+    var i = regler ? util.grenze(Number(regler.value), 0, VORLETZTE_TEILER.length - 1) : 3;
+    return 1 / VORLETZTE_TEILER[i];
+  }
+
   /* Bild einlesen und in Schärfestufen zerlegen. Gezeigt wird die gröbste
    * Stufe - so sieht man vorher, wie wenig das erste Fragment verrät. */
   async function bildVerarbeiten(ereignis) {
@@ -920,17 +944,28 @@
     ziel.appendChild(el('p', { class: 'flaut', text: 'Bild wird zerlegt ...' }));
     try {
       var stufen = Number($('#bild-stufen').value);
-      var ergebnis = await T.foto.stufenBilder(datei, stufen, 1280);
+      var ergebnis = await T.foto.stufenBilder(datei, stufen, 1280, vorletzteAnteil());
       ergebnis.datei = datei;
       zustand.bild = ergebnis;
       zustand.laenge = stufen;
       util.leeren(ziel);
       ziel.appendChild(el('div', { class: 'stufenreihe' }, ergebnis.stufen.map(function (stufe, i) {
-        return el('figure', { class: 'stufenbild' }, [
+        var kachel = el('figure', { class: 'stufenbild' + (i === ergebnis.stufen.length - 2 ? ' ist-entscheidend' : ''),
+          role: 'button', tabindex: '0',
+          title: 'Stufe ' + (i + 1) + ' groß ansehen' }, [
           el('img', { src: stufe.bild, alt: 'Stufe ' + (i + 1) }),
           el('figcaption', { text: (i + 1) + ' · ' + stufe.breite + ' px' })
         ]);
+        function oeffnen() { stufeVergroessern(ergebnis.stufen, i); }
+        kachel.addEventListener('click', oeffnen);
+        kachel.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); oeffnen(); }
+        });
+        return kachel;
       })));
+      ziel.appendChild(el('p', { class: 'flaut klein', text:
+        'Antippen zum Prüfen - so groß kommt die Stufe später heraus. Wer auf der vorletzten schon lesen kann, '
+        + 'was drauf steht, hat zu nah fotografiert.' }));
       var kilobyte = Math.round(ergebnis.groesse / 1024);
       ziel.appendChild(el('p', { class: 'flaut klein', text:
         'Vollbild ' + ergebnis.vollBreite + ' × ' + ergebnis.vollHoehe + ' px, alle Stufen zusammen rund '
@@ -946,6 +981,58 @@
       zustand.bild = null;
       pruefeBereit();
     }
+  }
+
+  /* Lupe: eine Stufe so gross, wie sie spaeter im Tresor erscheint.
+   *
+   * Ohne das laesst sich vorher nicht beurteilen, ob ein Bild zu frueh
+   * lesbar wird - genau die Frage, die bei einem Foto von Text
+   * entscheidend ist. Wie viel eine Stufe verraet, haengt daran, wie gross
+   * das Motiv im Bild steht, und das weiss nur der Fotograf. */
+  function stufeVergroessern(stufen, index) {
+    var bild = el('img', { class: 'lupenbild', src: stufen[index].bild, alt: '' });
+    var beschriftung = el('p', { class: 'lupentext flaut' });
+    var zurueck = el('button', { class: 'knopf', type: 'button', text: '‹ gröber' });
+    var weiter = el('button', { class: 'knopf', type: 'button', text: 'schärfer ›' });
+    var schliessen = el('button', { class: 'knopf haupt', type: 'button', text: 'Schließen' });
+
+    function zeige(i) {
+      index = util.grenze(i, 0, stufen.length - 1);
+      bild.src = stufen[index].bild;
+      beschriftung.textContent = 'Stufe ' + (index + 1) + ' von ' + stufen.length
+        + ' · ' + stufen[index].breite + ' px'
+        + (index === stufen.length - 1 ? ' · das ganze Bild'
+           : index === stufen.length - 2 ? ' · die letzte Stufe vor der Freigabe' : '');
+      zurueck.disabled = index === 0;
+      weiter.disabled = index === stufen.length - 1;
+    }
+
+    var lupe = el('div', { class: 'lupe' }, [
+      el('div', { class: 'lupeninhalt' }, [
+        bild,
+        beschriftung,
+        el('div', { class: 'knopfzeile mittig' }, [zurueck, weiter, schliessen])
+      ])
+    ]);
+
+    function zu() {
+      lupe.remove();
+      document.removeEventListener('keydown', beiTaste);
+    }
+    function beiTaste(e) {
+      if (e.key === 'Escape') { zu(); return; }
+      if (e.key === 'ArrowLeft') zeige(index - 1);
+      if (e.key === 'ArrowRight') zeige(index + 1);
+    }
+    zurueck.addEventListener('click', function () { zeige(index - 1); });
+    weiter.addEventListener('click', function () { zeige(index + 1); });
+    schliessen.addEventListener('click', zu);
+    lupe.addEventListener('click', function (e) { if (e.target === lupe) zu(); });
+    document.addEventListener('keydown', beiTaste);
+
+    zeige(index);
+    document.body.appendChild(lupe);
+    schliessen.focus();
   }
 
   function reiterWechsel(welcher) {

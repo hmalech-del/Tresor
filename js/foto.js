@@ -299,7 +299,28 @@
    * Schärfestufen: Stufe 1 ist ein grober Farbfleck, die letzte das ganze
    * Bild. Jede Stufe wird für sich verschlüsselt und ist ein eigenes Fragment,
    * so dass die Freigabe wie bei der Zahl schrittweise passiert. */
-  async function stufenBilder(datei, anzahl, maxKante) {
+  /* Wie breit die vorletzte Stufe hoechstens sein darf, als Anteil der
+   * Endbreite.
+   *
+   * Vorher liefen die Stufen geometrisch von 24 px bis zur vollen Breite.
+   * Das klingt gleichmaessig, ist es aber nicht: Bei fuenf Stufen lag die
+   * vorletzte schon bei 37 Prozent der Endbreite, und Text ist nicht
+   * allmaehlich lesbar, sondern ab einer Schwelle schlagartig. Wer ein Bild
+   * einer Zahlenfolge einschliesst, konnte sie nach dem vierten von fuenf
+   * Fragmenten entziffern - das letzte Fragment war dann geschenkt.
+   *
+   * Die Stufen davor laufen deshalb nur bis zu diesem Anteil, und die letzte
+   * macht den Sprung auf das ganze Bild.
+   *
+   * Ein fester Anteil loest es allerdings nicht: Ob eine Stufe zu viel
+   * verraet, haengt daran, wie gross das Motiv im Bild steht. Sechs Ziffern
+   * ueber die ganze Breite sind auch bei einem Sechstel noch zu lesen, ein
+   * Gesicht in einer Landschaft bei der Haelfte noch nicht. Deshalb ist der
+   * Anteil einstellbar, und die Lupe im Einrichtungsbildschirm zeigt, was
+   * dabei herauskommt. */
+  var VORLETZTE_STUFE = 1 / 8;
+
+  async function stufenBilder(datei, anzahl, maxKante, vorletzteAnteil) {
     maxKante = maxKante || 1280;
     var bild;
     try { bild = await createImageBitmap(datei, { imageOrientation: 'from-image' }); }
@@ -310,10 +331,21 @@
     var vollHoehe = Math.max(8, Math.round(bild.height * faktor));
     var kleinste = Math.max(8, Math.round(vollBreite / Math.pow(vollBreite / 24, 1)));
 
+    /* Die Stufen vor der letzten laufen geometrisch von 24 px bis zur
+     * gedeckelten Breite; die letzte springt auf das ganze Bild. */
+    var anteilVorletzte = vorletzteAnteil > 0 ? vorletzteAnteil : VORLETZTE_STUFE;
+    var vorletzte = Math.max(16, Math.round(vollBreite * anteilVorletzte));
     var stufen = [];
     for (var i = 0; i < anzahl; i++) {
-      var anteil = anzahl === 1 ? 1 : i / (anzahl - 1);
-      var breite = Math.max(8, Math.round(24 * Math.pow(vollBreite / 24, anteil)));
+      var breite;
+      if (i === anzahl - 1) {
+        breite = vollBreite;
+      } else if (anzahl === 2) {
+        breite = 24;
+      } else {
+        var anteil = i / (anzahl - 2);
+        breite = Math.max(8, Math.round(24 * Math.pow(vorletzte / 24, anteil)));
+      }
       var hoehe = Math.max(8, Math.round(breite * vollHoehe / vollBreite));
       var c = leinwand(breite, hoehe);
       var ctx = c.getContext('2d');
@@ -332,7 +364,8 @@
       groesse: stufen.reduce(function (summe, stufe) { return summe + stufe.bild.length; }, 0),
       vollBreite: vollBreite,
       vollHoehe: vollHoehe,
-      kleinste: kleinste
+      kleinste: kleinste,
+      anteilVorletzte: anteilVorletzte
     };
   }
 

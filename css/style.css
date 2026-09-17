@@ -701,3 +701,37 @@ select, input[type=file] {
 @media (prefers-reduced-motion: reduce) {
   .mahlwerk::after { animation: none; left: 0; width: 100%; opacity: .35; }
 }
+
+/* ---------- Lupe: eine Schärfestufe in voller Größe prüfen ---------- */
+
+.stufenbild { cursor: zoom-in; }
+.stufenbild:focus-visible { outline: 2px solid var(--neon); outline-offset: 2px; }
+
+.lupe {
+  position: fixed; inset: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+  background: rgba(4, 9, 14, .92);
+  backdrop-filter: blur(3px);
+}
+.lupeninhalt {
+  width: 100%;
+  max-width: 640px;
+  text-align: center;
+}
+.lupenbild {
+  display: block;
+  width: 100%;
+  max-height: 68vh;
+  object-fit: contain;
+  border: 1px solid var(--rand);
+  border-radius: var(--radius);
+  background: var(--grund-hoch);
+}
+.lupentext { margin: 14px 0 4px; font-variant-numeric: tabular-nums; }
+.knopfzeile.mittig { justify-content: center; }
+
+/* Die vorletzte Stufe entscheidet, ob das letzte Fragment noch etwas wert
+   ist - deshalb sticht sie in der Reihe hervor. */
+.stufenbild.ist-entscheidend img { border-color: var(--gold); }
+.stufenbild.ist-entscheidend figcaption { color: var(--gold-hell); }

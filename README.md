@@ -35,19 +35,45 @@ fertige Ergebnis.
 
 ## Ein Bild als Geheimnis
 
-Ein Bild lässt sich nicht in Ziffern zerlegen, wohl aber in **Schärfestufen**:
-Stufe 1 ist ein grober Farbfleck von 24 px Breite, die letzte das ganze Bild
-(bis 1280 px, JPEG). Jede Stufe ist ein eigenes Fragment mit eigenem Schlüssel
-und eigenem Zeitschloss, die Freigabe geht also immer von grob nach fein – eine
-Zufallsreihenfolge gibt es hier nicht, sie ergäbe keinen Sinn.
+Ein Bild lässt sich nicht in Ziffern zerlegen, wohl aber in Schärfestufen:
+Stufe 1 ist ein grober Farbfleck, die letzte das ganze Bild. Jede Stufe ist ein
+eigenes Fragment und wird für sich verschlüsselt, die Freigabe passiert also
+schrittweise wie bei einer Zahl.
 
-Die Zerlegung passiert vor dem Verriegeln und ist in der Einrichtung zu sehen:
-So weißt du vorher, wie wenig die erste Stufe verrät. Ein 900 × 600-Foto kostet
-mit fünf Stufen rund 30 kB; passt der Tresor nicht in den Browser-Speicher,
-sagt die App das, statt still zu scheitern. Am Ende gibt es das Bild zum
-Sichern.
+### Wo die vorletzte Stufe liegt
 
----
+Zuerst liefen die Stufen geometrisch von 24 px bis zur vollen Breite. Das
+klingt gleichmäßig, ist es aber nicht: Bei fünf Stufen lag die vorletzte schon
+bei 37 % der Endbreite. Text ist nicht allmählich lesbar, sondern ab einer
+Schwelle schlagartig – wer ein Foto einer Zahlenfolge einschloss, konnte sie
+nach dem vierten von fünf Fragmenten entziffern. Das letzte Fragment war dann
+geschenkt.
+
+Die Stufen vor der letzten laufen jetzt nur bis zu einem einstellbaren Anteil
+der Endbreite, und die letzte macht den Sprung auf das ganze Bild:
+
+| Regler | vorletzte Stufe bei 1280 px | Reihe bei 5 Stufen |
+|---|---|---|
+| 1/3 | 427 px | 24 · 63 · 164 · 427 · 1280 |
+| **1/8** (Vorgabe) | **160 px** | 24 · 45 · 85 · 160 · 1280 |
+| 1/24 | 53 px | 24 · 31 · 41 · 53 · 1280 |
+
+**Ein fester Wert löst das nicht**, und das ist keine Bequemlichkeit, sondern
+Physik: Ob eine Stufe zu viel verrät, hängt daran, wie groß das Motiv im Bild
+steht. Sechs Ziffern über die ganze Breite sind auch bei einem Achtel noch zu
+lesen; ein Gesicht in einer Landschaft ist bei der Hälfte schon verschwunden.
+Deshalb ein weiter Regelbereich statt eines gut gemeinten Festwerts.
+
+### Die Lupe
+
+Weil nur der Fotograf weiß, wie groß sein Motiv im Bild steht, muss er es
+selbst beurteilen können. Jede Stufe in der Vorschau lässt sich antippen und
+erscheint dann so groß, wie sie später im Tresor herauskommt – mit Blättern
+zwischen den Stufen, Pfeiltasten und Escape. Die vorletzte ist in der Reihe
+golden umrandet: Sie entscheidet, ob das letzte Fragment noch etwas wert ist.
+
+Steht dort noch lesbar, was drauf steht, hilft entweder ein kleinerer Regler
+oder ein Foto aus größerer Entfernung.
 
 ## Passphrase: der Schlüsselteil, der nirgends liegt
 
