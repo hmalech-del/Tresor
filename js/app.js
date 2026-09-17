@@ -339,31 +339,44 @@
 
     // Den Notausgang gibt es in beiden Modi - nur zahlt er einmal in
     // Rechenzeit und einmal schlicht in Wartezeit.
-    var exitModus = $('#notausgang-modus').value;
-    var exitArt = ohneRechenzeit ? 'Wartezeit' : 'Rechenzeit';
-    var exitFest = Number($('#notausgang-dauer').value);
-    var exitMin = Math.min(Number($('#notausgang-min').value), Number($('#notausgang-max').value));
-    var exitMax = Math.max(Number($('#notausgang-min').value), Number($('#notausgang-max').value));
-    $('#notausgang-fest-feld').classList.toggle('versteckt', exitModus !== 'fest');
-    $('#notausgang-spanne-felder').classList.toggle('versteckt', exitModus !== 'zufall' && exitModus !== 'geheim');
+    var exit = notausgangFelderZeigen(ohneRechenzeit);
+    var exitAufwand = exit.modus === 'aus' ? 0 : exit.modus === 'fest' ? exit.fest : exit.max;
+    $('#notausgang-aufwand').textContent = exitAufwand && !ohneRechenzeit ? rechenaufwand(exitAufwand) : '';
+  }
+
+  /* Sichtbarkeit und Erklaerung der Notausgang-Felder.
+   *
+   * Steht bewusst ausserhalb von aufwandAktualisieren: Unter "meinen Regeln"
+   * gibt es nichts zu schaetzen, weshalb die Schaetzung dort frueh aussteigt -
+   * aber der Notausgang ist genau dort der einzige Wert, den der Spieler
+   * setzt, und der einzige Boden nach unten. Wer das Risiko eingeht, muss
+   * seine feste Zeit auch einstellen koennen. */
+  function notausgangFelderZeigen(ohneRechenzeit) {
+    var modus = $('#notausgang-modus').value;
+    var art = ohneRechenzeit ? 'Wartezeit' : 'Rechenzeit';
+    var fest = Number($('#notausgang-dauer').value);
+    var min = Math.min(Number($('#notausgang-min').value), Number($('#notausgang-max').value));
+    var max = Math.max(Number($('#notausgang-min').value), Number($('#notausgang-max').value));
+
+    $('#notausgang-fest-feld').classList.toggle('versteckt', modus !== 'fest');
+    $('#notausgang-spanne-felder').classList.toggle('versteckt', modus !== 'zufall' && modus !== 'geheim');
     util.$$('#notausgang-dauer option, #notausgang-min option, #notausgang-max option').forEach(function (option) {
       if (!option.dataset.sekunden) return;
-      option.textContent = util.dauer(Number(option.dataset.sekunden)) + ' ' + exitArt;
+      option.textContent = util.dauer(Number(option.dataset.sekunden)) + ' ' + art;
     });
     $('#notausgang-spanne').textContent =
-      exitModus === 'aus' ? ''
-      : exitModus === 'fest'
-        ? 'Der Notausgang springt nach genau ' + util.dauer(exitFest) + ' ' + exitArt + ' auf. Du weißt also von Anfang an, woran du bist.'
-      : exitModus === 'zufall'
-        ? 'Die Dauer wird beim Verriegeln zufällig zwischen ' + util.dauer(exitMin) + ' und ' + util.dauer(exitMax)
+      modus === 'aus' ? ''
+      : modus === 'fest'
+        ? 'Der Notausgang springt nach genau ' + util.dauer(fest) + ' ' + art + ' auf. Du weißt also von Anfang an, woran du bist.'
+      : modus === 'zufall'
+        ? 'Die Dauer wird beim Verriegeln zufällig zwischen ' + util.dauer(min) + ' und ' + util.dauer(max)
           + ' gezogen - und dir danach angezeigt. Du weißt sie erst nach dem Verriegeln, dann aber genau.'
-      : 'Die Dauer wird beim Verriegeln zufällig zwischen ' + util.dauer(exitMin) + ' und ' + util.dauer(exitMax)
+      : 'Die Dauer wird beim Verriegeln zufällig zwischen ' + util.dauer(min) + ' und ' + util.dauer(max)
         + ' gezogen und bleibt geheim. '
         + (ohneRechenzeit
             ? 'Angezeigt wird sie nicht - im Browser-Speicher steht sie allerdings, wie alles in diesem Modus.'
             : 'Sie wird nirgends gespeichert: Der Rechner merkt am Prüfwert selbst, wann er angekommen ist. Du erfährst sie erst, wenn der Notausgang aufspringt.');
-    var exitAufwand = exitModus === 'aus' ? 0 : exitModus === 'fest' ? exitFest : exitMax;
-    $('#notausgang-aufwand').textContent = exitAufwand && !ohneRechenzeit ? rechenaufwand(exitAufwand) : '';
+    return { modus: modus, art: art, fest: fest, min: min, max: max };
   }
 
   function schaetzungAktualisieren() {
@@ -375,10 +388,9 @@
     if ($('#blindgang') && $('#blindgang').checked) {
       anzeige.textContent = 'Das erfährst du nicht.';
       $('#schaetzung-detail').textContent = '';
-      util.$$('#notausgang-min option, #notausgang-max option, #notausgang-dauer option').forEach(function (option) {
-        if (!option.dataset.sekunden) return;
-        option.textContent = util.dauer(Number(option.dataset.sekunden)) + ' Rechenzeit';
-      });
+      // "Meine Regeln" läuft immer eisern, also zahlt der Ausgang in Rechenzeit.
+      notausgangFelderZeigen(false);
+      $('#notausgang-aufwand').textContent = '';
       return;
     }
 

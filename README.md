@@ -702,6 +702,14 @@ Die Regel gilt für alles, was man nur aussitzt.
 Die Spanne des Notausgangs bleibt sichtbar – die hat der Spieler selbst
 gesetzt. Nur der gezogene Wert und der Fortschritt dorthin fehlen.
 
+Weil der Notausgang hier der einzige Wert ist, den der Spieler setzt, bleiben
+alle drei Spielarten einstellbar – feste Dauer, gezogene Spanne, geheime
+Spanne. Das war eine Weile kaputt: Die Sichtbarkeit der Felder hing an
+`aufwandAktualisieren`, und die Schätzung steigt unter „meinen Regeln" früh
+aus, bevor sie dort ankommt. Wer „feste Zeit" wählte, bekam kein Feld. Die
+Umschaltung steht jetzt in `notausgangFelderZeigen` und wird aus beiden Wegen
+aufgerufen.
+
 Der Notausgang bleibt der einzige Boden nach unten – deshalb ist er das
 Einzige, was du selbst festlegst.
 
