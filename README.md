@@ -554,17 +554,25 @@ auf einem echten Android steht noch aus.
 
 ## Der Ton
 
-Die Oberfläche spricht nicht wie eine Dokumentation, sondern wie eine Instanz,
-die urteilt. Alle Sätze, die im Ablauf erscheinen, stehen in `js/stimme.js` –
-nicht verstreut in der Zustandslogik. Regel für neue Sätze: kurz, ohne
-Ausrufezeichen, ohne Anbiederung. Der Wächter erklärt nicht, er stellt fest.
+Die Oberfläche bedient niemanden. Sie gehört einem **Game Master**, der die
+Regeln aufstellt, misst und urteilt; der Nutzer ist ein Spieler in seiner
+Prüfung, kein Kunde. Alle Sätze, die im Ablauf erscheinen, stehen in
+`js/stimme.js` – nicht verstreut in der Zustandslogik.
 
-Begriffe, die nach Innenleben klingen, haben in der Oberfläche einen anderen
-Namen: Das Zeitschloss heißt **Bann**, „Rechenzeit“ heißt, dass ein Fragment
-unter Bann liegt, „Strafzeit“ heißt **Strafe**. Quadrierungen, PBKDF2 und
-AES stehen weiterhin da, aber zugeklappt hinter „Was dahintersteckt“ – wer es
-wissen will, klappt es auf, und wer nur seinen Tresor öffnen will, liest es
-nicht. Diese README bleibt davon unberührt; sie ist für Entwickler.
+Leitplanken für neue Sätze:
+
+* Von oben herab, aber stilvoll. Harter Lehrmeister, kein Schläger.
+* Kein Lob über „ausreichend" hinaus. Ein Sieg ist das erwartete Minimum.
+* Kein Mitleid, keine Hilfe, keine Motivationsfloskeln („Du schaffst das!").
+* Keine Verhandlung. Die Zeit ist das Gesetz.
+* **Kurz.** Wer erklärt, rechtfertigt sich. Das ist der häufigste Fehler: Ein
+  Satz, der begründet, warum eine Regel gilt, nimmt ihr die Autorität.
+
+Begriffe, die nach Innenleben klingen, heißen in der Oberfläche anders: Das
+Zeitschloss ist der **Bann**, die Strafzeit die **Strafe**, Aufgaben sind
+**Prüfungen**. Quadrierungen, PBKDF2 und AES stehen weiterhin da, aber
+zugeklappt hinter „Was dahintersteckt". Diese README bleibt davon unberührt;
+sie ist für Entwickler und darf erklären.
 
 ## Blindgang
 
@@ -578,6 +586,28 @@ Gezogen wird mit `crypto.getRandomValues`, nicht mit dem Saat-Strom des
 Tresors. Das ist wichtig: Die Saat liegt gespeichert im Tresor, aus ihr ließe
 sich der ganze Plan nachrechnen. Der Blindgang läuft immer eisern, Strafen sind
 immer an, das Glücksspiel ist immer an.
+
+### Keine Zahl, die die Zukunft verrät
+
+Im Blindgang verschwindet jede Anzeige, aus der sich ablesen ließe, wie lange
+es noch dauert. Was bereits geschehen ist, bleibt stehen – drei von fünf
+Fragmenten offen sieht man ohnehin am Band.
+
+| | normal | Blindgang |
+|---|---|---|
+| Bann | Countdown und Prozent | `· · ·`, kein Balken |
+| Strafe | Countdown | `· · ·` |
+| Sperrfrist | Countdown und Termin | `· · ·`, „Komm wieder, wenn du glaubst, dass es so weit ist." |
+| Notausgang | verstrichen / verbleibend, Balken | nur der Knopf |
+| Fahrplan | alle Fragmente und Prüfungen | ein Satz des Game Masters |
+| Schätzung | „ungefähr 2 h 40 min" | „Das erfährst du nicht." |
+
+Ausgenommen sind Prüfungen, die ohne Uhrzeit **unlösbar** wären: Wer zu einem
+Zeitfenster oder zu einer Rückmeldung zurückkommen soll, muss wissen, wann.
+Die Regel gilt für alles, was man nur aussitzt.
+
+Die Spanne des Notausgangs bleibt sichtbar – die hat der Spieler selbst
+gesetzt. Nur der gezogene Wert und der Fortschritt dorthin fehlen.
 
 Der Notausgang bleibt der einzige Boden nach unten – deshalb ist er das
 Einzige, was du selbst festlegst.

@@ -1,95 +1,113 @@
-/* Die Stimme des Wächters.
+/* Die Stimme des Game Masters.
  *
- * Der Tresor ist kein Werkzeug, das seinen Zustand meldet, sondern eine
- * Instanz, die urteilt. Alle Sätze, die der Nutzer im Ablauf zu lesen
- * bekommt, stehen deshalb hier zusammen - nicht verstreut zwischen
- * Zustandslogik, und nicht in der Sprache dessen, der das gebaut hat.
+ * Er bedient niemanden. Er stellt die Regeln auf, misst und urteilt. Der
+ * Nutzer ist ein Spieler in seiner Prüfung, kein Kunde.
  *
- * Regeln für neue Sätze: kurz, ohne Ausrufezeichen, ohne Anbiederung. Der
- * Wächter erklärt nicht, er stellt fest. Wer wissen will, wie es innen
- * funktioniert, klappt die Technikzeile auf oder liest die README. */
+ * Leitplanken für neue Sätze:
+ *   - Von oben herab, aber stilvoll. Harter Lehrmeister, kein Schläger.
+ *   - Kein Lob, das über "ausreichend" hinausgeht. Ein Sieg ist das Minimum.
+ *   - Kein Mitleid, keine Hilfe, keine Motivationsfloskeln.
+ *   - Keine Verhandlung. Die Zeit ist das Gesetz.
+ *   - Kurz. Wer erklärt, rechtfertigt sich.
+ *
+ * Alles, was der Spieler im Ablauf liest, steht hier - nicht verstreut in
+ * der Zustandslogik. Was die App technisch tut, gehört in die README. */
 (function (global) {
   'use strict';
   var T = global.Tresor || (global.Tresor = {});
 
   var SAETZE = {
+    /* Frisch verriegelt */
+    verriegelt: [
+      'Die Regeln sind diktiert. Dein Zug.',
+      'Der Tribut ist deine Zeit. Enttäusch mich nicht.',
+      'Verriegelt. Ab hier zählt nur, was du tust.',
+      'Das Geheimnis gehört jetzt mir. Hol es dir.'
+    ],
     /* Aufgabe bestanden */
     lob: [
-      'Angenommen.',
-      'Das lasse ich gelten.',
-      'Sauber. Weiter.',
-      'Geht doch.',
-      'Bestanden. Der nächste Teil wartet.',
-      'Gut. Merk dir das Gefühl, es kommt noch mal.'
+      'Bestanden. Das Minimum.',
+      'Angenommen. Mehr nicht.',
+      'Ich bin fast beeindruckt. Fast.',
+      'Erledigt. Der nächste Teil ist härter.',
+      'Gut genug. Diesmal.',
+      'Kein Fehlschlag. Noch keiner.'
     ],
-    /* Aufgabe verpatzt, ohne Strafe */
+    /* Aufgabe verpatzt */
     tadel: [
-      'Daneben.',
-      'Nein. Von vorn.',
-      'Das war nichts.',
-      'Noch einmal, und diesmal richtig.',
-      'Zu früh gefreut.'
+      'Kritischer Fehlschlag.',
+      'Eingeknickt.',
+      'Schwach. Noch einmal.',
+      'Das war nichts. Beweis es besser.',
+      'Prüfung nicht bestanden.'
     ],
     /* Strafe läuft */
     strafe: [
-      'Gesperrt. Warte es ab.',
-      'Das kostet. Die Uhr läuft für dich, nicht gegen dich.',
-      'Zu oft danebengegriffen. Jetzt gibt es Pause.',
-      'Fehler haben einen Preis. Hier ist er.'
+      'Du hast geraten. Jetzt wartest du.',
+      'Der Tribut steigt. Deine Schuld.',
+      'Gesperrt. Das ist keine Verhandlung.',
+      'Zu oft danebengegriffen. Sitz es ab.'
     ],
     /* Zeitschloss rechnet */
     bann: [
-      'Jetzt zahlt das Gerät für dich. Beschleunigen kannst du nichts.',
-      'Der Bann läuft. Ungeduld ist hier wertlos.',
-      'Kein Trick kürzt das ab. Nur Zeit.',
-      'Von hier an arbeitet die Maschine. Du wartest.',
-      'Der Bann kennt keine Abkürzung - auch für dich nicht.'
+      'Der Tribut ist Zeit. Zahl ihn.',
+      'Hier hilft dir nichts. Ungeduld am wenigsten.',
+      'Die Maschine arbeitet. Du nicht.',
+      'Kein Weg daran vorbei. Auch nicht für dich.',
+      'Warte. Das ist die ganze Prüfung.'
     ],
     /* Fragment ist auf */
     freigabe: [
-      'Ein Stück gehört wieder dir.',
-      'Genommen. Der Rest bleibt, wo er ist.',
-      'Eins offen. Nicht nachlassen.',
-      'Verdient.'
+      'Ein Stück. Nicht mehr.',
+      'Genommen. The Keep bleibt zu.',
+      'Eins. Der Rest gehört noch mir.',
+      'Verdient. Kaum.'
     ],
     /* Alles offen */
     sieg: [
-      'Der Tresor ist leer. Du hast alles zurückgeholt.',
-      'Durch. Das hat dich etwas gekostet - so war es gedacht.',
-      'Vollständig. Von mir aus kannst du gehen.'
+      'The Keep is open. Für dieses Mal.',
+      'Du hast den Tribut gezollt. Ich hätte anders gewettet.',
+      'Durch. Mach dich bereit für die nächste Runde.'
     ],
     /* Notausgang genommen */
     notausgang: [
-      'Du nimmst den Ausgang. Vermerkt.',
-      'Der zweite Weg. Auch der war nicht umsonst.',
-      'Nicht der schöne Weg, aber ein Weg.'
-    ],
-    /* Frisch verriegelt */
-    verriegelt: [
-      'Verriegelt. Ab jetzt gilt, was du eingestellt hast.',
-      'Das Geheimnis ist weg. Hol es dir zurück.',
-      'Zu. Der Rest liegt bei dir.'
+      'Der leichte Weg. Vermerkt.',
+      'Du bist nicht durchgekommen. Du bist rausgelassen worden.',
+      'Kapituliert und abgewartet. Auch eine Art zu gewinnen.'
     ],
     /* Geheime Frist abgelaufen */
     fristAus: [
-      'Zu langsam. Der Fortschritt ist hin.',
-      'Die Frist war abgelaufen. Neuer Anlauf, neue Frist.',
-      'Zeit verpasst. Zurück auf Anfang.'
+      'Zeit verfallen. Kritischer Fehlschlag.',
+      'Zu langsam. Der Fortschritt ist weg.',
+      'Die Frist war das Gesetz. Du hast sie verpasst.'
     ],
     /* Zu spät zur Rückmeldung */
     verspaetet: [
-      'Zu spät. Dieser Besuch zählt nicht.',
-      'Das Fenster war zu. Der Abstand beginnt von vorn.'
+      'Zu spät. Zählt nicht.',
+      'Das Fenster war offen. Du warst es nicht.'
+    ],
+    /* Ersatzweg statt Sensor oder Marke */
+    ersatz: [
+      'Dein Gerät kann es nicht. Dann zahlst du eben anders.',
+      'Keine Ausrüstung, kein Rabatt.',
+      'Du weichst aus. Das kostet.'
+    ],
+    /* Blindgang: was der Spieler nicht erfährt */
+    dunkel: [
+      'Du erfährst es nicht.',
+      'Das geht dich nichts an.',
+      'Frag nicht. Lauf.',
+      'Im Dunkeln. So hast du es gewollt.'
     ]
   };
 
-  /* Feste Bezeichnungen. Alles, was nach Innenleben klingt, bekommt hier
-   * seinen Namen für die Oberfläche. */
+  /* Namen für die Oberfläche. Nichts hier klingt nach Innenleben. */
   var WORT = {
     bann: 'Bann',
     bannLang: 'Der Bann',
     strafe: 'Strafe',
-    ausgang: 'Notausgang'
+    ausgang: 'Notausgang',
+    keep: 'The Keep'
   };
 
   function waehle(liste) { return liste[Math.floor(Math.random() * liste.length)]; }

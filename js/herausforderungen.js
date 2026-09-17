@@ -634,8 +634,10 @@
     starte: function (kontext) {
       var p = kontext.params, z = kontext.zustand;
       if (!z.bis) { z.bis = Date.now() + p.sekunden * 1000; z.gesehen = Date.now(); kontext.speichern(); }
-      var b = buehne(kontext, 'Sperrfrist',
-        'Dieses Fragment öffnet sich erst ' + util.zeitpunkt(z.bis) + '. Die App darf zu sein - die Uhr laeuft weiter.');
+      var dunkel = !!(kontext.konfig || {}).blind;
+      var b = buehne(kontext, 'Sperrfrist', dunkel
+        ? 'Noch nicht. Komm wieder, wenn du glaubst, dass es so weit ist.'
+        : 'Offen ab ' + util.zeitpunkt(z.bis) + '. Die App darf zu sein.');
       var anzeige = el('div', { class: 'countdown', text: '--:--' });
       b.koerper.appendChild(anzeige);
       var fortschritt = balken(b.koerper, '');
@@ -660,9 +662,9 @@
         }
         z.gesehen = Math.max(z.gesehen || 0, jetzt);
         var rest = (z.bis - jetzt) / 1000;
-        anzeige.textContent = util.uhrwerk(rest);
-        fortschritt.setze(1 - rest / p.sekunden);
-        fortschritt.text('frei ' + util.zeitpunkt(z.bis));
+        anzeige.textContent = dunkel ? '· · ·' : util.uhrwerk(rest);
+        fortschritt.setze(dunkel ? 1 : 1 - rest / p.sekunden);
+        fortschritt.text(dunkel ? '' : 'frei ' + util.zeitpunkt(z.bis));
         if (rest <= 0) { stopp(); kontext.speichern(); ton(660, 0.3); kontext.fertig(); }
       });
 

@@ -124,8 +124,8 @@
       var p = kontext.params;
       var modul = this;
       return mitSensor(kontext, modul, 'neigung', 'Wasserwaage',
-        'Leg das Gerät flach auf die Hand und halte es ' + util.dauer(p.sekunden)
-        + ' lang innerhalb von ±' + p.toleranz + '°. Kippt es weg, läuft der Fortschritt zurück - doppelt so schnell, wie er steigt.',
+        'Flach in die Hand. ' + util.dauer(p.sekunden) + ' innerhalb von ±' + p.toleranz
+        + '°. Wackelst du, verlierst du doppelt so schnell, wie du gewinnst.',
         function (b) {
           var dose = el('div', { class: 'libellendose' });
           var blase = el('i', { class: 'libelle' });
@@ -210,8 +210,7 @@
       var p = kontext.params;
       var modul = this;
       return mitSensor(kontext, modul, 'neigung', 'Lagenfolge',
-        'Bring das Gerät der Reihe nach in die angezeigten Lagen und halte jede '
-        + p.halten.toFixed(1).replace('.', ',') + ' Sekunden. Die Reihenfolge zählt.',
+        'Der Reihe nach. Jede Lage ' + p.halten.toFixed(1).replace('.', ',') + ' Sekunden halten.',
         function (b) {
           var leiste = el('div', { class: 'lagenleiste' });
           var marken = p.folge.map(function (nummer) {
@@ -300,8 +299,7 @@
       var p = kontext.params;
       var modul = this;
       return mitSensor(kontext, modul, 'bewegung', 'Schritte',
-        'Steck das Gerät ein oder nimm es in die Hand und geh ' + p.schritte
-        + ' Schritte. Gezählt wird der Takt deiner Bewegung - Schütteln hilft nicht weiter.',
+        p.schritte + ' Schritte. Ich zähle den Takt, nicht die Ausschläge - Schütteln erkenne ich.',
         function (b) {
           var zaehlwerk = el('p', { class: 'schrittzaehler', text: '0' });
           b.koerper.appendChild(zaehlwerk);
@@ -397,8 +395,8 @@
       var p = kontext.params;
       var modul = this;
       return mitSensor(kontext, modul, 'bewegung', 'Ruhige Hand',
-        'Nimm das Gerät in die Hand und halte es ' + util.dauer(p.sekunden)
-        + ' lang ruhig. Ablegen zählt nicht - der Tresor merkt den Unterschied zwischen einer Hand und einem Tisch.',
+        'In die Hand, ' + util.dauer(p.sekunden) + ' ruhig halten. Ablegen zählt nicht - '
+        + 'ich kenne den Unterschied zwischen einer Hand und einem Tisch.',
         function (b) {
           var skala = el('div', { class: 'ruheskala' }, [
             el('span', { class: 'ruhezone' }),

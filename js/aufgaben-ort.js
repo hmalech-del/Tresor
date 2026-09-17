@@ -69,8 +69,7 @@
       var p = kontext.params;
       var modul = this;
       var b = buehne(kontext, 'Station',
-        'Eine deiner ' + (p.stationen || 2) + ' Marken öffnet dieses Fragment. Welche, sage ich nicht. '
-        + 'Halte das Gerät an eine - so lange, bis du die richtige hast. Falsche Marken kosten nichts außer dem Weg.');
+        'Eine deiner ' + (p.stationen || 2) + ' Marken öffnet das. Welche, sage ich nicht. Lauf.');
       var innen = null, lebt = true;
 
       function raeumeInnen() { if (innen) { innen(); innen = null; } }

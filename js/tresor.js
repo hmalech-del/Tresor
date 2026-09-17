@@ -22,7 +22,7 @@
       sicherheit: 'rechenzeit',      // 'rechenzeit' = Zeitschloss, sonst: ohne Rechenzeit
       sensoren: false,               // Lagesensoren nur, wenn das Gerät sie wirklich hat
       gluecksspiel: false,           // Wartezeiten dürfen verwürfelt werden
-      blind: false,                  // Blindgang: der Wächter würfelt alles aus und sagt nichts
+      blind: false,                  // Blindgang: der Game Master wuerfelt alles aus und sagt nichts
       strafe: 0,
       erinnerungen: false,           // gehört zum Tresor: selbst dran denken ist eine Option
       geheimeFrist: {
@@ -65,12 +65,12 @@
   }
 
   /* Blindgang: Der Nutzer setzt nur den Notausgang, alles andere zieht der
-   * Wächter - und zeigt es nicht. Gezogen wird mit dem Systemzufall, nicht
+   * Game Master - und zeigt es nicht. Gezogen wird mit dem Systemzufall, nicht
    * mit dem gespeicherten Saat-Strom des Tresors: Aus der Saat liesse sich
    * der Plan sonst nachrechnen, und der soll im Dunkeln bleiben. */
   function blindKonfiguration(notausgang, sensorenMoeglich) {
     /* Ohne beschriebene Marken gibt es keine Stationen - und die schreibt
-     * man von Hand, das kann der Wächter nicht für einen erledigen. */
+     * man von Hand, das kann der Game Master nicht uebernehmen. */
     var alle = T.herausforderungen.dimensionen.map(function (d) { return d.id; })
       .filter(function (id) { return id !== 'ort' || T.ortAufgaben.vorratGroesse() >= 2; });
     for (var i = alle.length - 1; i > 0; i--) {

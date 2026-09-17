@@ -46,18 +46,16 @@
       util.leeren(b.koerper);
       b.sag('');
       b.koerper.appendChild(el('p', { class: 'warnung', text: grund }));
-      b.koerper.appendChild(el('p', { text: 'Es gibt einen Ersatzweg, aber er ist absichtlich teuer: '
-        + (mitRechenzeit
-            ? util.dauer(sekunden) + ' echte Rechenarbeit statt dieser Aufgabe.'
-            : util.dauer(sekunden) + ' Wartezeit statt dieser Aufgabe.')
-        + ' Sonst wäre ein Gerät ohne Sensor die bequemste Abkürzung durch den ganzen Tresor.' }));
+      b.koerper.appendChild(el('p', { class: 'wachterwort', text: T.stimme.sag('ersatz') }));
+      b.koerper.appendChild(el('p', { text: 'Ersatzweg: ' + util.dauer(sekunden)
+        + (mitRechenzeit ? ' rechnen.' : ' warten.')
+        + ' Deutlich teurer als die Prüfung selbst. So ist das gedacht.' }));
       var los = el('button', { class: 'knopf gross haupt', type: 'button',
         text: mitRechenzeit ? 'Ersatz beginnen (' + util.dauer(sekunden) + ' rechnen)'
                             : 'Ersatz beginnen (' + util.dauer(sekunden) + ' warten)' });
       var erneut = el('button', { class: 'knopf', type: 'button', text: 'Sensor noch einmal prüfen' });
       b.koerper.appendChild(el('div', { class: 'knopfzeile' }, [los, erneut]));
-      b.koerper.appendChild(el('p', { class: 'flaut klein', text:
-        'Einmal begonnen, bleibt es beim Ersatzweg - der angefangene Aufwand verfällt sonst mit jedem Wechsel.' }));
+      b.koerper.appendChild(el('p', { class: 'flaut klein', text: 'Einmal begonnen, kein Zurück.' }));
       los.addEventListener('click', function () { starten(); });
       erneut.addEventListener('click', function () {
         if (laufendesAufraeumen) { laufendesAufraeumen(); laufendesAufraeumen = null; }
@@ -75,7 +73,7 @@
      * ist ohnehin alles an die Uhr geknüpft. */
     function warten() {
       util.leeren(b.koerper);
-      b.koerper.appendChild(el('p', { text: 'Ersatzweg: Warten. Du kannst die App verlassen, die Uhr läuft weiter.' }));
+      b.koerper.appendChild(el('p', { text: 'Warte es ab. Die App darf zu.' }));
       var fortschritt = balken(b.koerper, '');
       var stopp = takt(function () {
         var uebrig = (z.ersatzFrei - Date.now()) / 1000;
@@ -92,8 +90,7 @@
      * welchem Gerät die Aufgabe einmal landet. */
     function rechnen() {
       util.leeren(b.koerper);
-      b.koerper.appendChild(el('p', { text: 'Ersatzweg: Rechenarbeit. Sie läuft weiter, solange dieser Tab offen ist, '
-        + 'und der Zwischenstand überlebt einen Neustart.' }));
+      b.koerper.appendChild(el('p', { text: 'Rechne es ab. Läuft, solange der Tab offen ist.' }));
       var fortschritt = balken(b.koerper, '');
       b.sag('Zeitschloss wird geschmiedet ...', '');
 
