@@ -298,8 +298,9 @@ Drei Schalter, die quer über alle Dimensionen wirken:
 * **Strafzeit bei Fehlversuch** (aus / mild ab 20 s / hart ab 60 s). Jeder
   weitere Fehlversuch derselben Aufgabe kostet das 1,7-Fache, gedeckelt bei
   30 Minuten. Die Aufgabe ist währenddessen gesperrt und zeigt einen Countdown.
-* **Geheime Höchstzeit.** Beim Verriegeln wird eine Höchstzeit *zufällig
-  gezogen* und nicht angezeigt – sichtbar sind nur die Spanne, die du gesetzt
+* **Geheimes Zeitlimit für die Aufgaben** (im Dialog so benannt, damit es
+  nicht mit dem Notausgang verwechselt wird). Beim Verriegeln wird eine Frist
+  *zufällig gezogen* und nicht angezeigt – sichtbar sind nur die Spanne, die du gesetzt
   hast, und die verstrichene Zeit. Zwei Bezüge:
 
   * **Ganzer Tresor** (Standard): eine absolute Spanne, z. B. „mindestens 1 h,
@@ -319,20 +320,26 @@ Drei Schalter, die quer über alle Dimensionen wirken:
   den Tresor unlösbar machen. „Geheim" heißt hier: nicht angezeigt. Im
   `localStorage` steht der gezogene Wert, wie alles andere auch.
 
-* **Notausgang** – die Exit-Strategie, und zwar mit unbekannter Dauer. Ein
-  zweites, unabhängiges Zeitschloss über das *ganze* Geheimnis: keine Aufgaben,
-  keine Sperrfristen, nur Rechenzeit. Du setzt eine Spanne – etwa „frühestens
-  nach 1 h, spätestens nach 5 h" –, die tatsächliche Dauer wird beim Verriegeln
-  daraus gezogen.
+* **Notausgang** – der Ausweg, falls du an einer Aufgabe hängen bleibst: ein
+  zweites, unabhängiges Zeitschloss über das *ganze* Geheimnis, ohne Aufgaben
+  und ohne Sperrfristen. Wie lange er kostet, entscheidest du mit einer von
+  drei Spielarten:
 
-  Sie ist dabei **wirklich** unbekannt und nicht bloß ausgeblendet: Die
-  Schrittzahl wird nirgends gespeichert. Abgelegt ist nur `SHA-256` der Lösung;
-  der Worker quadriert und prüft alle 250 000 Schritte, ob er angekommen ist.
-  Weder die App noch jemand, der den Speicher ausliest, kann die Dauer vorher
-  ablesen – bekannt sind nur Unter- und Obergrenze. Entsprechend gibt es in der
-  Ansicht keinen Countdown und keine Prozentzahl, sondern die geleistete
-  Rechenzeit, eine Markierung für die Untergrenze und den Hinweis, ab wann es
-  aufspringen kann.
+  | Modus | Dauer | Was du weißt |
+  |---|---|---|
+  | **feste Dauer** | genau der eingestellte Wert | alles, von Anfang an |
+  | **zufällig, angezeigt** | beim Verriegeln aus deiner Spanne gezogen | nach dem Verriegeln genau |
+  | **zufällig, geheim** | ebenso gezogen | nur die Spanne |
+
+  In den ersten beiden Fällen zeigt die Karte Restzeit und Prozent wie ein
+  gewöhnlicher Fortschritt. Im geheimen Fall gibt es beides nicht – und zwar
+  nicht aus Prinzipienreiterei: Die Schrittzahl wird dort **nirgends
+  gespeichert**. Abgelegt ist nur `SHA-256` der Lösung; der Worker quadriert
+  und prüft alle 250 000 Schritte, ob er angekommen ist. Weder die App noch
+  jemand, der den Speicher ausliest, kann die Dauer vorher ablesen – bekannt
+  sind nur Unter- und Obergrenze. Gezeigt werden die geleistete Rechenzeit,
+  eine Markierung für die Untergrenze und der Hinweis, ab wann es aufspringen
+  kann.
 
   Er **rechnet im Hintergrund**: einmal gestartet, läuft er weiter, während du
   an den Aufgaben sitzt, und nimmt seinen Lauf nach einem Neuladen von selbst
@@ -341,10 +348,10 @@ Drei Schalter, die quer über alle Dimensionen wirken:
   Laufen Fragment-Zeitschloss und Notausgang gleichzeitig, sind das zwei
   Worker – auf einem Mehrkerngerät stören sie sich nicht.
 
-  Eingestellt wird er mit **zwei Feldern**: „öffnet frühestens nach" und
-  „… und spätestens nach". Mehr braucht es nicht. Im Modus **ohne Rechenzeit**
-  bedeuten dieselben zwei Felder Wartezeit statt Rechenzeit – siehe „Zwei
-  Sicherheitsstufen".
+  Im Modus **ohne Rechenzeit** zahlt derselbe Notausgang in Wartezeit statt in
+  Quadrierungen, mit denselben drei Spielarten; die Karte nennt dann zusätzlich
+  den Termin. Dort steht er allerdings im Browser-Speicher – wie alles in
+  diesem Modus.
 
 ---
 
