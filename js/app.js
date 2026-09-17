@@ -212,6 +212,18 @@
    * ablesen liesse, wie lange es noch dauert. Ausgenommen sind Aufgaben, die
    * ohne Uhrzeit unlösbar wären: Wer zu einem Zeitfenster zurückkommen soll,
    * muss wissen, wann. */
+  /* Ein Schlag des Mahlwerks. Aufgerufen wird das aus dem Fortschritts-
+   * rueckruf des Loesers - der Balken laeuft also nur, solange wirklich
+   * gerechnet wird, und steht still, sobald es pausiert. Wie weit es ist,
+   * zeigt er nicht: Er hat keine Fuellung, nur Bewegung. */
+  function mahlwerkSchlag(mahlwerk, laeuft) {
+    mahlwerk.classList.toggle('ist-still', !laeuft);
+    if (!laeuft) return;
+    mahlwerk.classList.add('ist-schlag');
+    clearTimeout(mahlwerk.__schlag);
+    mahlwerk.__schlag = setTimeout(function () { mahlwerk.classList.remove('ist-schlag'); }, 220);
+  }
+
   function imDunkeln() {
     return !!(((zustand.tresor || {}).konfig) || {}).blind;
   }
@@ -291,7 +303,8 @@
     };
     if ($('#blindgang') && $('#blindgang').checked) {
       var sensorenMoeglich = !!($('#sensoren-aktiv') && !$('#sensoren-aktiv').disabled);
-      return T.tresorLogik.blindKonfiguration(notausgang, sensorenMoeglich);
+      return T.tresorLogik.blindKonfiguration(notausgang, sensorenMoeglich,
+        $('#blind-ohne-rechenzeit').checked);
     }
     var stufen = {};
     aktiveDimensionen().forEach(function (dimension) {
@@ -388,8 +401,7 @@
     if ($('#blindgang') && $('#blindgang').checked) {
       anzeige.textContent = 'Das erfährst du nicht.';
       $('#schaetzung-detail').textContent = '';
-      // "Meine Regeln" läuft immer eisern, also zahlt der Ausgang in Rechenzeit.
-      notausgangFelderZeigen(false);
+      notausgangFelderZeigen($('#blind-ohne-rechenzeit').checked);
       $('#notausgang-aufwand').textContent = '';
       return;
     }
@@ -696,9 +708,11 @@
       el('p', { class: 'flaut klein', text:
         'Du setzt den Notausgang. Alles andere bestimme ich - wie viele Prüfungen, welche, wie hart. '
         + 'Kein Fahrplan, keine Schätzung, keine Uhr. Du erfährst nichts, bis es so weit ist.' }),
-      el('p', { class: 'warnung versteckt', id: 'blindgang-warnung', text:
-        'Immer eisern, immer mit Strafen. Setz den Notausgang so, dass du damit leben kannst - '
-        + 'du weisst nicht, wie lang der Weg wird.' })
+      el('label', { class: 'schalterzeile versteckt', id: 'blind-sanft-zeile' }, [
+        el('input', { type: 'checkbox', id: 'blind-ohne-rechenzeit' }),
+        el('span', { text: 'ohne Rechenzeit - schont den Akku, hält aber nur dich auf' })
+      ]),
+      el('p', { class: 'warnung versteckt', id: 'blindgang-warnung', text: '' })
     ]);
 
     var stationTeil = el('section', { class: 'karte versteckt', id: 'stationkarte' }, [
@@ -844,7 +858,13 @@
     function blindgangAnwenden() {
       var an = $('#blindgang').checked;
       blindTeil.classList.toggle('ist-an', an);
+      $('#blind-sanft-zeile').classList.toggle('versteckt', !an);
       $('#blindgang-warnung').classList.toggle('versteckt', !an);
+      $('#blindgang-warnung').textContent = $('#blind-ohne-rechenzeit').checked
+        ? 'Ohne Rechenzeit hält dich nichts als dein eigener Vorsatz - wer den Browser-Speicher liest, '
+          + 'hat das Geheimnis sofort. Der Notausgang zahlt dann in Wartezeit.'
+        : 'Immer mit Strafen. Setz den Notausgang so, dass du damit leben kannst - '
+          + 'du weisst nicht, wie lang der Weg wird.';
       dimensionTeil.classList.toggle('versteckt', an);
       feinTeil.classList.toggle('versteckt', an);
 
@@ -862,6 +882,7 @@
       pruefeBereit();
     }
     $('#blindgang').addEventListener('change', blindgangAnwenden);
+    $('#blind-ohne-rechenzeit').addEventListener('change', blindgangAnwenden);
     $('#passphrase-aktiv').addEventListener('change', function () {
       $('#passphrase-felder').classList.toggle('versteckt', !this.checked);
       pruefeBereit();
@@ -1346,6 +1367,7 @@
   }
 
   function exitKnopfAktualisieren(teile) {
+    if (teile.mahlwerk) mahlwerkSchlag(teile.mahlwerk, notausgangLaeuft());
     teile.knopf.textContent = notausgangLaeuft() ? 'Anhalten' : 'Ausgang freirechnen';
     teile.zustandstext.textContent = notausgangLaeuft()
       ? (imDunkeln() ? 'Läuft. Im Hintergrund, solange diese Seite offen ist.'
@@ -1421,7 +1443,11 @@
       if (notausgangLaeuft()) notausgangAnhalten(); else notausgangStarten();
     });
 
-    if (!imDunkeln()) {
+    var exitMahlwerk = null;
+    if (imDunkeln()) {
+      exitMahlwerk = el('div', { class: 'mahlwerk ist-still' });
+      karte.appendChild(exitMahlwerk);
+    } else {
       karte.appendChild(el('p', { class: 'flaut klein',
         text: exit.schloss.t ? 'verbleibende Rechenzeit' : 'bisher gerechnet' }));
       karte.appendChild(anzeige);
@@ -1434,7 +1460,7 @@
     karte.appendChild(zustandstext);
 
     zustand.exitAnzeige = { wurzel: karte, anzeige: anzeige, fuellung: fuellung, text: text,
-      knopf: knopf, zustandstext: zustandstext };
+      knopf: knopf, zustandstext: zustandstext, mahlwerk: exitMahlwerk };
     return karte;
   }
 
@@ -1892,7 +1918,11 @@
     var text = el('span', { class: 'balken-text', text: '' });
     var knopf = el('button', { class: 'knopf gross haupt', type: 'button', text: 'Bann brechen' });
     buehne.appendChild(anzeige);
-    if (!imDunkeln()) {
+    var mahlwerk = null;
+    if (imDunkeln()) {
+      mahlwerk = el('div', { class: 'mahlwerk ist-still' });
+      buehne.appendChild(mahlwerk);
+    } else {
       buehne.appendChild(el('div', { class: 'balken' }, [fuellung]));
       buehne.appendChild(text);
     }
@@ -1906,6 +1936,7 @@
       var anteil = erledigt / schritteGesamt;
       if (imDunkeln()) {
         anzeige.textContent = laeuft ? '· · ·' : 'angehalten';
+        if (mahlwerk) mahlwerkSchlag(mahlwerk, laeuft);
         return;
       }
       fuellung.style.width = (anteil * 100).toFixed(2) + '%';

@@ -677,8 +677,22 @@ nur die Aufgabe, die gerade vor dir liegt.
 
 Gezogen wird mit `crypto.getRandomValues`, nicht mit dem Saat-Strom des
 Tresors. Das ist wichtig: Die Saat liegt gespeichert im Tresor, aus ihr ließe
-sich der ganze Plan nachrechnen. Der Modus läuft immer eisern, Strafen sind
-immer an, das Glücksspiel ist immer an.
+sich der ganze Plan nachrechnen. Strafen sind immer an, das Glücksspiel ist immer an. Ob das Gerät dafür
+stundenlang rechnen soll, bleibt dagegen eine eigene Entscheidung: Härte und
+Ungewissheit sind zwei verschiedene Dinge, und der Akku ist ein echtes
+Argument. In der Karte steht deshalb ein Schalter „ohne Rechenzeit".
+
+### Das Mahlwerk
+
+Wenn keine Zahl verrät, wie weit der Bann ist, bleibt die Frage, ob überhaupt
+etwas passiert. Ungewissheit heißt nicht, dass man im Ungewissen lässt, ob das
+Gerät arbeitet. An die Stelle des Fortschrittsbalkens tritt deshalb ein
+unbestimmter: ein Lichtstreifen, der durchläuft, solange gerechnet wird, und
+stehenbleibt, sobald es pausiert.
+
+Er hat keine Füllung, nur Bewegung – aus seinem Lauf lässt sich nichts über den
+Stand ablesen. Gesteuert wird er aus demselben Fortschrittsrückruf wie sonst
+die Prozentzahl, zeigt also echtes Rechnen an und keine Dekoration.
 
 ### Keine Zahl, die die Zukunft verrät
 
@@ -688,10 +702,10 @@ Fragmenten offen sieht man ohnehin am Band.
 
 | | normal | Meine Regeln |
 |---|---|---|
-| Bann | Countdown und Prozent | `· · ·`, kein Balken |
+| Bann | Countdown und Prozent | `· · ·` und das Mahlwerk |
 | Strafe | Countdown | `· · ·` |
 | Sperrfrist | Countdown und Termin | `· · ·`, „Komm wieder, wenn du glaubst, dass es so weit ist." |
-| Notausgang | verstrichen / verbleibend, Balken | nur der Knopf |
+| Notausgang | verstrichen / verbleibend, Balken | Mahlwerk und Knopf |
 | Fahrplan | alle Fragmente und Prüfungen | gibt es nicht |
 | Schätzung | „ungefähr 2 h 40 min" | „Das erfährst du nicht." |
 

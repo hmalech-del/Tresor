@@ -669,3 +669,35 @@ select, input[type=file] {
 .verwaltung[open] > summary::before { content: '▾ '; }
 .verwaltung > summary:hover { color: var(--text); }
 .verwaltung .karte { margin-top: 12px; }
+
+/* ---------- Mahlwerk: es läuft, mehr sagt es nicht ----------
+   Ein unbestimmter Balken. Er zeigt, DASS gerechnet wird, und verrät
+   nichts darüber, wie weit. Genau das ist unter "meinen Regeln" gewollt:
+   Ungewissheit heißt nicht, dass man im Ungewissen lässt, ob das Gerät
+   überhaupt arbeitet. */
+.mahlwerk {
+  position: relative;
+  height: 8px;
+  margin: 18px 0 6px;
+  border-radius: 4px;
+  background: var(--grund-hoch);
+  border: 1px solid var(--rand);
+  overflow: hidden;
+}
+.mahlwerk::after {
+  content: '';
+  position: absolute; top: 0; bottom: 0;
+  width: 38%;
+  background: linear-gradient(90deg, transparent, var(--neon), transparent);
+  animation: mahlen 1.7s linear infinite;
+}
+.mahlwerk.ist-still::after { animation-play-state: paused; opacity: .2; }
+.mahlwerk.ist-schlag { border-color: var(--neon); }
+
+@keyframes mahlen {
+  from { left: -38%; }
+  to   { left: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mahlwerk::after { animation: none; left: 0; width: 100%; opacity: .35; }
+}

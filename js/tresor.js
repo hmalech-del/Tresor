@@ -68,7 +68,7 @@
    * Game Master - und zeigt es nicht. Gezogen wird mit dem Systemzufall, nicht
    * mit dem gespeicherten Saat-Strom des Tresors: Aus der Saat liesse sich
    * der Plan sonst nachrechnen, und der soll im Dunkeln bleiben. */
-  function blindKonfiguration(notausgang, sensorenMoeglich) {
+  function blindKonfiguration(notausgang, sensorenMoeglich, ohneRechenzeit) {
     /* Ohne beschriebene Marken gibt es keine Stationen - und die schreibt
      * man von Hand, das kann der Game Master nicht uebernehmen. */
     var alle = T.herausforderungen.dimensionen.map(function (d) { return d.id; })
@@ -87,7 +87,10 @@
       aufgabenProFragment: zufallsGanz(1, 3),
       rechenzeit: zufallsGanz(1, 4),
       reihenfolge: zufallsAnteil() < 0.5 ? 'links' : 'zufall',
-      sicherheit: 'rechenzeit',
+      /* Haerte und Ungewissheit sind zwei verschiedene Dinge. Der Modus
+       * nimmt dem Spieler jede Ansage - ob das Geraet dafuer stundenlang
+       * rechnen soll, bleibt trotzdem seine Entscheidung. */
+      sicherheit: ohneRechenzeit ? 'ohne-rechenzeit' : 'rechenzeit',
       sensoren: !!sensorenMoeglich && zufallsAnteil() < 0.5,
       strafe: zufallsGanz(1, 2),
       gluecksspiel: true,
