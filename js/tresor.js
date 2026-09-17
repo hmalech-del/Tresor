@@ -69,7 +69,10 @@
    * mit dem gespeicherten Saat-Strom des Tresors: Aus der Saat liesse sich
    * der Plan sonst nachrechnen, und der soll im Dunkeln bleiben. */
   function blindKonfiguration(notausgang, sensorenMoeglich) {
-    var alle = T.herausforderungen.dimensionen.map(function (d) { return d.id; });
+    /* Ohne beschriebene Marken gibt es keine Stationen - und die schreibt
+     * man von Hand, das kann der Wächter nicht für einen erledigen. */
+    var alle = T.herausforderungen.dimensionen.map(function (d) { return d.id; })
+      .filter(function (id) { return id !== 'ort' || T.ortAufgaben.vorratGroesse() >= 2; });
     for (var i = alle.length - 1; i > 0; i--) {
       var j = zufallsGanz(0, i);
       var merk = alle[i]; alle[i] = alle[j]; alle[j] = merk;

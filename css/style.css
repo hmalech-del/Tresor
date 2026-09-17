@@ -611,3 +611,42 @@ select, input[type=file] {
 }
 .blindtitel { font-size: 18px; font-weight: 600; letter-spacing: .04em; }
 .blindkarte.ist-an .blindtitel { color: var(--gold-hell); }
+
+/* ---------- Stationen (NFC) ---------- */
+
+.stationsreihe { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; min-height: 4px; }
+.stationsmarke {
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--gold); border-radius: 50%;
+  background: rgba(242, 181, 68, .1); color: var(--gold-hell);
+  font-variant-numeric: tabular-nums;
+}
+
+.nfcwelle {
+  position: relative;
+  height: 150px;
+  margin: 18px 0 4px;
+  display: flex; align-items: center; justify-content: center;
+}
+.nfcwelle > i {
+  position: absolute;
+  width: 46px; height: 46px;
+  border: 2px solid var(--neon);
+  border-radius: 50%;
+  opacity: 0;
+  animation: nfcpuls 2.4s ease-out infinite;
+}
+.nfcwelle > i:nth-child(2) { animation-delay: .8s; }
+.nfcwelle > i:nth-child(3) { animation-delay: 1.6s; }
+.nfcmarke { position: relative; font-size: 34px; color: var(--neon-hell); }
+.nfcwelle.ist-pruefend > i { animation-duration: .7s; border-color: var(--gold); }
+.nfcwelle.ist-pruefend .nfcmarke { color: var(--gold-hell); }
+
+@keyframes nfcpuls {
+  0%   { transform: scale(1);   opacity: .7; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nfcwelle > i { animation: none; opacity: .3; }
+}

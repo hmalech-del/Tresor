@@ -488,6 +488,70 @@ Standortfreigabe. Eine Aufgabe „steig drei Stockwerke“ würde häufiger fals
 als richtig messen. Waagerechte Strecke wäre deutlich genauer (±5 bis 10 m),
 bliebe aber eine reine Draußen-Aufgabe.
 
+## Stationen: NFC-Marken als Suchspiel
+
+Eine Aufgabe, die weder Zeit noch Konzentration kostet, sondern **Weg**.
+NFC-Marken kosten im Zehnerpack ein paar Euro, also verteilt man sie in der
+Wohnung: hinter dem Bücherregal, im Keller, unter der Fensterbank. Beim
+Einrichten bekommt jede Marke ein eigenes Zufallsgeheimnis, und jedes Fragment
+wird an genau eine davon gebunden – an welche, sagt die App nicht. Das Suchen
+ist die Aufgabe.
+
+Die Dimension heißt **Ort**, der Aufgabentyp **Station**.
+
+### Wie es gebunden ist
+
+Kryptografisch ist eine Station dasselbe wie eine Rätselantwort: Das Geheimnis
+der Marke geht über PBKDF2 in den Fragmentschlüssel ein, gespeichert wird nur
+ein Prüfwert. Ohne die richtige Marke gibt es den Schlüssel nicht – das ist
+keine Oberflächenhürde, die sich mit dem Entwicklerwerkzeug wegklicken ließe.
+
+Die Geheimnisse gehen dabei **nie durch die Konfiguration**. Die landet im
+Tresor und damit im Browser-Speicher; die Geheimnisse sind der Schlüssel. Sie
+liegen während des Einrichtens in einem Modulvorrat (`js/aufgaben-ort.js`),
+gehen als `params.loesung` in den Aufgabenplan, der sie nach dem Hashen selbst
+wieder löscht, und werden nach dem Verriegeln geleert. Nachgemessen: Nach dem
+Verriegeln steht keines der fünf Geheimnisse im `localStorage`.
+
+### Falsche Marken kosten nichts
+
+Bewusst kein Fehlversuch. Das Abklappern **ist** der Weg, nicht der Fehler –
+eine Strafe für jede falsche Marke würde das Suchspiel in ein Ratespiel
+verwandeln, bei dem Herumlaufen bestraft wird. Gezählt wird trotzdem, damit
+man sieht, wie weit man ist: „3 Marken abgeklappert, keine davon war es.“
+
+Der Reiz wächst mit der Zahl der Fragmente: Jedes hängt an einer eigenen,
+zufällig gezogenen Station, also läuft man dieselben Orte in einer Reihenfolge
+ab, die man nicht vorhersehen kann.
+
+### Was das schützt – und was nicht
+
+* Ein NDEF-Satz lässt sich von **jeder** NFC-App auslesen. Wer eine Marke in
+  die Hand bekommt, hat ihr Geheimnis. Das hält den eigenen Impuls auf und
+  Gelegenheitszugriff, nicht jemanden, der sich bei dir umsehen darf.
+* Wer alle Marken in eine Schublade legt, hat das Suchspiel abgeschafft. Die
+  App kann das nicht verhindern – der Tresor ist so stark wie deine Disziplin
+  darüber, wo die Marken liegen.
+* Nach einer gefundenen Station liegt deren Geheimnis bis zum Öffnen des
+  Fragments in `zustand.antwort`. Das ist bei allen antwortgebundenen Aufgaben
+  so und unvermeidlich: Der Schlüssel wird erst gebraucht, wenn der Bann fällt,
+  und bis dahin muss die Antwort einen Neustart überleben.
+* Eine überschriebene oder verlegte Marke macht ihr Fragment nur noch über den
+  Notausgang erreichbar.
+
+### Reichweite
+
+Web NFC gibt es **nur in Chrome auf Android** – Safari kennt es nicht,
+Desktop-Chrome auch nicht. Anders als bei den Lagesensoren ist die Prüfung
+ehrlich einfach: Wo `NDEFReader` fehlt, fehlt die Fähigkeit wirklich; es gibt
+keinen Fall, in dem die Schnittstelle da ist und trotzdem nie etwas ankommt.
+Fehlt sie, greift derselbe [Ersatzweg](#der-ersatzweg) wie bei den
+Sensoraufgaben.
+
+**Ungetestet auf echter Hardware.** Alles außer der Funkschicht ist geprüft –
+mit einem gefälschten `NDEFReader` im Test. Der erste Lauf mit echten Marken
+auf einem echten Android steht noch aus.
+
 ## Der Ton
 
 Die Oberfläche spricht nicht wie eine Dokumentation, sondern wie eine Instanz,
@@ -678,7 +742,10 @@ unverändert.
 | `js/aufgaben-raetsel.js` | Chiffre, Morse, Anagramm, Zahlenrätsel |
 | `js/aufgaben-konzentration.js` | Tonfolge, N-Back, Stroop, Zahlenjagd |
 | `js/sensoren.js` | Lagesensoren: Fähigkeitsprüfung, iOS-Freigabe, Messungen |
-| `js/aufgaben-sensor.js` | Wasserwaage, Lagenfolge, Schritte, Ruhige Hand, Ersatzweg |
+| `js/aufgaben-sensor.js` | Wasserwaage, Lagenfolge, Schritte, Ruhige Hand |
+| `js/nfc.js` | Web NFC: Fähigkeitsprüfung, Marken lesen und beschreiben |
+| `js/aufgaben-ort.js` | Station: NFC-Marke finden, Vorrat der Stationsgeheimnisse |
+| `js/ersatzweg.js` | Aufwand statt Fähigkeit, wenn Sensor oder NFC fehlen |
 | `js/woerter.js` | Wortvorrat ohne Umlaute |
 | `js/tresor.js` | Aufgabenplan, Verriegeln, Freigabe |
 | `js/foto.js` | Ziffernerkennung im Bild, Zerlegung in Schärfestufen |

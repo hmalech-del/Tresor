@@ -141,17 +141,20 @@
     var pass = passAn ? $('#passphrase').value : '';
     var passWdh = passAn ? $('#passphrase-wdh').value : '';
     var passOk = !passAn || (pass.length >= 4 && pass === passWdh);
+    var stationenNoetig = !blind && dimensionen.indexOf('ort') !== -1;
+    var stationenOk = !stationenNoetig || (zustand.stationen || []).length >= 2;
     if (passAn) {
       $('#passphrase-hinweis').textContent = !pass.length ? 'Noch keine Passphrase.'
         : pass.length < 4 ? 'Zu kurz - nimm lieber einen ganzen Satz.'
         : pass !== passWdh ? 'Die beiden Eingaben stimmen noch nicht überein.'
         : 'Passt. Schreib sie dir auf, bevor du verriegelst.';
     }
-    knopf.disabled = !(vollstaendig && dimensionen.length && passOk);
+    knopf.disabled = !(vollstaendig && dimensionen.length && passOk && stationenOk);
     $('#bereit-hinweis').textContent = !vollstaendig
       ? (zustand.art === 'foto' ? 'Es fehlt noch ein Bild.' : 'Es fehlen noch Ziffern.')
       : !dimensionen.length ? 'Wähle mindestens eine Dimension.'
-      : !passOk ? 'Die Passphrase ist noch nicht vollständig.' : '';
+      : !passOk ? 'Die Passphrase ist noch nicht vollständig.'
+      : !stationenOk ? 'Für die Dimension „Ort“ brauchst du mindestens zwei beschriebene Marken.' : '';
   }
 
   /* Technisches bleibt verfuegbar, aber zugeklappt: Der Wächter erklärt nicht,
@@ -211,6 +214,51 @@
         return !!(modul && modul.sensor);
       });
     });
+  }
+
+  /* Die Stationskarte: sichtbar, sobald die Dimension "Ort" gewählt ist.
+   * Ohne NFC bleibt sie sichtbar, aber gesperrt - dann sagt sie, warum. */
+  function stationLageZeigen() {
+    var karte = $('#stationkarte');
+    if (!karte) return;
+    var gewaehlt = aktiveDimensionen().indexOf('ort') !== -1;
+    karte.classList.toggle('versteckt', !gewaehlt);
+    if (!gewaehlt) return;
+
+    var moeglich = T.nfc.moeglich();
+    $('#station-lage').textContent = moeglich
+      ? 'Halte eine Marke ans Gerät und beschreibe sie. Mindestens zwei, sinnvoll sind fünf bis zehn.'
+      : T.nfc.grundText() + ' Marken beschreiben geht nur auf einem Gerät, das NFC kann.';
+    $('#station-schreiben').disabled = !moeglich;
+
+    var reihe = util.leeren($('#stationsreihe'));
+    (zustand.stationen || []).forEach(function (_, i) {
+      reihe.appendChild(el('span', { class: 'stationsmarke', text: String(i + 1) }));
+    });
+    $('#station-verwerfen').classList.toggle('versteckt', !(zustand.stationen || []).length);
+  }
+
+  async function stationBeschreiben() {
+    var knopf = $('#station-schreiben');
+    var meldung = $('#station-meldung');
+    knopf.disabled = true;
+    meldung.className = 'aufgabe-meldung ist-laeuft';
+    meldung.textContent = 'Halte jetzt eine Marke an das Gerät ...';
+    var geheimnis = T.nfc.neuesGeheimnis();
+    try {
+      await T.nfc.schreiben(geheimnis);
+      zustand.stationen = (zustand.stationen || []).concat([geheimnis]);
+      T.ortAufgaben.vorratSetzen(zustand.stationen);
+      meldung.className = 'aufgabe-meldung ist-gut';
+      meldung.textContent = 'Marke ' + zustand.stationen.length + ' beschrieben. Leg sie weg und nimm die nächste.';
+    } catch (fehler) {
+      meldung.className = 'aufgabe-meldung ist-fehler';
+      meldung.textContent = 'Das hat nicht geklappt: ' + (fehler.message || fehler);
+    }
+    knopf.disabled = false;
+    stationLageZeigen();
+    schaetzungAktualisieren();
+    pruefeBereit();
   }
 
   function sensorWarnung() {
@@ -633,9 +681,27 @@
         + 'du weißt vorher nicht, wie lang der Weg wird.' })
     ]);
 
+    var stationTeil = el('section', { class: 'karte versteckt', id: 'stationkarte' }, [
+      el('h2', { text: 'Deine Stationen' }),
+      el('p', { class: 'flaut klein', id: 'station-lage', text: '' }),
+      el('p', { class: 'flaut klein', text:
+        'Verteile die Marken, wo du sie haben willst - hinter dem Regal, im Keller, unter der Fensterbank. '
+        + 'Jede bekommt ein eigenes Geheimnis, und jedes Fragment wird an genau eine davon gebunden. '
+        + 'An welche, erfährst du nicht. Das Suchen ist die Aufgabe.' }),
+      el('div', { class: 'stationsreihe', id: 'stationsreihe' }),
+      el('button', { class: 'knopf', type: 'button', id: 'station-schreiben', text: 'Nächste Marke beschreiben' }),
+      el('button', { class: 'knopf', type: 'button', id: 'station-verwerfen', text: 'Von vorn' }),
+      el('p', { class: 'aufgabe-meldung', id: 'station-meldung', role: 'status' }),
+      el('p', { class: 'warnung', text:
+        'Wird eine Marke überschrieben oder verlegt, ist das daran gebundene Fragment nur noch über den '
+        + 'Notausgang zu haben. Und wer eine Marke in die Hand bekommt, kann sie mit jeder NFC-App auslesen: '
+        + 'Das hält deinen eigenen Impuls auf, nicht jemanden, der sich bei dir umsehen darf.' })
+    ]);
+
     wurzel.appendChild(geheimTeil);
     wurzel.appendChild(blindTeil);
     wurzel.appendChild(dimensionTeil);
+    wurzel.appendChild(stationTeil);
     wurzel.appendChild(zeitTeil);
     wurzel.appendChild(feinTeil);
     wurzel.appendChild(abschluss);
@@ -661,8 +727,22 @@
     $('#fotodatei').addEventListener('change', fotoVerarbeiten);
 
     util.$$('.dimension-karte input[type=checkbox]').forEach(function (feld) {
-      feld.addEventListener('change', function () { schaetzungAktualisieren(); pruefeBereit(); });
+      feld.addEventListener('change', function () {
+        stationLageZeigen();
+        schaetzungAktualisieren();
+        pruefeBereit();
+      });
     });
+    $('#station-schreiben').addEventListener('click', stationBeschreiben);
+    $('#station-verwerfen').addEventListener('click', function () {
+      zustand.stationen = [];
+      T.ortAufgaben.vorratLeeren();
+      $('#station-meldung').textContent = 'Verworfen. Die Marken selbst behalten ihr Geheimnis, bis du sie neu beschreibst.';
+      $('#station-meldung').className = 'aufgabe-meldung';
+      stationLageZeigen();
+      pruefeBereit();
+    });
+    stationLageZeigen();
     T.herausforderungen.dimensionen.forEach(function (dimension) {
       var regler = $('#stufe-' + dimension.id);
       if (!regler) return;
@@ -738,6 +818,8 @@
     });
     $('#sensoren-freigeben').addEventListener('click', function () { sensorlageZeigen(true); });
     sensorlageZeigen(false);
+    /* Im Blindgang zieht der Wächter die Dimensionen selbst - Stationen
+     * kämen ohne beschriebene Marken nicht zustande. */
 
     /* Blindgang blendet alles aus, was der Wächter selbst entscheidet - bis
      * auf den Notausgang, der in den Zeitregeln stehen bleibt. */
@@ -896,6 +978,9 @@
       el('div', { class: 'balken' }, [el('i', { id: 'schmiede-balken' })])
     ]);
     wurzel.appendChild(kasten);
+    /* Die Stationsgeheimnisse gehen nur durch den Aufgabenplan, nie in die
+     * Konfiguration - die landet im Speicher, sie sind der Schlüssel. */
+    T.ortAufgaben.vorratSetzen(zustand.stationen || []);
     try {
       var tresor = await T.tresorLogik.erstellen({
         art: art,
@@ -907,6 +992,8 @@
           if (typeof m.anteil === 'number') $('#schmiede-balken').style.width = (m.anteil * 100) + '%';
         }
       });
+      T.ortAufgaben.vorratLeeren();
+      zustand.stationen = [];
       zustand.geheimnis = '';
       zustand.bild = null;
       teile = null;
@@ -1389,8 +1476,8 @@
     if (tresor) {
       var offen = tresor.fragmente.filter(function (f) { return f.offen; }).length;
       karte.appendChild(el('p', { class: 'flaut klein', text:
-        'Eine Kopie dieses Tresors als Datei - mit allem, was dazugehört: Aufgaben, Zeitschlösser, '
-        + 'Rechenfortschritt und laufende Fristen. Beim Einlesen auf einem anderen Gerät geht es dort '
+        'Eine Kopie dieses Tresors als Datei - mit allem, was dazugehört: Aufgaben, Bannzustand '
+        + 'und laufende Fristen. Beim Einlesen auf einem anderen Gerät geht es dort '
         + 'weiter, wo du hier aufgehört hast.'
         + (T.tresorLogik.brauchtPassphrase(tresor)
             ? ' Die Passphrase steckt nicht in der Datei - ohne sie ist auch die Sicherung wertlos.' : '') }));
