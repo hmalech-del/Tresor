@@ -112,6 +112,15 @@
       + 'Der Fortschritt wird gespeichert, du kannst die Strecke in Etappen abarbeiten.';
   }
 
+  function notausgangOptionen(vorgabe) {
+    return T.tresorLogik.NOTAUSGANG_WERTE.map(function (sekunden) {
+      var option = el('option', { value: String(sekunden), selected: sekunden === vorgabe ? 'selected' : null },
+        util.dauer(sekunden));
+      option.dataset.sekunden = String(sekunden);
+      return option;
+    });
+  }
+
   function zeitOptionen(vorgabe) {
     return T.tresorLogik.FRIST_WERTE.map(function (sekunden) {
       return el('option', { value: String(sekunden), selected: sekunden === vorgabe ? 'selected' : null },
@@ -162,8 +171,10 @@
         folge: $('#frist-folge').value
       },
       notausgang: {
+        modus: $('#notausgang-modus').value,
+        sekunden: Number($('#notausgang-dauer').value),
         minSekunden: Number($('#notausgang-min').value),
-        maxSekunden: Number($('#notausgang-min').value) ? Number($('#notausgang-max').value) : 0
+        maxSekunden: Number($('#notausgang-max').value)
       }
     };
   }
@@ -182,19 +193,31 @@
 
     // Den Notausgang gibt es in beiden Modi - nur zahlt er einmal in
     // Rechenzeit und einmal schlicht in Wartezeit.
-    var exitMin = Number($('#notausgang-min').value);
-    var exitMax = exitMin ? Math.max(exitMin, Number($('#notausgang-max').value)) : 0;
+    var exitModus = $('#notausgang-modus').value;
     var exitArt = ohneRechenzeit ? 'Wartezeit' : 'Rechenzeit';
-    $('#notausgang-max-feld').classList.toggle('versteckt', !exitMin);
-    $('#notausgang-spanne').textContent = !exitMin ? ''
-      : exitMin === exitMax
-        ? 'Feste Dauer: der Notausgang springt nach ' + util.dauer(exitMin) + ' ' + exitArt + ' auf.'
-        : 'Die tatsächliche Dauer wird beim Verriegeln zufällig zwischen ' + util.dauer(exitMin)
-          + ' und ' + util.dauer(exitMax) + ' gezogen. '
-          + (ohneRechenzeit
-              ? 'Angezeigt wird sie nicht – im Browser-Speicher steht sie allerdings, wie alles in diesem Modus.'
-              : 'Gespeichert wird sie nicht – du erfährst sie erst, wenn er aufspringt.');
-    $('#notausgang-aufwand').textContent = exitMax && !ohneRechenzeit ? rechenaufwand(exitMax) : '';
+    var exitFest = Number($('#notausgang-dauer').value);
+    var exitMin = Math.min(Number($('#notausgang-min').value), Number($('#notausgang-max').value));
+    var exitMax = Math.max(Number($('#notausgang-min').value), Number($('#notausgang-max').value));
+    $('#notausgang-fest-feld').classList.toggle('versteckt', exitModus !== 'fest');
+    $('#notausgang-spanne-felder').classList.toggle('versteckt', exitModus !== 'zufall' && exitModus !== 'geheim');
+    util.$$('#notausgang-dauer option, #notausgang-min option, #notausgang-max option').forEach(function (option) {
+      if (!option.dataset.sekunden) return;
+      option.textContent = util.dauer(Number(option.dataset.sekunden)) + ' ' + exitArt;
+    });
+    $('#notausgang-spanne').textContent =
+      exitModus === 'aus' ? ''
+      : exitModus === 'fest'
+        ? 'Der Notausgang springt nach genau ' + util.dauer(exitFest) + ' ' + exitArt + ' auf. Du weißt also von Anfang an, woran du bist.'
+      : exitModus === 'zufall'
+        ? 'Die Dauer wird beim Verriegeln zufällig zwischen ' + util.dauer(exitMin) + ' und ' + util.dauer(exitMax)
+          + ' gezogen - und dir danach angezeigt. Du weißt sie erst nach dem Verriegeln, dann aber genau.'
+      : 'Die Dauer wird beim Verriegeln zufällig zwischen ' + util.dauer(exitMin) + ' und ' + util.dauer(exitMax)
+        + ' gezogen und bleibt geheim. '
+        + (ohneRechenzeit
+            ? 'Angezeigt wird sie nicht - im Browser-Speicher steht sie allerdings, wie alles in diesem Modus.'
+            : 'Sie wird nirgends gespeichert: Der Rechner merkt am Prüfwert selbst, wann er angekommen ist. Du erfährst sie erst, wenn der Notausgang aufspringt.');
+    var exitAufwand = exitModus === 'aus' ? 0 : exitModus === 'fest' ? exitFest : exitMax;
+    $('#notausgang-aufwand').textContent = exitAufwand && !ohneRechenzeit ? rechenaufwand(exitAufwand) : '';
   }
 
   function schaetzungAktualisieren() {
@@ -217,35 +240,20 @@
     $('#sicherheit-hinweis').textContent = ohneRechenzeit
       ? 'Weniger sicher: Die Schlüssel liegen offen im Browser-Speicher, die Aufgaben sind Oberflächenhürden. Wer den Speicher liest, kommt sofort an das Geheimnis. Dafür kostet nichts Strom, und der Notausgang ist hier eine Wartezeit statt Rechenzeit. Antwortgebundene Rätsel wirken auch in diesem Modus, weil ihre Lösung in den Schlüssel eingeht.'
       : 'Sicher: Jedes Fragment kostet echte, nicht abkürzbare Rechenzeit - auch für jemanden mit Entwicklerwerkzeug.';
-    var exitMinS = Math.min(konfig.notausgang.minSekunden, konfig.notausgang.maxSekunden);
-    var exitMaxS = Math.max(konfig.notausgang.minSekunden, konfig.notausgang.maxSekunden);
+    var exitModusW = konfig.notausgang.modus;
+    var exitDauerText = exitModusW === 'fest'
+      ? util.dauer(konfig.notausgang.sekunden)
+      : util.dauer(Math.min(konfig.notausgang.minSekunden, konfig.notausgang.maxSekunden))
+        + ' bis ' + util.dauer(Math.max(konfig.notausgang.minSekunden, konfig.notausgang.maxSekunden));
     aufwandAktualisieren();
     $('#abschluss-warnung').textContent = ohneRechenzeit
       ? 'Der weniger sichere Modus hält niemanden auf, der den Browser-Speicher liest - er hält dich auf.'
-        + (exitMaxS ? ' Der Notausgang öffnet nach ' + (exitMinS === exitMaxS ? util.dauer(exitMaxS)
-            : util.dauer(exitMinS) + ' bis ' + util.dauer(exitMaxS)) + ' Wartezeit.' : '')
+        + (exitModusW !== 'aus' ? ' Der Notausgang öffnet nach ' + exitDauerText + ' Wartezeit.' : '')
         + ' Löschen des Tresors löscht das Geheimnis.'
-      : exitMaxS
-      ? 'Ab hier führen nur noch die Aufgaben zur Zahl - oder der Notausgang, der '
-        + (exitMinS === exitMaxS ? util.dauer(exitMaxS) : util.dauer(exitMinS) + ' bis ' + util.dauer(exitMaxS))
-        + ' Rechenzeit kostet. Löschen des Tresors löscht die Zahl.'
-      : 'Danach gibt es keinen Notausgang: Nur die Aufgaben und die Rechenzeit führen zur Zahl zurück. Löschen des Tresors löscht die Zahl.';
-    /* Wie viele Aufgabenplätze gibt es überhaupt? Bei fünf Fragmenten mit je
-     * einer Aufgabe sind es fünf - wer sechs Dimensionen ankreuzt, sieht eine
-     * davon nie. Das sagt die Oberfläche lieber vorher. */
-    var plaetze = zustand.laenge * konfig.aufgabenProFragment;
-    var proFragment = konfig.aufgabenProFragment === 1 ? 'einer Aufgabe' : konfig.aufgabenProFragment + ' Aufgaben';
-    var uebrig = dimensionen.length - plaetze;
-    $('#dimension-hinweis').textContent = uebrig > 0
-      ? 'Achtung: ' + zustand.laenge + ' Fragmente mit je ' + proFragment + ' ergeben nur ' + plaetze
-        + ' Aufgabenplätze – ' + (uebrig === 1 ? 'eine deiner ' : uebrig + ' deiner ') + dimensionen.length
-        + ' Dimensionen ' + (uebrig === 1 ? 'bleibt' : 'bleiben') + ' außen vor, und der Zufall entscheidet welche. Mit '
-        + Math.ceil(dimensionen.length / zustand.laenge) + ' Aufgaben je Fragment sind alle dabei.'
-      : dimensionen.length === 1
-        ? 'Eine Dimension auf ' + plaetze + ' Aufgabenplätze: Es kommen lauter Aufgaben aus dieser einen, '
-          + 'jede Sorte einmal, bevor sich eine wiederholt.'
-        : dimensionen.length + ' Dimensionen auf ' + plaetze + ' Aufgabenplätze: Jede kommt mindestens einmal dran, '
-          + 'danach geht es reihum weiter.';
+      : exitModusW !== 'aus'
+        ? 'Ab hier führen nur noch die Aufgaben zur Zahl - oder der Notausgang, der '
+          + exitDauerText + ' Rechenzeit kostet. Löschen des Tresors löscht die Zahl.'
+        : 'Danach gibt es keinen Notausgang: Nur die Aufgaben und die Rechenzeit führen zur Zahl zurück. Löschen des Tresors löscht die Zahl.';
     $('#schaetzung-detail').textContent =
       zustand.laenge + ' Fragmente · ' + konfig.aufgabenProFragment
       + (konfig.aufgabenProFragment === 1 ? ' Aufgabe' : ' Aufgaben') + ' je Fragment · '
@@ -358,9 +366,9 @@
       el('p', { class: 'flaut klein', text: 'Jeder weitere Fehlversuch derselben Aufgabe kostet das 1,7-Fache, höchstens 30 Minuten. Die Aufgabe ist währenddessen gesperrt.' }),
       el('label', { class: 'schalterzeile' }, [
         el('input', { type: 'checkbox', id: 'frist-aktiv' }),
-        el('span', { text: 'Geheime Höchstzeit' })
+        el('span', { text: 'Geheimes Zeitlimit für die Aufgaben' })
       ]),
-      el('p', { class: 'flaut klein', text: 'Beim Verriegeln wird eine Höchstzeit zufällig aus deiner Spanne gezogen. Angezeigt werden nur die Spanne und die verstrichene Zeit – der gezogene Wert nicht.' }),
+      el('p', { class: 'flaut klein', text: 'Eine zufällig gezogene Frist, in der du die Aufgaben schaffen musst: Läuft sie ab, fällt der Fortschritt zurück. Angezeigt werden nur Spanne und verstrichene Zeit. Mit dem Notausgang weiter unten hat das nichts zu tun.' }),
       el('div', { id: 'frist-bereich' }, [
         el('div', { class: 'feld' }, [
           el('label', { for: 'frist-bezug', text: 'Wofür gilt sie?' }),
@@ -399,25 +407,30 @@
         ])
       ]),
       el('div', { class: 'feld' }, [
-        el('label', { for: 'notausgang-min', text: 'Notausgang – öffnet frühestens nach' }),
-        el('select', { id: 'notausgang-min' }, [el('option', { value: '0' }, 'kein Notausgang')]
-          .concat(T.tresorLogik.NOTAUSGANG_WERTE.map(function (sekunden) {
-            var option = el('option', { value: String(sekunden) }, util.dauer(sekunden) + ' Rechenzeit');
-            option.dataset.sekunden = String(sekunden);
-            return option;
-          })))
+        el('label', { for: 'notausgang-modus', text: 'Notausgang' }),
+        el('select', { id: 'notausgang-modus' }, [
+          el('option', { value: 'aus' }, 'kein Notausgang'),
+          el('option', { value: 'fest' }, 'feste Dauer'),
+          el('option', { value: 'zufall' }, 'zufällig aus einer Spanne – Dauer wird angezeigt'),
+          el('option', { value: 'geheim' }, 'zufällig aus einer Spanne – Dauer bleibt geheim')
+        ])
       ]),
-      el('div', { class: 'feld', id: 'notausgang-max-feld' }, [
-        el('label', { for: 'notausgang-max', text: '… und spätestens nach' }),
-        el('select', { id: 'notausgang-max' }, T.tresorLogik.NOTAUSGANG_WERTE.map(function (sekunden) {
-          var option = el('option', { value: String(sekunden), selected: sekunden === 7200 ? 'selected' : null },
-            util.dauer(sekunden) + ' Rechenzeit');
-          option.dataset.sekunden = String(sekunden);
-          return option;
-        }))
+      el('div', { class: 'feld', id: 'notausgang-fest-feld' }, [
+        el('label', { for: 'notausgang-dauer', text: 'Dauer' }),
+        el('select', { id: 'notausgang-dauer' }, notausgangOptionen(7200))
+      ]),
+      el('div', { id: 'notausgang-spanne-felder' }, [
+        el('div', { class: 'feld' }, [
+          el('label', { for: 'notausgang-min', text: 'frühestens nach' }),
+          el('select', { id: 'notausgang-min' }, notausgangOptionen(1800))
+        ]),
+        el('div', { class: 'feld' }, [
+          el('label', { for: 'notausgang-max', text: '… und spätestens nach' }),
+          el('select', { id: 'notausgang-max' }, notausgangOptionen(10800))
+        ])
       ]),
       el('p', { class: 'flaut klein', id: 'notausgang-spanne', text: '' }),
-      el('p', { class: 'flaut klein', text: 'Der Notausgang ist der zweite Weg zum ganzen Geheimnis, falls du an einer Aufgabe hängen bleibst: keine Aufgaben, nur Zeit. Wie lange genau, wird beim Verriegeln aus deiner Spanne gezogen.' }),
+      el('p', { class: 'flaut klein', text: 'Der Notausgang ist der zweite Weg zum ganzen Geheimnis, falls du an einer Aufgabe hängen bleibst: keine Aufgaben, keine Sperrfristen, nur Zeit.' }),
       el('p', { class: 'flaut klein aufwandzeile', id: 'notausgang-aufwand', text: '' })
     ]);
 
@@ -500,8 +513,9 @@
       });
     });
     $('#strafzeit').addEventListener('change', schaetzungAktualisieren);
-    $('#notausgang-min').addEventListener('change', schaetzungAktualisieren);
-    $('#notausgang-max').addEventListener('change', schaetzungAktualisieren);
+    ['#notausgang-modus', '#notausgang-dauer', '#notausgang-min', '#notausgang-max'].forEach(function (auswahl) {
+      $(auswahl).addEventListener('change', schaetzungAktualisieren);
+    });
     function fristAnsichtAktualisieren() {
       var aufTresor = $('#frist-bezug').value === 'tresor';
       $('#frist-absolut').classList.toggle('versteckt', !aufTresor);
@@ -854,14 +868,21 @@
    * absichtlich eine Spanne und keine Zahl. */
   function notausgangSpanne(exit) {
     var rahmen = exit.rahmen || [0, 0];
+    var einheit = exit.art === 'wartezeit' ? 'Wartezeit' : 'Rechenzeit';
+    var modus = exit.modus || (exit.blind ? 'geheim' : 'fest');
+
+    if (modus === 'fest') {
+      return 'Er öffnet nach genau ' + util.dauer(exit.sekunden) + ' ' + einheit + '.';
+    }
+    if (modus === 'zufall') {
+      return 'Gezogen wurden ' + util.dauer(exit.sekunden) + ' ' + einheit
+        + ' – aus der Spanne ' + util.dauer(rahmen[0]) + ' bis ' + util.dauer(rahmen[1]) + '.';
+    }
     if (exit.art === 'wartezeit') {
-      if (rahmen[0] === rahmen[1]) return 'Er öffnet ' + util.dauer(rahmen[1]) + ' nach dem Verriegeln.';
       return 'Wann, steht nicht fest: irgendwann zwischen ' + util.dauer(rahmen[0]) + ' und '
         + util.dauer(rahmen[1]) + ' nach dem Verriegeln, beim Verriegeln zufällig gezogen. '
         + 'Angezeigt wird der Termin nicht – im Browser-Speicher steht er, wie alles in diesem Modus.';
     }
-    if (!exit.blind) return 'Rund ' + util.dauer(exit.sekunden) + ', damit bleibst du höchstens so lange ausgesperrt.';
-    if (rahmen[0] === rahmen[1]) return 'Rund ' + util.dauer(rahmen[1]) + ' Rechenzeit.';
     return 'Wie lange, steht nicht fest: irgendwo zwischen ' + util.dauer(rahmen[0]) + ' und '
       + util.dauer(rahmen[1]) + ' Rechenzeit, beim Verriegeln zufällig gezogen und nirgends gespeichert.';
   }
@@ -936,14 +957,23 @@
     if (!teile.wurzel.isConnected) return;
     var exit = tresor.notausgang;
     var erledigt = exit.stand.erledigt;
-    var obergrenze = exit.schloss.obergrenze || exit.schloss.t || 1;
+    var ziel = exit.schloss.t || 0;                       // 0 = blind, Ziel unbekannt
+    var obergrenze = exit.schloss.obergrenze || ziel || 1;
     var untergrenze = exit.schloss.untergrenze || 0;
+    var rate = tresor.rate || 1;
     teile.fuellung.style.width = (Math.min(1, erledigt / obergrenze) * 100).toFixed(2) + '%';
-    teile.anzeige.textContent = util.dauer(erledigt / (tresor.rate || 1));
-    teile.text.textContent = erledigt.toLocaleString('de-DE') + ' Schritte · '
-      + (untergrenze && erledigt < untergrenze
-          ? 'frühestens ab ' + util.dauer(untergrenze / (tresor.rate || 1)) + ' kann es aufspringen'
-          : 'kann jederzeit aufspringen');
+    if (ziel) {
+      // bekannte Dauer: Restzeit und Prozent sind ehrlich anzeigbar
+      teile.anzeige.textContent = util.uhrwerk(Math.max(0, (ziel - erledigt) / rate));
+      teile.text.textContent = erledigt.toLocaleString('de-DE') + ' von ' + ziel.toLocaleString('de-DE')
+        + ' Schritten · ' + (erledigt / ziel * 100).toFixed(1) + ' %';
+    } else {
+      teile.anzeige.textContent = util.dauer(erledigt / rate);
+      teile.text.textContent = erledigt.toLocaleString('de-DE') + ' Schritte · '
+        + (untergrenze && erledigt < untergrenze
+            ? 'frühestens ab ' + util.dauer(untergrenze / rate) + ' kann es aufspringen'
+            : 'kann jederzeit aufspringen');
+    }
     teile.knopf.textContent = notausgangLaeuft() ? 'Anhalten' : 'Rechnen starten';
     teile.zustandstext.textContent = notausgangLaeuft()
       ? 'Rechnet im Hintergrund – auch während du an den Aufgaben arbeitest, solange diese Seite offen bleibt.'
@@ -963,9 +993,14 @@
 
     if (exit.art === 'wartezeit') {
       var bereit = T.tresorLogik.notausgangBereit(tresor);
+      var geheim = (exit.modus || 'geheim') === 'geheim';
       var verstrichen = el('strong', { class: 'fristzeit',
-        text: util.dauer((Date.now() - tresor.erstellt) / 1000) });
-      karte.appendChild(el('p', {}, ['verstrichen: ', verstrichen]));
+        text: geheim ? util.dauer((Date.now() - tresor.erstellt) / 1000)
+                     : util.dauer(Math.max(0, (exit.frei - Date.now()) / 1000)) });
+      karte.appendChild(el('p', {}, [geheim ? 'verstrichen: ' : 'noch: ', verstrichen]));
+      if (!geheim && !bereit) {
+        karte.appendChild(el('p', { class: 'flaut klein', text: 'Offen ab ' + util.zeitpunkt(exit.frei) + '.' }));
+      }
       var oeffnen = el('button', { class: 'knopf gross haupt', type: 'button', text: 'Geheimnis freigeben' });
       oeffnen.disabled = !bereit;
       oeffnen.addEventListener('click', function () {
@@ -985,7 +1020,9 @@
       if (!bereit) {
         zustand.exitUhr = setInterval(function () {
           if (T.tresorLogik.notausgangBereit(tresor)) { zeichneTresor(); return; }
-          verstrichen.textContent = util.dauer((Date.now() - tresor.erstellt) / 1000);
+          verstrichen.textContent = geheim
+            ? util.dauer((Date.now() - tresor.erstellt) / 1000)
+            : util.dauer(Math.max(0, (exit.frei - Date.now()) / 1000));
         }, 1000);
       }
       return karte;
@@ -1007,7 +1044,8 @@
       if (notausgangLaeuft()) notausgangAnhalten(); else notausgangStarten();
     });
 
-    karte.appendChild(el('p', { class: 'flaut klein', text: 'bisher gerechnet' }));
+    karte.appendChild(el('p', { class: 'flaut klein',
+      text: exit.schloss.t ? 'verbleibende Rechenzeit' : 'bisher gerechnet' }));
     karte.appendChild(anzeige);
     karte.appendChild(balken);
     karte.appendChild(text);

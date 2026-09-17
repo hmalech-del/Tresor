@@ -30,7 +30,7 @@
         maxFaktor: 3,
         folge: 'aufgaben'           // 'aufgaben' oder 'alles' (Rechenzeit verfällt mit)
       },
-      notausgang: { minSekunden: 0, maxSekunden: 0 }
+      notausgang: { modus: 'aus', sekunden: 7200, minSekunden: 1800, maxSekunden: 10800 }
     };
   }
 
@@ -273,53 +273,80 @@
      * quadriert und merkt am Prüfwert selbst, wann er angekommen ist. Damit
      * weiß niemand vorher, wie lange es dauert - weder du noch die App noch
      * jemand, der den Speicher ausliest. Bekannt ist nur die Spanne. */
+    /* Notausgang: der zweite Weg zum ganzen Geheimnis, falls man an einer
+     * Aufgabe hängen bleibt. Drei Spielarten:
+     *
+     *   fest    - genau die eingestellte Dauer, wird angezeigt
+     *   zufall  - aus der Spanne gezogen, der gezogene Wert wird angezeigt
+     *   geheim  - aus der Spanne gezogen und nirgends abgelegt; bei
+     *             Rechenzeit merkt der Rechner am Prüfwert selbst, wann er
+     *             angekommen ist, sodass die Dauer wirklich niemand kennt.
+     *
+     * Ohne Rechenzeit zahlt derselbe Notausgang in Wartezeit statt in
+     * Quadrierungen. */
     var notausgang = null;
     var exitKonfig = konfig.notausgang || {};
-    var exitMin = Math.min(exitKonfig.minSekunden || 0, exitKonfig.maxSekunden || 0);
-    var exitMax = Math.max(exitKonfig.minSekunden || 0, exitKonfig.maxSekunden || 0);
-    if (exitMax && mitRechenzeit) {
+    var exitModus = exitKonfig.modus || (exitKonfig.maxSekunden ? 'geheim' : 'aus');
+    if (exitModus !== 'aus') {
+      var exitMin, exitMax;
+      if (exitModus === 'fest') {
+        exitMin = exitMax = Math.max(1, exitKonfig.sekunden || 0);
+      } else {
+        exitMin = Math.max(1, Math.min(exitKonfig.minSekunden || 0, exitKonfig.maxSekunden || 0));
+        exitMax = Math.max(exitMin, Math.max(exitKonfig.minSekunden || 0, exitKonfig.maxSekunden || 0));
+      }
+      var gezogen = exitMin === exitMax ? exitMin
+        : Math.round(exitMin + zufallsAnteil() * (exitMax - exitMin));
+
       melde({ phase: 'notausgang', text: 'Notausgang schmieden ...', anteil: 1 });
-      var untergrenze = aufRaster(rate * Math.max(exitMin, 1));
-      var obergrenze = Math.max(untergrenze + PRUEFSCHRITT, aufRaster(rate * exitMax));
-      var exitSchritte = aufRaster(untergrenze + zufallsAnteil() * (obergrenze - untergrenze));
-      exitSchritte = Math.min(Math.max(exitSchritte, untergrenze), obergrenze);
-      var exitPuzzle = await T.zeitschloss.erzeugen(exitSchritte);
-      notausgang = {
-        art: 'rechenzeit',
-        blind: true,
-        mitlaufen: false,          // rechnet im Hintergrund weiter, solange die Seite offen ist
-        rahmen: [exitMin, exitMax],
-        frei: 0,
-        schloss: {
-          n: exitPuzzle.n, a: exitPuzzle.a,
-          pruef: await T.krypto.pruefwert(exitPuzzle.b),
-          untergrenze: untergrenze,
-          obergrenze: obergrenze,
-          pruefschritt: PRUEFSCHRITT
-        },
-        paket: await T.krypto.verschluesseln('notausgang', exitPuzzle.b, JSON.stringify(teile), null),
-        stand: { erledigt: 0, x: exitPuzzle.a },
-        benutzt: false
-      };
-      exitPuzzle.b = null;
-      exitSchritte = null;
-    } else if (exitMax) {
-      /* Ohne Rechenzeit bleibt als Notausgang die Uhr: Er öffnet irgendwann
-       * zwischen den beiden Grenzen, gezogen beim Verriegeln. Das ist keine
-       * kryptografische Sperre - der Schlüssel liegt daneben, wie alles in
-       * diesem Modus. Es ist ein Sicherheitsnetz, keine Mauer. */
-      var wartezeit = Math.round(exitMin + zufallsAnteil() * (exitMax - exitMin));
-      var exitSchluessel = zufallsHex(32);
-      notausgang = {
-        art: 'wartezeit',
-        rahmen: [exitMin, exitMax],
-        frei: Date.now() + wartezeit * 1000,
-        gesehen: Date.now(),
-        schluessel: exitSchluessel,
-        paket: await T.krypto.verschluesseln('notausgang', exitSchluessel, JSON.stringify(teile), null),
-        benutzt: false
-      };
-      wartezeit = null;
+
+      if (mitRechenzeit && exitModus === 'geheim') {
+        var untergrenze = aufRaster(rate * exitMin);
+        var obergrenze = Math.max(untergrenze + PRUEFSCHRITT, aufRaster(rate * exitMax));
+        var exitSchritte = Math.min(Math.max(aufRaster(rate * gezogen), untergrenze), obergrenze);
+        var blindPuzzle = await T.zeitschloss.erzeugen(exitSchritte);
+        notausgang = {
+          art: 'rechenzeit', modus: 'geheim', blind: true, mitlaufen: false,
+          rahmen: [exitMin, exitMax], frei: 0,
+          schloss: {
+            n: blindPuzzle.n, a: blindPuzzle.a,
+            pruef: await T.krypto.pruefwert(blindPuzzle.b),
+            untergrenze: untergrenze, obergrenze: obergrenze, pruefschritt: PRUEFSCHRITT
+          },
+          paket: await T.krypto.verschluesseln('notausgang', blindPuzzle.b, JSON.stringify(teile), null),
+          stand: { erledigt: 0, x: blindPuzzle.a },
+          benutzt: false
+        };
+        blindPuzzle.b = null;
+        exitSchritte = null;
+      } else if (mitRechenzeit) {
+        var offeneSchritte = Math.max(PRUEFSCHRITT, Math.round(rate * gezogen));
+        var offenesPuzzle = await T.zeitschloss.erzeugen(offeneSchritte);
+        notausgang = {
+          art: 'rechenzeit', modus: exitModus, blind: false, mitlaufen: false,
+          rahmen: [exitMin, exitMax], sekunden: gezogen, frei: 0,
+          schloss: { n: offenesPuzzle.n, a: offenesPuzzle.a, t: offeneSchritte },
+          paket: await T.krypto.verschluesseln('notausgang', offenesPuzzle.b, JSON.stringify(teile), null),
+          stand: { erledigt: 0, x: offenesPuzzle.a },
+          benutzt: false
+        };
+        offenesPuzzle.b = null;
+      } else {
+        /* Ohne Rechenzeit hilft nur die Uhr. Das ist keine kryptografische
+         * Sperre - der Schlüssel liegt daneben, wie alles in diesem Modus. */
+        var exitSchluessel = zufallsHex(32);
+        notausgang = {
+          art: 'wartezeit', modus: exitModus,
+          rahmen: [exitMin, exitMax],
+          sekunden: exitModus === 'geheim' ? null : gezogen,
+          frei: Date.now() + gezogen * 1000,
+          gesehen: Date.now(),
+          schluessel: exitSchluessel,
+          paket: await T.krypto.verschluesseln('notausgang', exitSchluessel, JSON.stringify(teile), null),
+          benutzt: false
+        };
+      }
+      gezogen = null;
     }
 
     /* Geheime Höchstzeit für den ganzen Tresor: jetzt gezogen, ab jetzt laufend. */
