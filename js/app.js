@@ -161,6 +161,7 @@
       reihenfolge: $('#reihenfolge').value,
       sicherheit: $('#sicherheit').value,
       strafe: Number($('#strafzeit').value),
+      erinnerungen: $('#erinnerungen').checked,
       geheimeFrist: {
         aktiv: $('#frist-aktiv').checked,
         bezug: $('#frist-bezug').value,
@@ -261,6 +262,7 @@
       + (schaetzung.gebundeneAufgaben ? ' · ' + schaetzung.gebundeneAufgaben + ' Aufgaben gehen in die Schlüssel ein' : '')
       + (schaetzung.mitZeitfenster ? ' · enthält ein Zeitfenster, das an eine Tageszeit gebunden ist' : '')
       + (konfig.strafe ? ' · Strafzeiten aktiv' : '')
+      + (konfig.erinnerungen ? ' · mit Erinnerungen' : ' · ohne Erinnerungen')
       + (konfig.geheimeFrist.aktiv
           ? ' · geheime Höchstzeit ' + (konfig.geheimeFrist.bezug === 'tresor'
               ? 'zwischen ' + util.dauer(Math.min(konfig.geheimeFrist.minSekunden, konfig.geheimeFrist.maxSekunden))
@@ -364,6 +366,14 @@
         ])
       ]),
       el('p', { class: 'flaut klein', text: 'Jeder weitere Fehlversuch derselben Aufgabe kostet das 1,7-Fache, höchstens 30 Minuten. Die Aufgabe ist währenddessen gesperrt.' }),
+      el('label', { class: 'schalterzeile' }, [
+        el('input', { type: 'checkbox', id: 'erinnerungen' }),
+        el('span', { text: 'Erinnerungen schicken' })
+      ]),
+      el('p', { class: 'flaut klein', id: 'erinnerungen-hinweis', text:
+        'Eine Nachricht, wenn eine Sperrfrist abläuft, ein Check-in-Fenster aufgeht oder der Notausgang offen ist. '
+        + 'Ohne Erinnerungen musst du selbst daran denken - das kann genau der Punkt sein. '
+        + 'Die Einstellung gehört zum Tresor und lässt sich später nicht mehr ändern.' }),
       el('label', { class: 'schalterzeile' }, [
         el('input', { type: 'checkbox', id: 'frist-aktiv' }),
         el('span', { text: 'Geheimes Zeitlimit für die Aufgaben' })
@@ -513,6 +523,25 @@
       });
     });
     $('#strafzeit').addEventListener('change', schaetzungAktualisieren);
+    $('#erinnerungen').addEventListener('change', async function () {
+      var hinweis = $('#erinnerungen-hinweis');
+      if (!this.checked) { schaetzungAktualisieren(); return; }
+      if (!T.erinnerung.moeglich()) {
+        this.checked = false;
+        hinweis.textContent = 'Dieser Browser kann keine Benachrichtigungen anzeigen.';
+        return;
+      }
+      var antwort = await T.erinnerung.erlaubnisHolen();
+      if (antwort !== 'granted') {
+        this.checked = false;
+        hinweis.textContent = 'Der Browser hat Benachrichtigungen abgelehnt. Ohne seine Erlaubnis geht es nicht - '
+          + 'du kannst das in den Seiteneinstellungen ändern und es dann erneut versuchen.';
+      } else {
+        hinweis.textContent = 'Erinnerungen sind erlaubt. Sie erreichen dich nur, solange diese Seite läuft - '
+          + 'ein Hintergrund-Tab genügt, ein geschlossener Browser nicht.';
+      }
+      schaetzungAktualisieren();
+    });
     ['#notausgang-modus', '#notausgang-dauer', '#notausgang-min', '#notausgang-max'].forEach(function (auswahl) {
       $(auswahl).addEventListener('change', schaetzungAktualisieren);
     });
@@ -833,6 +862,20 @@
         verstrichen.textContent = util.dauer((Date.now() - tresor.frist.start) / 1000);
       }, 1000);
       verstrichen.textContent = util.dauer((Date.now() - tresor.frist.start) / 1000);
+    }
+
+    if (!fertig && (tresor.konfig || {}).erinnerungen && !T.erinnerung.erlaubt()) {
+      var erlaubnisKarte = el('section', { class: 'karte' }, [
+        el('p', { class: 'flaut klein', text: T.erinnerung.offen()
+          ? 'Dieser Tresor soll dich erinnern, aber der Browser hat noch nicht zugestimmt.'
+          : 'Dieser Tresor soll dich erinnern, doch der Browser lässt keine Benachrichtigungen zu. '
+            + 'Das lässt sich in den Einstellungen dieser Seite ändern.' })
+      ]);
+      if (T.erinnerung.offen()) {
+        erlaubnisKarte.appendChild(el('button', { class: 'knopf', type: 'button', text: 'Erinnerungen erlauben',
+          onclick: async function () { await T.erinnerung.erlaubnisHolen(); zeichneTresor(); } }));
+      }
+      wurzel.appendChild(erlaubnisKarte);
     }
 
     if (!fertig && tresor.notausgang && !tresor.notausgang.benutzt) {
@@ -1514,6 +1557,12 @@
     }
 
     document.addEventListener('visibilitychange', function () { if (document.hidden) sichern(true); });
+
+    // Erinnerungen laufen unabhängig von der gerade sichtbaren Ansicht
+    setInterval(function () {
+      T.erinnerung.pruefen(zustand.tresor, function () { sichern(true); });
+    }, 15000);
+    T.erinnerung.pruefen(zustand.tresor, function () { sichern(true); });
     global.addEventListener('pagehide', function () { sichern(true); });
   }
 

@@ -21,6 +21,7 @@
       reihenfolge: 'links',
       sicherheit: 'rechenzeit',      // 'rechenzeit' = Zeitschloss, sonst: ohne Rechenzeit
       strafe: 0,
+      erinnerungen: false,           // gehört zum Tresor: selbst dran denken ist eine Option
       geheimeFrist: {
         aktiv: false,
         bezug: 'tresor',            // 'tresor' = absolute Spanne, 'aufgabe' = Vielfaches der Schätzung

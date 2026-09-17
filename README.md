@@ -74,6 +74,37 @@ nicht durch Zurückstellen der Systemuhr austricksen.
 
 ---
 
+## Erinnerungen – abschaltbar, und aus gutem Grund
+
+Sperrfristen, Check-in-Fenster und Zeitfenster brauchen eigentlich eine
+Erinnerung; ein Fenster, das man verpassen kann, ohne gestupst zu werden, ist
+sonst eine Falle. Nur: Selbst daran denken zu müssen, kann genau der Punkt
+sein. Deshalb ist es eine **Einstellung des Tresors**, nicht der App – sie wird
+beim Verriegeln festgelegt und lässt sich danach nicht mehr ändern. Sonst
+schaltete man sie genau dann ein, wenn es bequem wird. Voreinstellung: aus.
+
+Erinnert wird an drei Dinge: eine abgelaufene Sperrfrist, ein geöffnetes
+Check-in-Fenster (und zwei Minuten vor seinem Ende noch einmal, wenn es lang
+genug ist) sowie den offenen Notausgang. An die geheime Höchstzeit wird
+bewusst **nicht** erinnert – sie ist geheim.
+
+Zwei Ehrlichkeiten:
+
+* Die Erlaubnis erteilt der Browser, nicht die App. Beim Anhaken wird gefragt;
+  lehnt der Browser ab, sagt die Oberfläche das und der Schalter springt
+  zurück. Auf einem neuen Gerät (etwa nach einer Sicherung) fragt der Tresor
+  erneut.
+* Eine Web-Benachrichtigung kann nur verschickt werden, **solange die Seite
+  läuft** – ein Hintergrund-Tab genügt, ein geschlossener Browser nicht. Ohne
+  Server und Push geht das nicht anders, und die App behauptet auch nichts
+  anderes.
+
+Ist die Seite gerade sichtbar, wird nichts geschickt – die Oberfläche sagt es
+ja selbst –, der Anlass aber als erledigt vermerkt, damit später keine
+Nachzügler kommen.
+
+---
+
 ## Sicherung: ausgelesen und wieder eingelesen
 
 Ein Tresor lebt sonst ausschließlich im Browser-Speicher **dieses** Geräts.
@@ -472,4 +503,5 @@ unverändert.
 | `js/foto.js` | Ziffernerkennung im Bild, Zerlegung in Schärfestufen |
 | `js/speicher.js` | `localStorage`, Verlauf, benutzte Aufgabentypen |
 | `js/sicherung.js` | Export und Import als Datei, optional verschlüsselt |
+| `js/erinnerung.js` | Anlässe für Benachrichtigungen, Erlaubnis, Versand |
 | `js/app.js` | Oberfläche und Ablauf |
