@@ -462,6 +462,40 @@ Beim Einlesen einer Sicherung prüft die App vorher, ob noch offene
 Sensoraufgaben drinstehen, und sagt im Bestätigungsdialog, was das auf diesem
 Gerät kosten würde.
 
+### Teilfortschritt und die geheime Frist
+
+Gegangene Schritte überleben einen Neustart. Sie wurden ja wirklich gegangen –
+bei 700 Schritten wäre ein verlorener Tab sonst eine Strafe für nichts.
+Abgelegt wird der Stand unter `zustand.stand`; das ist die Abmachung für alle
+Aufgaben mit Teilfortschritt. `kontext.fehlschlag` löscht diesen Schlüssel,
+denn genau das ist die Strafe: Läuft die geheime Frist ab, sind die Schritte
+weg.
+
+Die Schätzung liegt bei **0,8 s je Schritt plus 45 s Anlauf**. Sie war anfangs
+0,7 s plus 30 s, was rechnerisch aufging, aber zu knapp war: Bei 100 Schritten
+pro Minute sind 0,6 s echte Gehzeit, doch der Taktfilter verwirft drinnen bei
+vielen Kehren bis zu einem Fünftel – dann sind es effektiv 0,75 s, und der
+Anlauf (aufstehen, hinausgehen) fehlte ganz.
+
+Gegen die kürzestmögliche Frist (Faktor 1,2×) gerechnet, im ungünstigsten Fall
+(oberer Jitter, drinnen, 20 % verworfen, gemütliches Tempo):
+
+| Stufe | Schritte | Mindestfrist | schlimmster Fall | Reserve |
+|---|---|---|---|---|
+| 1 | 46 | 98 s | 50 s | 49 % |
+| 2 | 103 | 152 s | 92 s | 39 % |
+| 3 | 207 | 253 s | 170 s | 33 % |
+| 4 | 402 | 440 s | 317 s | 28 % |
+| 5 | 805 | 827 s | 619 s | 25 % |
+
+Vorher schrumpfte die Reserve von 32 % auf 13 %, weil der feste Anlauf mit
+steigender Schrittzahl relativ verschwindet. Jetzt bleibt sie über alle Stufen
+bei mindestens einem Viertel.
+
+Die Frist läuft in **echter Zeit**, der Zähler dagegen nur bei sichtbarem
+Bildschirm. Deshalb sagt die Aufgabe ausdrücklich „Bildschirm an, Gerät in der
+Hand" – in der Tasche zählt nichts mit, die Frist aber schon.
+
 ### Was der Schrittzähler kann und was nicht
 
 Es gibt keine Schrittzähler-Schnittstelle im Browser, auf keiner der beiden

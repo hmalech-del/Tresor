@@ -1752,6 +1752,11 @@
         },
         fehlschlag: function (grund) {
           if (beendet) return false;
+          /* Abmachung: Aufgaben, deren Teilfortschritt einen Neustart
+           * ueberleben soll, legen ihn unter zustand.stand ab. Ein
+           * Fehlschlag - etwa eine abgelaufene Frist - loescht ihn. Genau
+           * das ist die Strafe; ohne das waere die Frist folgenlos. */
+          delete aufgabe.zustand.stand;
           aufgabe.zustand.fehlversuche = (aufgabe.zustand.fehlversuche || 0) + 1;
           var sekunden = T.tresorLogik.strafzeit(tresor.konfig, aufgabe.zustand.fehlversuche);
           if (!sekunden) { sichern(false); return false; }

@@ -293,13 +293,14 @@
         strafe: strafFaktor(stufe)
       };
     },
-    schaetzung: function (p) { return Math.round(p.schritte * 0.7) + 30; },
+    schaetzung: function (p) { return Math.round(p.schritte * 0.8) + 45; },
     beschreibe: function (p) { return p.schritte + ' Schritte gehen'; },
     starte: function (kontext) {
       var p = kontext.params;
       var modul = this;
       return mitSensor(kontext, modul, 'bewegung', 'Schritte',
-        p.schritte + ' Schritte. Ich zähle den Takt, nicht die Ausschläge - Schütteln erkenne ich.',
+        p.schritte + ' Schritte. Bildschirm an, Gerät in der Hand - ich zähle nur, was ich sehe. '
+        + 'Und ich zähle den Takt, nicht die Ausschläge: Schütteln erkenne ich.',
         function (b) {
           var zaehlwerk = el('p', { class: 'schrittzaehler', text: '0' });
           b.koerper.appendChild(zaehlwerk);
@@ -307,7 +308,8 @@
           var fortschritt = balken(b.koerper, '');
 
           var geglaettet = 9.81, ueber = false, letzterAusschlag = 0;
-          var intervalle = [], gezaehlt = 0, verworfen = 0;
+          var intervalle = [], verworfen = 0, gesichert = 0;
+          var gezaehlt = kontext.zustand.stand || 0;
 
           function zaehle(abstand) {
             intervalle.push(abstand);
@@ -343,6 +345,11 @@
           });
 
           var stopp = takt(function () {
+            if (gezaehlt !== gesichert) {
+              gesichert = gezaehlt;
+              kontext.zustand.stand = gezaehlt;
+              kontext.speichern();
+            }
             zaehlwerk.textContent = String(Math.min(gezaehlt, p.schritte));
             fortschritt.setze(gezaehlt / p.schritte);
             fortschritt.text(Math.max(0, p.schritte - gezaehlt) + ' übrig');
