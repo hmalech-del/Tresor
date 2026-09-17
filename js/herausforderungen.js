@@ -640,7 +640,9 @@
         : 'Offen ab ' + util.zeitpunkt(z.bis) + '. Die App darf zu sein.');
       var anzeige = el('div', { class: 'countdown', text: '--:--' });
       b.koerper.appendChild(anzeige);
-      var fortschritt = balken(b.koerper, '');
+      /* Kein Balken im Dunkeln: Ein voller behauptet "gleich fertig", ein
+       * leerer "gerade erst angefangen". Beides waere gelogen. */
+      var fortschritt = dunkel ? null : balken(b.koerper, '');
 
       /* Glücksspiel: einmal je Sperrfrist, und nur solange noch etwas zu
        * gewinnen ist. */
@@ -663,8 +665,10 @@
         z.gesehen = Math.max(z.gesehen || 0, jetzt);
         var rest = (z.bis - jetzt) / 1000;
         anzeige.textContent = dunkel ? '· · ·' : util.uhrwerk(rest);
-        fortschritt.setze(dunkel ? 1 : 1 - rest / p.sekunden);
-        fortschritt.text(dunkel ? '' : 'frei ' + util.zeitpunkt(z.bis));
+        if (fortschritt) {
+          fortschritt.setze(1 - rest / p.sekunden);
+          fortschritt.text('frei ' + util.zeitpunkt(z.bis));
+        }
         if (rest <= 0) { stopp(); kontext.speichern(); ton(660, 0.3); kontext.fertig(); }
       });
 
