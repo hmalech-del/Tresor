@@ -617,14 +617,14 @@
         el('label', { for: 'notausgang-modus', text: 'Notausgang' }),
         el('select', { id: 'notausgang-modus' }, [
           el('option', { value: 'aus' }, 'kein Notausgang'),
-          el('option', { value: 'fest' }, 'feste Dauer'),
+          el('option', { value: 'fest', selected: 'selected' }, 'feste Dauer'),
           el('option', { value: 'zufall' }, 'zufällig aus einer Spanne – Dauer wird angezeigt'),
           el('option', { value: 'geheim' }, 'zufällig aus einer Spanne – Dauer bleibt geheim')
         ])
       ]),
       el('div', { class: 'feld', id: 'notausgang-fest-feld' }, [
         el('label', { for: 'notausgang-dauer', text: 'Dauer' }),
-        el('select', { id: 'notausgang-dauer' }, notausgangOptionen(7200))
+        el('select', { id: 'notausgang-dauer' }, notausgangOptionen(1800))
       ]),
       el('div', { id: 'notausgang-spanne-felder' }, [
         el('div', { class: 'feld' }, [

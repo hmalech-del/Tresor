@@ -34,7 +34,10 @@
         maxFaktor: 3,
         folge: 'aufgaben'           // 'aufgaben' oder 'alles' (Rechenzeit verfällt mit)
       },
-      notausgang: { modus: 'aus', sekunden: 7200, minSekunden: 1800, maxSekunden: 10800 }
+      /* Vorgabe ist bewusst der sichere Weg: eine feste halbe Stunde. Wer
+       * den Notausgang uebersieht und dann an den Aufgaben scheitert, sitzt
+       * sonst ohne Ausweg da - und der Tresor haelt, was er verspricht. */
+      notausgang: { modus: 'fest', sekunden: 1800, minSekunden: 1800, maxSekunden: 10800 }
     };
   }
 

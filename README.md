@@ -843,6 +843,12 @@ Zeitfenster ziehen, das bis zum nächsten Abend wartet – neunzehn Stunden gege
 fünf Minuten. Der Aufgabenweg war damit sinnlos, weil der Ausgang immer die
 bessere Wahl gewesen wäre.
 
+**Vorgabe ist deshalb der sichere Weg**: eine feste halbe Stunde Rechenzeit.
+Wer den Notausgang übersieht und dann an den Aufgaben scheitert, säße sonst
+ohne Ausweg da – und ein voreingestellter Ausgang, den man bewusst abschalten
+muss, ist die freundlichere Reihenfolge. Der voreingestellte Tresor schätzt
+sich damit auf rund 28 Minuten, passt also zu seinem eigenen Ausgang.
+
 Der Notausgang spannt deshalb ein Budget auf (`zeitBudget` in `js/tresor.js`).
 Maßgeblich ist die **Obergrenze** der Spanne: das Schlimmste, worauf sich der
 Spieler eingelassen hat. Es verteilt sich gleichmäßig auf alle Aufgabenplätze,
