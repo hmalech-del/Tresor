@@ -486,5 +486,108 @@
     }
   });
 
-  T.sensorAufgaben = { ersatzSekunden: ersatzSekunden, LAGEN: LAGEN };
+  /* =====================  RUHIGE HAND  =====================
+   *
+   * Ein Gerät, das auf dem Tisch liegt, leistet nichts - das wäre eine
+   * Aufgabe, die man aussitzt. Verlangt wird deshalb das Gegenteil: Es muss
+   * in der Hand liegen und trotzdem ruhig bleiben.
+   *
+   * Unterscheiden lässt sich das an der Streuung der Beschleunigung über ein
+   * gleitendes Fenster. Ein liegendes Gerät misst fast nur Sensorrauschen,
+   * eine ruhige Hand zittert messbar darüber, und jede echte Bewegung schlägt
+   * weit darüber aus. Gefordert ist also ein Band, keine Untergrenze:
+   * oberhalb des Tisches, unterhalb der Bewegung. Dazu darf die Neigung nicht
+   * wegdriften - sonst wäre "in die Tasche stecken und stehenbleiben" die
+   * Lösung. */
+
+  var HAND_UNTEN = 0.045;      // darunter liegt es auf etwas
+  var HAND_FENSTER = 40;       // Messwerte im gleitenden Fenster (gut 1 s)
+  var HAND_DRIFT = 22;         // Grad, die die Neigung insgesamt wandern darf
+
+  H.registrieren({
+    id: 'ruhigehand',
+    dimension: 'geduld',
+    name: 'Ruhige Hand',
+    kurz: 'Das Geraet in der Hand halten und ruhig bleiben - abgelegt zaehlt nicht',
+    sensor: true,
+    sensorBedarf: 'bewegung',
+    erzeuge: function (zufall, stufe) {
+      return {
+        sekunden: jitter(zufall, proStufe(stufe, [20, 40, 75, 130, 210]), 0.2),
+        obergrenze: proStufe(stufe, [0.85, 0.65, 0.5, 0.38, 0.28]),
+        strafe: strafFaktor(stufe)
+      };
+    },
+    schaetzung: function (p) { return Math.round(p.sekunden * 1.7) + 25; },
+    beschreibe: function (p) { return util.dauer(p.sekunden) + ' ruhig in der Hand halten'; },
+    starte: function (kontext) {
+      var p = kontext.params;
+      var modul = this;
+      return mitSensor(kontext, modul, 'bewegung', 'Ruhige Hand',
+        'Nimm das Gerät in die Hand und halte es ' + util.dauer(p.sekunden)
+        + ' lang ruhig. Ablegen zählt nicht - der Tresor merkt den Unterschied zwischen einer Hand und einem Tisch.',
+        function (b) {
+          var skala = el('div', { class: 'ruheskala' }, [
+            el('span', { class: 'ruhezone' }),
+            el('i', { class: 'ruhezeiger' })
+          ]);
+          b.koerper.appendChild(skala);
+          b.koerper.appendChild(el('div', { class: 'ruhebeschriftung flaut klein' }, [
+            el('span', { text: 'abgelegt' }),
+            el('span', { text: 'ruhige Hand' }),
+            el('span', { text: 'Bewegung' })
+          ]));
+          var zeiger = skala.querySelector('.ruhezeiger');
+          var zone = skala.querySelector('.ruhezone');
+          // Die Zone sitzt zwischen Unter- und Obergrenze; die Skala reicht
+          // bis zum Doppelten der Obergrenze.
+          var spanne = p.obergrenze * 2;
+          zone.style.left = (HAND_UNTEN / spanne * 100) + '%';
+          zone.style.width = ((p.obergrenze - HAND_UNTEN) / spanne * 100) + '%';
+
+          var fortschritt = balken(b.koerper, '');
+          var fenster = [], verstrichen = 0, drin = false, grund = '';
+          var beta0 = null, gamma0 = null, beta = 0, gamma = 0;
+
+          var abNeigung = T.sensoren.neigung(function (w) {
+            beta = w.beta; gamma = w.gamma;
+            if (beta0 === null) { beta0 = beta; gamma0 = gamma; }
+          });
+
+          var abBewegung = T.sensoren.beschleunigung(function (w) {
+            fenster.push(Math.sqrt(w.x * w.x + w.y * w.y + w.z * w.z));
+            if (fenster.length > HAND_FENSTER) fenster.shift();
+            if (fenster.length < HAND_FENSTER) return;
+
+            var mittel = fenster.reduce(function (s, v) { return s + v; }, 0) / fenster.length;
+            var streuung = Math.sqrt(fenster.reduce(function (s, v) {
+              return s + (v - mittel) * (v - mittel);
+            }, 0) / fenster.length);
+
+            zeiger.style.left = util.grenze(streuung / spanne, 0, 1) * 100 + '%';
+            var gedriftet = beta0 !== null
+              && (Math.abs(beta - beta0) > HAND_DRIFT || Math.abs(gamma - gamma0) > HAND_DRIFT);
+
+            if (streuung < HAND_UNTEN) { drin = false; grund = 'Das liegt auf etwas. In die Hand nehmen.'; }
+            else if (streuung > p.obergrenze) { drin = false; grund = 'Zu unruhig.'; }
+            else if (gedriftet) { drin = false; grund = 'Die Neigung wandert weg - ruhig halten, nicht mitgehen.'; }
+            else { drin = true; grund = ''; }
+            skala.classList.toggle('ist-gut', drin);
+          });
+
+          var stopp = takt(function (delta) {
+            verstrichen = util.grenze(verstrichen + (drin ? delta : -delta * 2), 0, p.sekunden);
+            fortschritt.setze(verstrichen / p.sekunden);
+            fortschritt.text(util.uhrwerk(Math.max(0, p.sekunden - verstrichen)) + ' übrig');
+            if (fenster.length < HAND_FENSTER) { b.sag('Messe ein ...', ''); return; }
+            b.sag(drin ? 'Genau so. Nicht nachlassen.' : grund, drin ? 'gut' : 'fehler');
+            if (verstrichen >= p.sekunden) { stopp(); abNeigung(); abBewegung(); ton(660, 0.3); kontext.fertig(); }
+          });
+
+          return function () { stopp(); abNeigung(); abBewegung(); };
+        });
+    }
+  });
+
+  T.sensorAufgaben = { ersatzSekunden: ersatzSekunden, LAGEN: LAGEN, HAND_UNTEN: HAND_UNTEN };
 })(typeof window !== 'undefined' ? window : globalThis);

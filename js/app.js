@@ -135,7 +135,8 @@
     var vollstaendig = zustand.art === 'foto'
       ? !!zustand.bild
       : /^\d+$/.test(zustand.geheimnis) && zustand.geheimnis.length === zustand.laenge;
-    var dimensionen = aktiveDimensionen();
+    var blind = $('#blindgang') && $('#blindgang').checked;
+    var dimensionen = blind ? ['blindgang'] : aktiveDimensionen();
     var passAn = $('#passphrase-aktiv') && $('#passphrase-aktiv').checked;
     var pass = passAn ? $('#passphrase').value : '';
     var passWdh = passAn ? $('#passphrase-wdh').value : '';
@@ -151,6 +152,15 @@
       ? (zustand.art === 'foto' ? 'Es fehlt noch ein Bild.' : 'Es fehlen noch Ziffern.')
       : !dimensionen.length ? 'Wähle mindestens eine Dimension.'
       : !passOk ? 'Die Passphrase ist noch nicht vollständig.' : '';
+  }
+
+  /* Technisches bleibt verfuegbar, aber zugeklappt: Der Wächter erklärt nicht,
+   * wie er gebaut ist - wer es wissen will, klappt es auf. */
+  function technikZeile(text) {
+    var block = el('details', { class: 'technik' });
+    block.appendChild(el('summary', { text: 'Was dahintersteckt' }));
+    block.appendChild(el('p', { class: 'flaut klein', text: text }));
+    return block;
   }
 
   function aktiveDimensionen() {
@@ -215,6 +225,16 @@
   }
 
   function konfigurationLesen() {
+    var notausgang = {
+      modus: $('#notausgang-modus').value,
+      sekunden: Number($('#notausgang-dauer').value),
+      minSekunden: Number($('#notausgang-min').value),
+      maxSekunden: Number($('#notausgang-max').value)
+    };
+    if ($('#blindgang') && $('#blindgang').checked) {
+      var sensorenMoeglich = !!($('#sensoren-aktiv') && !$('#sensoren-aktiv').disabled);
+      return T.tresorLogik.blindKonfiguration(notausgang, sensorenMoeglich);
+    }
     var stufen = {};
     aktiveDimensionen().forEach(function (dimension) {
       stufen[dimension] = Number(($('#stufe-' + dimension) || {}).value || 3);
@@ -232,6 +252,7 @@
       sensoren: !!($('#sensoren-aktiv') && $('#sensoren-aktiv').checked),
       mitPassphrase: $('#passphrase-aktiv').checked,
       strafe: Number($('#strafzeit').value),
+      gluecksspiel: $('#gluecksspiel').checked,
       erinnerungen: $('#erinnerungen').checked,
       geheimeFrist: {
         aktiv: $('#frist-aktiv').checked,
@@ -242,12 +263,7 @@
         maxFaktor: maxFaktor,
         folge: $('#frist-folge').value
       },
-      notausgang: {
-        modus: $('#notausgang-modus').value,
-        sekunden: Number($('#notausgang-dauer').value),
-        minSekunden: Number($('#notausgang-min').value),
-        maxSekunden: Number($('#notausgang-max').value)
-      }
+      notausgang: notausgang
     };
   }
 
@@ -295,6 +311,19 @@
   function schaetzungAktualisieren() {
     var anzeige = $('#schaetzung');
     if (!anzeige) return;
+
+    /* Im Blindgang gibt es nichts zu schätzen - das ist der Punkt. Der
+     * Notausgang zahlt dort immer in Rechenzeit. */
+    if ($('#blindgang') && $('#blindgang').checked) {
+      anzeige.textContent = 'Das erfährst du nicht.';
+      $('#schaetzung-detail').textContent = '';
+      util.$$('#notausgang-min option, #notausgang-max option, #notausgang-dauer option').forEach(function (option) {
+        if (!option.dataset.sekunden) return;
+        option.textContent = util.dauer(Number(option.dataset.sekunden)) + ' Rechenzeit';
+      });
+      return;
+    }
+
     var dimensionen = aktiveDimensionen();
     if (!dimensionen.length) { anzeige.textContent = '-'; return; }
     var konfig = konfigurationLesen();
@@ -310,8 +339,8 @@
         + (ohneRechenzeit ? ' Wartezeit' : ' Rechenzeit');
     });
     $('#sicherheit-hinweis').textContent = ohneRechenzeit
-      ? 'Weniger sicher: Die Schlüssel liegen offen im Browser-Speicher, die Aufgaben sind Oberflächenhürden. Wer den Speicher liest, kommt sofort an das Geheimnis. Dafür kostet nichts Strom, und der Notausgang ist hier eine Wartezeit statt Rechenzeit. Antwortgebundene Rätsel wirken auch in diesem Modus, weil ihre Lösung in den Schlüssel eingeht.'
-      : 'Sicher: Jedes Fragment kostet echte, nicht abkürzbare Rechenzeit - auch für jemanden mit Entwicklerwerkzeug.';
+      ? 'Nachsichtig: Es hält dich nichts als dein eigener Vorsatz. Wer den Speicher dieses Browsers liest, hat das Geheimnis sofort. Dafür kostet es keinen Strom, und der Notausgang zahlt in Wartezeit. Aufgaben, die eine Antwort verlangen, wirken trotzdem - ihre Lösung steckt im Schlüssel.'
+      : 'Eisern: Jedes Fragment kostet echte Zeit, die niemand abkürzen kann - du nicht, und jemand mit Entwicklerwerkzeug auch nicht.';
     var exitModusW = konfig.notausgang.modus;
     var exitDauerText = exitModusW === 'fest'
       ? util.dauer(konfig.notausgang.sekunden)
@@ -329,7 +358,7 @@
     $('#schaetzung-detail').textContent =
       zustand.laenge + ' Fragmente · ' + konfig.aufgabenProFragment
       + (konfig.aufgabenProFragment === 1 ? ' Aufgabe' : ' Aufgaben') + ' je Fragment · '
-      + (rechen ? util.dauer(rechen) + ' reine Rechenzeit pro Zeitschloss' : 'ohne Zeitschloss')
+      + (rechen ? util.dauer(rechen) + ' Bann je Fragment' : 'ohne Bann')
       + (schaetzung.gebundeneAufgaben ? ' · ' + schaetzung.gebundeneAufgaben + ' Aufgaben gehen in die Schlüssel ein' : '')
       + (schaetzung.mitZeitfenster ? ' · enthält ein Zeitfenster, das an eine Tageszeit gebunden ist' : '')
       + (konfig.strafe ? ' · Strafzeiten aktiv' : '')
@@ -390,7 +419,7 @@
     ]);
 
     var dimensionTeil = el('section', { class: 'karte' }, [
-      el('h2', { text: '2 · Womit soll der Tresor dich aufhalten?' }),
+      el('h2', { text: '2 · Womit soll der Wächter dich aufhalten?' }),
       el('p', { class: 'flaut klein', id: 'dimension-hinweis', text: '' }),
       el('div', { class: 'dimension-gitter' }, dimensionen.map(function (dimension) {
         var module = T.herausforderungen.nachDimension(dimension.id);
@@ -429,7 +458,7 @@
     var zeitTeil = el('section', { class: 'karte' }, [
       el('h2', { text: '3 · Zeitregeln' }),
       el('div', { class: 'feld' }, [
-        el('label', { for: 'strafzeit', text: 'Strafzeit bei Fehlversuch' }),
+        el('label', { for: 'strafzeit', text: 'Strafe bei Fehlversuch' }),
         el('select', { id: 'strafzeit' }, [
           el('option', { value: '0' }, 'aus'),
           el('option', { value: '1' }, 'mild – ab 20 s, steigend'),
@@ -437,6 +466,13 @@
         ])
       ]),
       el('p', { class: 'flaut klein', text: 'Jeder weitere Fehlversuch derselben Aufgabe kostet das 1,7-Fache, höchstens 30 Minuten. Die Aufgabe ist währenddessen gesperrt.' }),
+      el('label', { class: 'schalterzeile' }, [
+        el('input', { type: 'checkbox', id: 'gluecksspiel' }),
+        el('span', { text: 'Wartezeiten dürfen verwürfelt werden' })
+      ]),
+      el('p', { class: 'flaut klein', text:
+        'Bei jeder Sperrfrist und jeder Strafe darfst du einmal würfeln. 5 oder 6: die Zeit fällt weg. '
+        + '1 bis 4: der Rest wird um die Hälfte länger. Im Mittel kostet das Spiel nichts - im Einzelfall alles.' }),
       el('label', { class: 'schalterzeile' }, [
         el('input', { type: 'checkbox', id: 'erinnerungen' }),
         el('span', { text: 'Erinnerungen schicken' })
@@ -523,10 +559,10 @@
         el('output', { id: 'aufgaben-anzeige', text: '2' })
       ]),
       el('div', { class: 'feld' }, [
-        el('label', { for: 'sicherheit', text: 'Wie fest soll das Schloss sein?' }),
+        el('label', { for: 'sicherheit', text: 'Wie unerbittlich?' }),
         el('select', { id: 'sicherheit' }, [
-          el('option', { value: 'rechenzeit' }, 'sicher – Zeitschloss aus echter Rechenzeit'),
-          el('option', { value: 'ohne-rechenzeit' }, 'weniger sicher – ohne Rechenzeit, nur Uhr und Aufgaben')
+          el('option', { value: 'rechenzeit' }, 'eisern – jedes Fragment muss freigerechnet werden'),
+          el('option', { value: 'ohne-rechenzeit' }, 'nachsichtig – kein Bann, nur Uhr und Aufgaben')
         ])
       ]),
       el('p', { class: 'flaut klein', id: 'sicherheit-hinweis', text: '' }),
@@ -558,7 +594,7 @@
         el('p', { class: 'flaut klein', id: 'passphrase-hinweis', text: '' })
       ]),
       el('div', { class: 'feld', id: 'rechenzeit-feld' }, [
-        el('label', { for: 'rechenzeit', text: 'Zeitschloss (echte Rechenzeit je Fragment)' }),
+        el('label', { for: 'rechenzeit', text: 'Wie lange der Bann auf jedem Fragment liegt' }),
         el('input', { type: 'range', min: '1', max: '5', value: '2', id: 'rechenzeit' }),
         el('output', { id: 'rechenzeit-anzeige', text: '45 s' }),
         el('p', { class: 'flaut klein aufwandzeile', id: 'rechenzeit-aufwand', text: '' })
@@ -571,7 +607,7 @@
         ])
       ]),
       el('div', { class: 'schaetzkasten' }, [
-        el('span', { class: 'flaut', text: 'Voraussichtlicher Gesamtaufwand' }),
+        el('span', { class: 'flaut', text: 'Was dich das kosten wird' }),
         el('strong', { id: 'schaetzung', text: '-' }),
         el('span', { class: 'flaut klein', id: 'schaetzung-detail', text: '' })
       ])
@@ -583,7 +619,22 @@
       el('p', { class: 'flaut', id: 'bereit-hinweis', text: '' })
     ]);
 
+    var blindTeil = el('section', { class: 'karte blindkarte' }, [
+      el('label', { class: 'schalterzeile' }, [
+        el('input', { type: 'checkbox', id: 'blindgang' }),
+        el('span', { class: 'blindtitel', text: 'Blindgang' })
+      ]),
+      el('p', { class: 'flaut klein', text:
+        'Du setzt nur den Notausgang. Alles andere würfelt der Wächter aus: wie viele Aufgaben, welche, '
+        + 'wie hart, mit welchen Strafen. Und er sagt es dir nicht - kein Fahrplan, keine Schätzung, '
+        + 'keine Ahnung, was als Nächstes kommt. Nur der Notausgang bleibt dir als Boden nach unten.' }),
+      el('p', { class: 'warnung versteckt', id: 'blindgang-warnung', text:
+        'Blindgang läuft immer eisern. Setz den Notausgang so, dass du damit leben kannst - '
+        + 'du weißt vorher nicht, wie lang der Weg wird.' })
+    ]);
+
     wurzel.appendChild(geheimTeil);
+    wurzel.appendChild(blindTeil);
     wurzel.appendChild(dimensionTeil);
     wurzel.appendChild(zeitTeil);
     wurzel.appendChild(feinTeil);
@@ -687,6 +738,30 @@
     });
     $('#sensoren-freigeben').addEventListener('click', function () { sensorlageZeigen(true); });
     sensorlageZeigen(false);
+
+    /* Blindgang blendet alles aus, was der Wächter selbst entscheidet - bis
+     * auf den Notausgang, der in den Zeitregeln stehen bleibt. */
+    function blindgangAnwenden() {
+      var an = $('#blindgang').checked;
+      blindTeil.classList.toggle('ist-an', an);
+      $('#blindgang-warnung').classList.toggle('versteckt', !an);
+      dimensionTeil.classList.toggle('versteckt', an);
+      feinTeil.classList.toggle('versteckt', an);
+
+      var kinder = Array.prototype.slice.call(zeitTeil.children);
+      var grenze = -1;
+      kinder.forEach(function (kind, i) {
+        if (grenze < 0 && kind.querySelector && kind.querySelector('#notausgang-modus')) grenze = i;
+      });
+      kinder.forEach(function (kind, i) {
+        if (i === 0 || (grenze >= 0 && i >= grenze)) return;
+        kind.classList.toggle('versteckt', an);
+      });
+      zeitTeil.querySelector('h2').textContent = an ? '2 · Der Notausgang' : '3 · Zeitregeln';
+      schaetzungAktualisieren();
+      pruefeBereit();
+    }
+    $('#blindgang').addEventListener('change', blindgangAnwenden);
     $('#passphrase-aktiv').addEventListener('change', function () {
       $('#passphrase-felder').classList.toggle('versteckt', !this.checked);
       pruefeBereit();
@@ -880,7 +955,7 @@
     return el('ol', { class: 'fragmentliste' }, tresor.fragmente.map(function (fragment) {
       var offeneAufgaben = fragment.aufgaben.filter(function (a) { return !a.erledigt; }).length;
       var status = fragment.offen ? 'frei'
-        : fragment === aktuell ? (offeneAufgaben ? offeneAufgaben + ' Aufgaben offen' : 'Zeitschloss läuft')
+        : fragment === aktuell ? (offeneAufgaben ? offeneAufgaben + ' Aufgaben offen' : 'Bann läuft')
           : 'verriegelt';
       return el('li', {
         class: 'fragment' + (fragment.offen ? ' ist-offen' : fragment === aktuell ? ' ist-aktuell' : '')
@@ -900,7 +975,7 @@
         }).concat(fragment.schloss ? [
           el('li', { class: fragment.offen ? 'ist-erledigt' : '' }, [
             el('span', { class: 'marke marke-zeit', text: 'Zeit' }),
-            'Zeitschloss: ' + util.dauer(zustand.tresor.sekundenProSchloss) + ' Rechenzeit'
+            'Bann: ' + util.dauer(zustand.tresor.sekundenProSchloss)
           ])
         ] : []))
       ]);
@@ -914,13 +989,13 @@
     // Läuft eine tresorweite Höchstzeit ab - auch bei geschlossener App?
     if (T.tresorLogik.fristAbgelaufen(tresor)) {
       var bericht = T.tresorLogik.fristAusloesen(tresor);
-      zustand.fristMeldung = 'Die geheime Höchstzeit ist abgelaufen. '
+      zustand.fristMeldung = T.stimme.sag('fristAus') + ' '
         + bericht.fragmente + (bericht.fragmente === 1 ? ' verschlossenes Fragment fällt' : ' verschlossene Fragmente fallen')
         + ' auf Anfang zurück'
         + (bericht.aufgaben ? ' (' + bericht.aufgaben + ' erledigte Aufgaben)' : '')
         + (bericht.rechenzeitVerfallen && bericht.schritte
             ? ', dazu verfallen ' + bericht.schritte.toLocaleString('de-DE') + ' Rechenschritte' : '')
-        + '. Eine neue Höchstzeit läuft ab jetzt.';
+        + '. Eine neue Frist läuft ab jetzt.';
       sichern(true);
     }
 
@@ -936,9 +1011,8 @@
 
     wurzel.appendChild(el('section', { class: 'karte band-karte' }, [
       tresor.art === 'foto' ? zeichneBildbuehne(tresor) : zeichneZiffernband(),
-      el('p', { class: 'flaut mittig-text', text: fertig
-        ? 'Vollständig freigegeben.'
-        : (tresor.fragmente.filter(function (f) { return f.offen; }).length) + ' von ' + tresor.laenge + ' Fragmenten frei' })
+      el('p', { class: 'flaut mittig-text', text:
+        (tresor.fragmente.filter(function (f) { return f.offen; }).length) + ' von ' + tresor.laenge + ' Fragmenten frei' })
     ]));
 
     if (fertig) {
@@ -949,6 +1023,7 @@
       }
       var bild = tresor.art === 'foto' ? (T.tresorLogik.besteStufe(tresor) || {}).bild : null;
       wurzel.appendChild(el('section', { class: 'karte mittig' }, [
+        el('p', { class: 'wachterwort gross', text: T.stimme.sag((tresor.notausgang && tresor.notausgang.benutzt) ? 'notausgang' : 'sieg') }),
         el('h2', { text: 'Dein Geheimnis' }),
         bild
           ? el('img', { class: 'ergebnisbild', src: bild, alt: 'Das freigegebene Bild' })
@@ -1004,30 +1079,48 @@
       exitAnzeigeAktualisieren();          // erst jetzt hängt die Karte im Dokument
     }
 
-    wurzel.appendChild(el('section', { class: 'karte' }, [
-      el('h2', { text: 'Fahrplan' }),
-      fragmentUebersicht()
-    ]));
+    if (!(tresor.konfig || {}).blind) {
+      wurzel.appendChild(el('section', { class: 'karte' }, [
+        el('h2', { text: 'Fahrplan' }),
+        fragmentUebersicht()
+      ]));
+    } else {
+      wurzel.appendChild(el('section', { class: 'karte' }, [
+        el('h2', { text: 'Fahrplan' }),
+        el('p', { class: 'flaut', text: 'Den bekommst du nicht. Du hast den Blindgang gewählt.' })
+      ]));
+    }
 
-    wurzel.appendChild(el('section', { class: 'karte flaut klein' }, [
+    /* Kurzurteil oben, Innenleben zugeklappt darunter. */
+    var gebunden = gebundeneAufgaben(tresor);
+    var infoKarte = el('section', { class: 'karte flaut klein' }, [
       el('p', { text: tresor.fragmente[0].schloss
-        ? 'Zeitschlösser dieses Tresors: ' + tresor.fragmente[0].schloss.t.toLocaleString('de-DE')
-          + ' sequentielle Quadrierungen modulo einer 1024-Bit-Zahl, gemessen mit '
-          + (tresor.rate || 0).toLocaleString('de-DE') + ' Quadrierungen/s auf diesem Gerät.'
-        : 'Weniger sicherer Modus: kein Zeitschloss. Die Schlüsselanteile liegen offen im Browser-Speicher, '
-          + 'die Aufgaben sind Oberflächenhürden.' }),
-      el('p', { text: gebundeneAufgaben(tresor)
-        ? gebundeneAufgaben(tresor) + ' Aufgaben sind an den Schlüssel gebunden: ihre Lösung ist nicht gespeichert, nur ein Prüfwert mit '
-          + (tresor.fragmente[0].iterationen || 0).toLocaleString('de-DE') + ' PBKDF2-Runden. Jeder Rateversuch kostet diese Rechnung.'
-        : tresor.fragmente[0].schloss
-          ? 'Keine antwortgebundenen Aufgaben – die Aufgaben sind reine Oberflächenhürden, kryptografisch bindend ist nur die Rechenzeit.'
-          : 'Keine antwortgebundenen Aufgaben und kein Zeitschloss – dieser Tresor ist reine Selbstbindung.' }),
+        ? 'Eiserner Tresor: Jedes Fragment liegt unter einem Bann, den nur verstrichene Rechenzeit bricht.'
+        : 'Nachsichtiger Tresor: kein Bann. Es halten dich die Aufgaben und die Uhr, sonst nichts.' }),
+      el('p', { text: gebunden
+        ? gebunden + (gebunden === 1 ? ' Aufgabe hält' : ' Aufgaben halten') + ' ein Stück des Schlüssels fest: '
+          + 'Ohne die richtige Antwort gibt es kein Fragment, und jeder Rateversuch kostet Zeit.'
+        : 'Keine Aufgabe hält ein Stück des Schlüssels fest - sie sind Hürden, die du dir selbst gesetzt hast.' }),
       T.tresorLogik.brauchtPassphrase(tresor)
-        ? el('p', { text: 'Zusätzlich mit einer Passphrase verschlossen: Sie geht über PBKDF2 in jeden '
-            + 'Fragmentschlüssel und in den Notausgang ein und liegt nirgends - weder hier noch in einer Sicherung.' })
-        : null,
-      el('button', { class: 'knopf gefahr', type: 'button', text: 'Tresor löschen', onclick: tresorLoeschen })
-    ]));
+        ? el('p', { text: 'Dazu die Passphrase. Ohne sie kommt niemand an das Geheimnis, auch nicht über den Notausgang, und auch du nicht.' })
+        : null
+    ]);
+    infoKarte.appendChild(technikZeile(
+      (tresor.fragmente[0].schloss
+        ? 'Zeitschlösser: ' + tresor.fragmente[0].schloss.t.toLocaleString('de-DE')
+          + ' sequentielle Quadrierungen modulo einer 1024-Bit-Zahl, gemessen mit '
+          + (tresor.rate || 0).toLocaleString('de-DE') + ' Quadrierungen/s auf diesem Gerät. '
+        : 'Ohne Zeitschloss liegen die Schlüsselanteile offen im Browser-Speicher. ')
+      + (gebunden
+        ? gebunden + ' Aufgaben sind an den Schlüssel gebunden: gespeichert ist nur ein Prüfwert mit '
+          + (tresor.fragmente[0].iterationen || 0).toLocaleString('de-DE') + ' PBKDF2-Runden. '
+        : '')
+      + (T.tresorLogik.brauchtPassphrase(tresor)
+        ? 'Die Passphrase geht über PBKDF2 in jeden Fragmentschlüssel und in den Notausgang ein und liegt nirgends - auch nicht in einer Sicherung. '
+        : '')
+      + 'Fragmente sind einzeln AES-256-GCM-verschlüsselt.'));
+    infoKarte.appendChild(el('button', { class: 'knopf gefahr', type: 'button', text: 'Tresor löschen', onclick: tresorLoeschen }));
+    wurzel.appendChild(infoKarte);
 
     wurzel.appendChild(sicherungsKarte());
     var verlauf = verlaufKarte();
@@ -1501,11 +1594,17 @@
 
     var kopf = el('div', { class: 'aufgaben-kopf' }, [
       el('span', { class: 'flaut', text: 'Fragment ' + (fragment.index + 1) + ' von ' + tresor.laenge }),
-      el('span', { class: 'flaut', text: aufgabe
-        ? 'Aufgabe ' + (fragment.aufgaben.indexOf(aufgabe) + 1) + ' von ' + fragment.aufgaben.length
-        : 'Zeitschloss' })
+      el('span', { class: 'flaut', text: (tresor.konfig || {}).blind
+        ? (aufgabe ? 'Aufgabe' : T.stimme.WORT.bann)
+        : (aufgabe
+            ? 'Aufgabe ' + (fragment.aufgaben.indexOf(aufgabe) + 1) + ' von ' + fragment.aufgaben.length
+            : T.stimme.WORT.bann) })
     ]);
     util.leeren(karte).appendChild(kopf);
+    if (zustand.wachterwort) {
+      karte.appendChild(el('p', { class: 'wachterwort', text: zustand.wachterwort }));
+      zustand.wachterwort = null;
+    }
     var buehne = el('div', { class: 'aufgaben-buehne' });
     karte.appendChild(buehne);
 
@@ -1537,6 +1636,7 @@
           if (beendet) return;
           beendet = true;
           aufgabe.erledigt = true;
+          zustand.wachterwort = T.stimme.sag('lob');
           sichern(true);
           zeichneTresor();
         },
@@ -1626,12 +1726,26 @@
   function strafBuehne(buehne, aufgabe) {
     var modul = T.herausforderungen.hole(aufgabe.id);
     util.leeren(buehne);
-    buehne.appendChild(el('p', { class: 'aufgabe-titel', text: 'Strafzeit' }));
+    buehne.appendChild(el('p', { class: 'aufgabe-titel', text: T.stimme.WORT.strafe }));
+    buehne.appendChild(el('p', { class: 'wachterwort', text: T.stimme.sag('strafe') }));
     buehne.appendChild(el('p', { class: 'aufgabe-hinweis', text:
       (aufgabe.zustand.strafGrund ? aufgabe.zustand.strafGrund + ' ' : '')
-      + 'Die Aufgabe „' + modul.name + '“ ist gesperrt. Fehlversuch Nummer ' + aufgabe.zustand.fehlversuche + '.' }));
+      + '„' + modul.name + '“ ist gesperrt. Fehlversuch Nummer ' + aufgabe.zustand.fehlversuche + '.' }));
     var anzeige = el('div', { class: 'countdown', text: '--:--' });
     buehne.appendChild(anzeige);
+
+    /* Auch eine Strafe darf verwürfelt werden - einmal. */
+    if ((zustand.tresor.konfig || {}).gluecksspiel && !aufgabe.zustand.gewuerfelt
+        && aufgabe.zustand.strafeBis - Date.now() > 5000) {
+      T.herausforderungen.werkzeug.wuerfel(buehne, function (gewonnen, streckung) {
+        aufgabe.zustand.gewuerfelt = true;
+        aufgabe.zustand.strafeBis = gewonnen
+          ? Date.now()
+          : Date.now() + (aufgabe.zustand.strafeBis - Date.now()) * streckung;
+        sichern(true);
+      });
+    }
+
     var uhr = setInterval(function () {
       var rest = (aufgabe.zustand.strafeBis - Date.now()) / 1000;
       anzeige.textContent = util.uhrwerk(rest);
@@ -1647,16 +1761,18 @@
   function zeitschlossBuehne(buehne, fragment) {
     var schritteGesamt = fragment.schloss.t;
     util.leeren(buehne);
-    buehne.appendChild(el('p', { class: 'aufgabe-titel', text: 'Zeitschloss' }));
+    buehne.appendChild(el('p', { class: 'aufgabe-titel', text: T.stimme.WORT.bannLang }));
+    buehne.appendChild(el('p', { class: 'wachterwort', text: T.stimme.sag('bann') }));
     buehne.appendChild(el('p', { class: 'aufgabe-hinweis', text:
-      'Jetzt arbeitet der Rechner: ' + schritteGesamt.toLocaleString('de-DE') + ' Quadrierungen, die nur nacheinander gehen. '
-      + 'Mehr Kerne helfen nicht, nur verstrichene Zeit. Ausgelastet ist genau ein Kern, das Gerät bleibt benutzbar. '
-      + 'Der Fortschritt wird gespeichert - du darfst die Seite schließen.' }));
+      'Das Gerät arbeitet das ab - ein Kern, Schritt für Schritt. Es bleibt benutzbar, und der Fortschritt '
+      + 'überlebt einen geschlossenen Tab.' }));
+    buehne.appendChild(technikZeile('Sequentielles Quadrieren modulo eines 1024-Bit-Produkts zweier Primzahlen: '
+      + schritteGesamt.toLocaleString('de-DE') + ' Schritte, die nur nacheinander gehen. Mehr Kerne verkürzen das nicht.'));
 
     var anzeige = el('div', { class: 'countdown', text: '--:--' });
     var fuellung = el('i');
     var text = el('span', { class: 'balken-text', text: '' });
-    var knopf = el('button', { class: 'knopf gross haupt', type: 'button', text: 'Rechnen starten' });
+    var knopf = el('button', { class: 'knopf gross haupt', type: 'button', text: 'Bann brechen' });
     buehne.appendChild(anzeige);
     buehne.appendChild(el('div', { class: 'balken' }, [fuellung]));
     buehne.appendChild(text);
@@ -1674,8 +1790,7 @@
         : zustand.tresor.rate;
       var rest = rate > 0 ? (schritteGesamt - erledigt) / rate : 0;
       anzeige.textContent = laeuft ? util.uhrwerk(rest) : util.uhrwerk(rest) + ' (pausiert)';
-      text.textContent = erledigt.toLocaleString('de-DE') + ' von ' + schritteGesamt.toLocaleString('de-DE')
-        + ' Schritten · ' + (anteil * 100).toFixed(1) + ' %';
+      text.textContent = (anteil * 100).toFixed(1) + ' % gebrochen';
     }
 
     zeichneStand(fragment.stand.erledigt);
@@ -1695,22 +1810,23 @@
         sichern(false);
       });
       zustand.loeser.starten().then(function (b) {
-        if (!b) { laeuft = false; knopf.textContent = 'Weiterrechnen'; zeichneStand(fragment.stand.erledigt); sichern(true); return; }
+        if (!b) { laeuft = false; knopf.textContent = 'Weiter brechen'; zeichneStand(fragment.stand.erledigt); sichern(true); return; }
         zustand.loeser = null;
         return T.tresorLogik.fragmentOeffnen(zustand.tresor, fragment, b, zustand.passMaterial).then(function () {
+          zustand.wachterwort = T.stimme.sag('freigabe');
           sichern(true);
           zeichneTresor();
         });
       }).catch(function (fehler) {
         laeuft = false;
-        buehne.appendChild(el('p', { class: 'warnung', text: 'Rechenfehler: ' + fehler.message }));
+        buehne.appendChild(el('p', { class: 'warnung', text: 'Der Bann ist gestolpert: ' + fehler.message }));
       });
     }
 
     function anhalten() {
       if (!zustand.loeser) return;
       laeuft = false;
-      knopf.textContent = 'Weiterrechnen';
+      knopf.textContent = 'Weiter brechen';
       bildschirmWachHalten(false);
       zustand.loeser.anhalten();
     }

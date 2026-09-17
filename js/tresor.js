@@ -21,6 +21,8 @@
       reihenfolge: 'links',
       sicherheit: 'rechenzeit',      // 'rechenzeit' = Zeitschloss, sonst: ohne Rechenzeit
       sensoren: false,               // Lagesensoren nur, wenn das Gerät sie wirklich hat
+      gluecksspiel: false,           // Wartezeiten dürfen verwürfelt werden
+      blind: false,                  // Blindgang: der Wächter würfelt alles aus und sagt nichts
       strafe: 0,
       erinnerungen: false,           // gehört zum Tresor: selbst dran denken ist eine Option
       geheimeFrist: {
@@ -56,6 +58,49 @@
     var werte = new Uint32Array(1);
     global.crypto.getRandomValues(werte);
     return werte[0] / 4294967296;
+  }
+
+  function zufallsGanz(min, max) {
+    return min + Math.floor(zufallsAnteil() * (max - min + 1));
+  }
+
+  /* Blindgang: Der Nutzer setzt nur den Notausgang, alles andere zieht der
+   * Wächter - und zeigt es nicht. Gezogen wird mit dem Systemzufall, nicht
+   * mit dem gespeicherten Saat-Strom des Tresors: Aus der Saat liesse sich
+   * der Plan sonst nachrechnen, und der soll im Dunkeln bleiben. */
+  function blindKonfiguration(notausgang, sensorenMoeglich) {
+    var alle = T.herausforderungen.dimensionen.map(function (d) { return d.id; });
+    for (var i = alle.length - 1; i > 0; i--) {
+      var j = zufallsGanz(0, i);
+      var merk = alle[i]; alle[i] = alle[j]; alle[j] = merk;
+    }
+    var gewaehlt = alle.slice(0, zufallsGanz(2, alle.length));
+    var stufen = {};
+    gewaehlt.forEach(function (d) { stufen[d] = zufallsGanz(2, 5); });
+    var mitFrist = zufallsAnteil() < 0.5;
+    return {
+      dimensionen: gewaehlt,
+      stufen: stufen,
+      aufgabenProFragment: zufallsGanz(1, 3),
+      rechenzeit: zufallsGanz(1, 4),
+      reihenfolge: zufallsAnteil() < 0.5 ? 'links' : 'zufall',
+      sicherheit: 'rechenzeit',
+      sensoren: !!sensorenMoeglich && zufallsAnteil() < 0.5,
+      strafe: zufallsGanz(1, 2),
+      gluecksspiel: true,
+      blind: true,
+      erinnerungen: false,
+      geheimeFrist: {
+        aktiv: mitFrist,
+        bezug: 'aufgabe',
+        minSekunden: 3600,
+        maxSekunden: 18000,
+        minFaktor: 1.2,
+        maxFaktor: 2 + zufallsAnteil() * 2,
+        folge: 'aufgaben'
+      },
+      notausgang: notausgang
+    };
   }
 
   function strafzeit(konfig, fehlversuche) {
@@ -563,6 +608,7 @@
     fristAusloesen: fristAusloesen,
     FRIST_WERTE: FRIST_WERTE,
     standardKonfiguration: standardKonfiguration,
+    blindKonfiguration: blindKonfiguration,
     geschaetzteDauer: geschaetzteDauer,
     erstellen: erstellen,
     aktuellesFragment: aktuellesFragment,

@@ -526,3 +526,88 @@ select, input[type=file] {
   color: var(--neon-hell);
   margin: 18px 0 0;
 }
+
+/* Ruhige Hand: Skala mit Zielband und Zeiger */
+.ruheskala {
+  position: relative;
+  height: 20px;
+  margin: 22px 0 6px;
+  border: 1px solid var(--rand);
+  border-radius: 10px;
+  background: var(--grund-hoch);
+  overflow: hidden;
+}
+.ruhezone {
+  position: absolute; top: 0; bottom: 0;
+  background: rgba(63, 214, 160, .18);
+  border-left: 1px solid rgba(63, 214, 160, .5);
+  border-right: 1px solid rgba(63, 214, 160, .5);
+}
+.ruhezeiger {
+  position: absolute; top: -4px; bottom: -4px;
+  width: 3px; margin-left: -1.5px;
+  background: var(--rot);
+  box-shadow: 0 0 10px rgba(255, 111, 107, .6);
+  transition: left .09s linear;
+}
+.ruheskala.ist-gut .ruhezeiger { background: var(--gruen); box-shadow: 0 0 12px rgba(63, 214, 160, .7); }
+.ruhebeschriftung { display: flex; justify-content: space-between; }
+
+/* ---------- Die Stimme des Wächters ---------- */
+
+.wachterwort {
+  margin: 4px 0 14px;
+  font-size: 17px;
+  line-height: 1.45;
+  color: var(--gold-hell);
+  border-left: 2px solid var(--gold);
+  padding-left: 12px;
+}
+.wachterwort.gross { font-size: 20px; border-left: none; padding: 0; text-align: center; }
+
+.technik {
+  margin: 14px 0 0;
+  border-top: 1px solid var(--rand);
+  padding-top: 8px;
+}
+.technik > summary {
+  cursor: pointer;
+  color: var(--flaut);
+  font-size: 13px;
+  list-style: none;
+}
+.technik > summary::-webkit-details-marker { display: none; }
+.technik > summary::before { content: '▸ '; }
+.technik[open] > summary::before { content: '▾ '; }
+.technik > summary:hover { color: var(--text); }
+
+/* ---------- Der Würfel ---------- */
+
+.wuerfelbox { text-align: center; margin: 22px 0 6px; }
+.wuerfel {
+  width: 64px; height: 64px;
+  margin: 0 auto 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 34px; font-weight: 600;
+  border: 1px solid var(--rand); border-radius: 12px;
+  background: var(--grund-hoch); color: var(--flaut);
+}
+.wuerfel.ist-rollend { color: var(--neon); border-color: var(--neon); }
+.wuerfel.ist-gewonnen {
+  color: var(--gruen); border-color: var(--gruen);
+  box-shadow: 0 0 22px rgba(63, 214, 160, .3);
+}
+.wuerfel.ist-verloren {
+  color: var(--rot); border-color: var(--rot);
+  box-shadow: 0 0 22px rgba(255, 111, 107, .25);
+}
+
+/* ---------- Blindgang ---------- */
+
+.blindkarte { border-color: var(--rand); transition: border-color .2s, box-shadow .2s; }
+.blindkarte.ist-an {
+  border-color: var(--gold);
+  box-shadow: 0 0 26px rgba(242, 181, 68, .16);
+}
+.blindtitel { font-size: 18px; font-weight: 600; letter-spacing: .04em; }
+.blindkarte.ist-an .blindtitel { color: var(--gold-hell); }

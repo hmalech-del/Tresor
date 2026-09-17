@@ -369,6 +369,7 @@ Konzentration und Geduld.
 | **Wasserwaage** | Konzentration | Das Gerät waagerecht halten; die Libelle darf nicht ausschlagen |
 | **Lagenfolge** | Konzentration | Das Gerät der Reihe nach in vorgegebene Lagen bringen und jede kurz halten |
 | **Schritte** | Geduld | Eine Strecke zu Fuß gehen; gezählt wird der Takt der Bewegung |
+| **Ruhige Hand** | Geduld | Das Gerät in der Hand halten und ruhig bleiben – abgelegt zählt nicht |
 
 Details – warum das an die Fähigkeit und nicht an das Gerät gebunden ist, und
 was passiert, wenn der Sensor fehlt – stehen unter
@@ -486,6 +487,53 @@ stammt aus dem GPS: ±10 bis 30 Meter, drinnen gar nichts, dazu eine eigene
 Standortfreigabe. Eine Aufgabe „steig drei Stockwerke“ würde häufiger falsch
 als richtig messen. Waagerechte Strecke wäre deutlich genauer (±5 bis 10 m),
 bliebe aber eine reine Draußen-Aufgabe.
+
+## Der Ton
+
+Die Oberfläche spricht nicht wie eine Dokumentation, sondern wie eine Instanz,
+die urteilt. Alle Sätze, die im Ablauf erscheinen, stehen in `js/stimme.js` –
+nicht verstreut in der Zustandslogik. Regel für neue Sätze: kurz, ohne
+Ausrufezeichen, ohne Anbiederung. Der Wächter erklärt nicht, er stellt fest.
+
+Begriffe, die nach Innenleben klingen, haben in der Oberfläche einen anderen
+Namen: Das Zeitschloss heißt **Bann**, „Rechenzeit“ heißt, dass ein Fragment
+unter Bann liegt, „Strafzeit“ heißt **Strafe**. Quadrierungen, PBKDF2 und
+AES stehen weiterhin da, aber zugeklappt hinter „Was dahintersteckt“ – wer es
+wissen will, klappt es auf, und wer nur seinen Tresor öffnen will, liest es
+nicht. Diese README bleibt davon unberührt; sie ist für Entwickler.
+
+## Blindgang
+
+Der harte Modus. Du setzt genau einen Wert: den Notausgang. Alles andere zieht
+der Wächter selbst – wie viele Aufgaben je Fragment, aus welchen Dimensionen,
+mit welcher Intensität, welche Strafen, ob eine geheime Frist läuft. Und er
+zeigt es nicht: kein Fahrplan, keine Schätzung, keine Anzahl. Du siehst immer
+nur die Aufgabe, die gerade vor dir liegt.
+
+Gezogen wird mit `crypto.getRandomValues`, nicht mit dem Saat-Strom des
+Tresors. Das ist wichtig: Die Saat liegt gespeichert im Tresor, aus ihr ließe
+sich der ganze Plan nachrechnen. Der Blindgang läuft immer eisern, Strafen sind
+immer an, das Glücksspiel ist immer an.
+
+Der Notausgang bleibt der einzige Boden nach unten – deshalb ist er das
+Einzige, was du selbst festlegst.
+
+## Das Glücksspiel
+
+Optional, in den Zeitregeln zuschaltbar (im Blindgang immer an). Bei jeder
+Sperrfrist und jeder Strafe darfst du **einmal** würfeln:
+
+* **5 oder 6** – die Wartezeit fällt weg.
+* **1 bis 4** – der Rest wird um die Hälfte länger.
+
+Der Erwartungswert ist genau die ursprüngliche Wartezeit: 2/3 × 1,5 = 1. Das
+Spiel kostet im Mittel nichts und tut trotzdem weh. Gewürfelt wird mit
+`crypto.getRandomValues` und Rückweisung ab 252 – ein Byte modulo sechs wäre
+schief, weil 256 nicht durch 6 teilbar ist, und ausgerechnet die Gewinnseite
+(5 und 6) wäre benachteiligt. Über 60 000 Würfe gemessen: Gleichverteilung
+zwischen 0,164 und 0,170 je Augenzahl, Gewinnquote 0,3333.
+
+Der Bann lässt sich nicht verwürfeln. Er ist kryptografisch, kein Timer.
 
 ## Zeitregeln
 
@@ -619,6 +667,7 @@ unverändert.
 | `index.html` | Gerüst und Skript-Reihenfolge |
 | `css/style.css` | Gestaltung |
 | `js/util.js` | DOM-Helfer, Zeitformate, Hex |
+| `js/stimme.js` | Die Sätze des Wächters, Benennungen für die Oberfläche |
 | `js/rng.js` | Zufallsstrom mit Saat |
 | `js/krypto.js` | Schlüsselableitung, PBKDF2-Antwortbindung, AES-256-GCM |
 | `js/worker-timelock.js` | Primzahlen, Puzzle-Erzeugung, sequentielles Quadrieren |
@@ -629,7 +678,7 @@ unverändert.
 | `js/aufgaben-raetsel.js` | Chiffre, Morse, Anagramm, Zahlenrätsel |
 | `js/aufgaben-konzentration.js` | Tonfolge, N-Back, Stroop, Zahlenjagd |
 | `js/sensoren.js` | Lagesensoren: Fähigkeitsprüfung, iOS-Freigabe, Messungen |
-| `js/aufgaben-sensor.js` | Wasserwaage, Lagenfolge, Schritte, Ersatzweg |
+| `js/aufgaben-sensor.js` | Wasserwaage, Lagenfolge, Schritte, Ruhige Hand, Ersatzweg |
 | `js/woerter.js` | Wortvorrat ohne Umlaute |
 | `js/tresor.js` | Aufgabenplan, Verriegeln, Freigabe |
 | `js/foto.js` | Ziffernerkennung im Bild, Zerlegung in Schärfestufen |

@@ -150,6 +150,61 @@
     } catch (fehler) { /* Ton ist Beiwerk */ }
   }
 
+  /* Der Wuerfel.
+   *
+   * Angeboten wird er ueberall dort, wo eine Wartezeit laeuft: Fuenf oder
+   * sechs loeschen sie, alles andere streckt den Rest um die Haelfte. Der
+   * Erwartungswert ist damit genau die urspruengliche Wartezeit
+   * (2/3 × 1,5 = 1) - das Spiel kostet im Mittel nichts und tut trotzdem weh.
+   * Genau ein Wurf je Wartezeit; der Aufrufer merkt sich das. */
+  var WURF_GEWINN = 5;        // ab dieser Augenzahl faellt die Zeit weg
+  var WURF_STRECKUNG = 1.5;   // sonst wird der Rest so gestreckt
+
+  /* Ein fairer Wurf. Der naheliegende Weg - Zufallsbyte modulo sechs - ist
+   * schief: 256 ist nicht durch 6 teilbar, also kaemen 1 bis 4 haeufiger als
+   * 5 und 6. Ausgerechnet die Gewinnseite waere benachteiligt. Werte ab 252
+   * werden deshalb verworfen und neu gezogen. */
+  function wurf() {
+    var werte = new Uint8Array(1);
+    var zufall = global.crypto || global.msCrypto;
+    do { zufall.getRandomValues(werte); } while (werte[0] >= 252);
+    return (werte[0] % 6) + 1;
+  }
+
+  function wuerfel(koerper, beiErgebnis) {
+    var box = el('div', { class: 'wuerfelbox' });
+    var auge = el('div', { class: 'wuerfel', text: '?' });
+    var knopf = el('button', { class: 'knopf', type: 'button', text: 'Würfeln' });
+    var text = el('p', { class: 'flaut klein', text:
+      '5 oder 6: die Wartezeit fällt weg. 1 bis 4: der Rest wird um die Hälfte länger. Ein Wurf, keine Wiederholung.' });
+    box.appendChild(auge);
+    box.appendChild(knopf);
+    box.appendChild(text);
+    koerper.appendChild(box);
+
+    knopf.addEventListener('click', function () {
+      knopf.disabled = true;
+      var augen = wurf();
+      var rollen = 0;
+      auge.classList.add('ist-rollend');
+      var uhr = setInterval(function () {
+        rollen++;
+        auge.textContent = String(((rollen * 7) % 6) + 1);
+        if (rollen < 12) return;
+        clearInterval(uhr);
+        auge.classList.remove('ist-rollend');
+        auge.textContent = String(augen);
+        var gewonnen = augen >= WURF_GEWINN;
+        auge.classList.add(gewonnen ? 'ist-gewonnen' : 'ist-verloren');
+        text.textContent = gewonnen
+          ? 'Gewonnen. Die Zeit ist weg.'
+          : 'Verloren. Der Rest wird um die Hälfte länger.';
+        beiErgebnis(gewonnen, WURF_STRECKUNG);
+      }, 70);
+    });
+    return box;
+  }
+
   function jitter(zufall, wert, anteil) {
     return Math.round(wert * zufall.bereich(1 - anteil, 1 + anteil));
   }
@@ -585,6 +640,17 @@
       b.koerper.appendChild(anzeige);
       var fortschritt = balken(b.koerper, '');
 
+      /* Glücksspiel: einmal je Sperrfrist, und nur solange noch etwas zu
+       * gewinnen ist. */
+      if ((kontext.konfig || {}).gluecksspiel && !z.gewuerfelt && z.bis - Date.now() > 5000) {
+        wuerfel(b.koerper, function (gewonnen, streckung) {
+          z.gewuerfelt = true;
+          if (gewonnen) z.bis = Date.now();
+          else z.bis = Date.now() + (z.bis - Date.now()) * streckung;
+          kontext.speichern();
+        });
+      }
+
       var stopp = takt(function () {
         var jetzt = Date.now();
         if (jetzt < z.gesehen - 120000) {
@@ -778,6 +844,8 @@
     registrieren: registrieren,
     dimensionRegistrieren: dimensionRegistrieren,
     dimensionen: dimensionen,
-    werkzeug: { buehne: buehne, balken: balken, takt: takt, ton: ton, jitter: jitter, proStufe: proStufe, antwortFeld: antwortFeld }
+    werkzeug: { buehne: buehne, balken: balken, takt: takt, ton: ton, jitter: jitter,
+      proStufe: proStufe, antwortFeld: antwortFeld, wuerfel: wuerfel, wurf: wurf,
+      WURF_GEWINN: WURF_GEWINN, WURF_STRECKUNG: WURF_STRECKUNG }
   };
 })(typeof window !== 'undefined' ? window : globalThis);
