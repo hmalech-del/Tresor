@@ -256,7 +256,9 @@ select, input[type=file] {
 /* ---- Antworten und Rätsel ---- */
 
 .antwort-beschriftung { margin: 4px 0 0; font-size: 13px; }
-.antwortzeile { display: flex; gap: 8px; width: 100%; max-width: 420px; }
+.antwortzeile { display: flex; gap: 8px; width: 100%; max-width: 420px; flex-wrap: wrap; }
+.antwortzeile .antwortfeld { min-width: 150px; }
+.antwortzeile .knopf { white-space: nowrap; }
 .antwortfeld {
   flex: 1; background: var(--grund); color: var(--text);
   border: 1px solid var(--rand); border-radius: 10px; padding: 12px 14px; font-size: 18px;
@@ -433,3 +435,5 @@ select, input[type=file] {
 .marke-konzentration { color: #c49bff; border-color: rgba(196,155,255,.4); }
 
 .checkliste li.ist-spaet { color: var(--rot); }
+
+.trenner { border: none; border-top: 1px solid var(--rand); margin: 16px 0; }

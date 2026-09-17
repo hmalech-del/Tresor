@@ -556,6 +556,7 @@
     $('#sicherheit').addEventListener('change', schaetzungAktualisieren);
     $('#verriegeln').addEventListener('click', verriegeln);
 
+    wurzel.appendChild(sicherungsKarte());
     var verlauf = verlaufKarte();
     if (verlauf) wurzel.appendChild(verlauf);
 
@@ -860,6 +861,7 @@
       el('button', { class: 'knopf gefahr', type: 'button', text: 'Tresor löschen', onclick: tresorLoeschen })
     ]));
 
+    wurzel.appendChild(sicherungsKarte());
     var verlauf = verlaufKarte();
     if (verlauf) wurzel.appendChild(verlauf);
   }
@@ -1059,6 +1061,135 @@
     return karte;
   }
 
+
+  /* ---------------- Sicherung ----------------
+   *
+   * Ein Tresor lebt sonst ausschließlich im Browser-Speicher dieses Geräts:
+   * Cache geleert, Browser gewechselt, Handy verloren - Geheimnis weg. Die
+   * Sicherung ist eine wortgetreue Kopie, kein neuer Tresor: Aufgaben,
+   * Parameter, Rechenfortschritt und Fristen kommen mit, beim Einlesen wird
+   * nichts neu gewählt. */
+
+  function dateiAusgeben(name, text) {
+    var blob = new Blob([text], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var verweis = el('a', { href: url, download: name });
+    document.body.appendChild(verweis);
+    verweis.click();
+    setTimeout(function () { URL.revokeObjectURL(url); verweis.remove(); }, 2000);
+  }
+
+  function sicherungsKarte() {
+    var tresor = zustand.tresor;
+    var karte = el('section', { class: 'karte' }, [el('h2', { text: 'Sicherung' })]);
+
+    if (tresor) {
+      var offen = tresor.fragmente.filter(function (f) { return f.offen; }).length;
+      karte.appendChild(el('p', { class: 'flaut klein', text:
+        'Eine Kopie dieses Tresors als Datei - mit allem, was dazugehört: Aufgaben, Zeitschlösser, '
+        + 'Rechenfortschritt und laufende Fristen. Beim Einlesen auf einem anderen Gerät geht es dort '
+        + 'weiter, wo du hier aufgehört hast.' }));
+      if (offen) {
+        karte.appendChild(el('p', { class: 'warnung', text:
+          'Achtung: ' + offen + (offen === 1 ? ' Fragment ist' : ' Fragmente sind') + ' bereits offen und '
+          + (offen === 1 ? 'steht' : 'stehen') + ' im Klartext in der Datei. Ohne Passphrase ist die Sicherung '
+          + 'nur so sicher wie ihr Ablageort.' }));
+      }
+      var feldAus = el('input', { type: 'password', class: 'antwortfeld', autocomplete: 'new-password',
+        placeholder: 'Passphrase (empfohlen)' });
+      var verlaufMit = el('input', { type: 'checkbox' });
+      var knopfAus = el('button', { class: 'knopf', type: 'button', text: 'Sichern' });
+      karte.appendChild(el('div', { class: 'antwortzeile' }, [feldAus, knopfAus]));
+      karte.appendChild(el('label', { class: 'schalterzeile klein' }, [
+        verlaufMit, el('span', { class: 'flaut', text: 'Verlauf mitsichern (enthält geöffnete Geheimnisse)' })
+      ]));
+      var meldungAus = el('p', { class: 'flaut klein', text: '' });
+      karte.appendChild(meldungAus);
+
+      knopfAus.addEventListener('click', async function () {
+        knopfAus.disabled = true;
+        meldungAus.textContent = 'Sicherung wird erstellt ...';
+        try {
+          var text = await T.sicherung.exportieren({
+            tresor: tresor,
+            passphrase: feldAus.value,
+            mitVerlauf: verlaufMit.checked
+          });
+          var datum = new Date();
+          var stempel = datum.getFullYear() + '-' + String(datum.getMonth() + 1).padStart(2, '0')
+            + '-' + String(datum.getDate()).padStart(2, '0');
+          dateiAusgeben('tresor-' + stempel + '.json', text);
+          meldungAus.textContent = feldAus.value
+            ? 'Gesichert und mit deiner Passphrase verschlüsselt. Ohne sie ist die Datei wertlos - auch für dich.'
+            : 'Gesichert - unverschlüsselt. Leg die Datei entsprechend ab.';
+          meldungAus.className = 'flaut klein';
+        } catch (fehler) {
+          meldungAus.textContent = 'Fehlgeschlagen: ' + fehler.message;
+          meldungAus.className = 'warnung';
+        }
+        knopfAus.disabled = false;
+      });
+      karte.appendChild(el('hr', { class: 'trenner' }));
+    }
+
+    karte.appendChild(el('p', { class: 'flaut klein', text: tresor
+      ? 'Eine andere Sicherung einlesen? Sie ersetzt den Tresor, der gerade hier liegt.'
+      : 'Sicherung einlesen und dort weitermachen, wo du aufgehört hast.' }));
+    var datei = el('input', { type: 'file', accept: '.json,application/json' });
+    var feldEin = el('input', { type: 'password', class: 'antwortfeld', autocomplete: 'current-password',
+      placeholder: 'Passphrase, falls verschlüsselt' });
+    var knopfEin = el('button', { class: 'knopf', type: 'button', text: 'Einlesen' });
+    var meldungEin = el('p', { class: 'flaut klein', text: '' });
+    karte.appendChild(datei);
+    karte.appendChild(el('div', { class: 'antwortzeile' }, [feldEin, knopfEin]));
+    karte.appendChild(meldungEin);
+
+    knopfEin.addEventListener('click', async function () {
+      var auswahl = datei.files && datei.files[0];
+      if (!auswahl) { meldungEin.textContent = 'Erst eine Datei auswählen.'; meldungEin.className = 'warnung'; return; }
+      knopfEin.disabled = true;
+      meldungEin.className = 'flaut klein';
+      meldungEin.textContent = 'Datei wird gelesen ...';
+      try {
+        var ergebnis = await T.sicherung.importieren(await auswahl.text(), feldEin.value);
+        var frage = 'Diese Sicherung einlesen?\n\n' + T.sicherung.beschreibung(ergebnis.tresor)
+          + (zustand.tresor ? '\n\nDer Tresor, der gerade auf diesem Gerät liegt, wird dabei ersetzt.' : '');
+        if (!global.confirm(frage)) {
+          meldungEin.textContent = 'Abgebrochen.';
+          knopfEin.disabled = false;
+          return;
+        }
+        if (zustand.exitLoeser) { zustand.exitLoeser.anhalten(); zustand.exitLoeser = null; }
+        aufraeumen();
+
+        // Die Kalibrierung stammt vom alten Gerät - für die Restzeitanzeige neu messen
+        if (ergebnis.tresor.fragmente[0].schloss) {
+          meldungEin.textContent = 'Rechenleistung dieses Geräts messen ...';
+          try { ergebnis.tresor.rate = await T.zeitschloss.messen(); } catch (fehler) {}
+        }
+        if (ergebnis.verlauf) {
+          ergebnis.verlauf.slice().reverse().forEach(function (eintrag) { T.speicher.archivErgaenzen(eintrag); });
+        }
+        zustand.tresor = ergebnis.tresor;
+        zustand.laenge = ergebnis.tresor.laenge;
+        zustand.art = ergebnis.tresor.art || 'zahl';
+        if (!T.speicher.sichern(ergebnis.tresor)) {
+          meldungEin.textContent = 'Der Tresor passt nicht in den Browser-Speicher dieses Geräts.';
+          meldungEin.className = 'warnung';
+          zustand.tresor = null;
+          knopfEin.disabled = false;
+          return;
+        }
+        zeichneTresor();
+      } catch (fehler) {
+        meldungEin.textContent = fehler.message;
+        meldungEin.className = 'warnung';
+        knopfEin.disabled = false;
+      }
+    });
+
+    return karte;
+  }
 
   /* ---------------- Verlauf ---------------- */
 

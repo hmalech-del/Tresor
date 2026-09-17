@@ -74,6 +74,41 @@ nicht durch Zurückstellen der Systemuhr austricksen.
 
 ---
 
+## Sicherung: ausgelesen und wieder eingelesen
+
+Ein Tresor lebt sonst ausschließlich im Browser-Speicher **dieses** Geräts.
+Cache geleert, Browser gewechselt, Handy verloren – und das Geheimnis ist weg,
+endgültig. Deshalb lässt sich der Tresor als Datei sichern und anderswo wieder
+einlesen.
+
+Gesichert wird der Tresor **wortgetreu**: Aufgaben samt ihren Parametern, die
+Zeitschlösser, die Chiffrate, der Rechenfortschritt, laufende Sperrfristen und
+Check-ins. Beim Einlesen wird nichts neu gewürfelt und nichts neu gewählt –
+sonst könnte man sich beim Import einen bequemen Aufgabensatz bestellen und
+wäre in einer Minute durch. Auf dem neuen Gerät geht es genau dort weiter, wo
+man aufgehört hat; nur die Kalibrierung wird neu gemessen, weil sie
+gerätespezifisch ist und ohnehin nur die Restzeitanzeige betrifft.
+
+Drei Dinge sagt die App dabei offen:
+
+* **Bereits geöffnete Fragmente stehen im Klartext in der Datei.** Eine
+  Sicherung ist so geheim wie der Fortschritt, den sie enthält – wer nach dem
+  dritten Fragment sichert, hat drei Ziffern in der Datei. Deshalb ist die
+  Verschlüsselung mit Passphrase der Normalfall (AES-256-GCM, Schlüssel aus
+  PBKDF2 mit 400 000 Runden). Ohne Passphrase geht es auch, mit Warnung.
+* **Der Verlauf bleibt draußen**, außer man hakt es an – dort stehen fertige
+  Geheimnisse im Klartext.
+* **Die Datei lässt sich von Hand ändern.** Zeitschloss und antwortgebundene
+  Aufgaben überstehen das (ohne Schlüsselmaterial keine Entschlüsselung), die
+  übrigen Aufgaben nicht. Das gilt aber genauso für den Browser-Speicher – die
+  Sicherung macht es nicht schlimmer. Die Prüfsumme fängt Übertragungsfehler,
+  keine Absicht.
+
+Beim Einlesen nennt die App, was in der Datei steckt (Art, Fortschritt, Datum)
+und lässt bestätigen, bevor sie einen vorhandenen Tresor ersetzt.
+
+---
+
 ## Verlauf
 
 Ein geöffneter Tresor wandert in den Verlauf, sobald das letzte Fragment
@@ -436,4 +471,5 @@ unverändert.
 | `js/tresor.js` | Aufgabenplan, Verriegeln, Freigabe |
 | `js/foto.js` | Ziffernerkennung im Bild, Zerlegung in Schärfestufen |
 | `js/speicher.js` | `localStorage`, Verlauf, benutzte Aufgabentypen |
+| `js/sicherung.js` | Export und Import als Datei, optional verschlüsselt |
 | `js/app.js` | Oberfläche und Ablauf |
