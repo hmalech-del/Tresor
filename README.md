@@ -357,6 +357,23 @@ Nichts davon ist schwer – aber nebenbei geht es nicht.
 | **Stroop** | Die Schriftfarbe antippen, nicht das Wort |
 | **Zahlenjagd** | Schulte-Tabelle: 1 bis n² der Reihe nach finden, gegen die Uhr |
 
+### Sensoren
+
+Optional, und nur wenn das Gerät sie wirklich hat. Der Schalter steht in der
+Feineinstellung und lässt sich gar nicht erst setzen, wenn beim Einrichten
+keine Messwerte ankommen. Die Aufgaben mischen sich dann in die Töpfe von
+Konzentration und Geduld.
+
+| Aufgabe | Dimension | Worum es geht |
+|---|---|---|
+| **Wasserwaage** | Konzentration | Das Gerät waagerecht halten; die Libelle darf nicht ausschlagen |
+| **Lagenfolge** | Konzentration | Das Gerät der Reihe nach in vorgegebene Lagen bringen und jede kurz halten |
+| **Schritte** | Geduld | Eine Strecke zu Fuß gehen; gezählt wird der Takt der Bewegung |
+
+Details – warum das an die Fähigkeit und nicht an das Gerät gebunden ist, und
+was passiert, wenn der Sensor fehlt – stehen unter
+[Sensoraufgaben und der Ersatzweg](#sensoraufgaben-und-der-ersatzweg).
+
 ### Eine eigene Aufgabe hinzufügen
 
 Alle sechs Dimensionen sind besetzt; weitere Aufgaben brauchen nur ein Objekt
@@ -381,6 +398,94 @@ Mehr muss der Tresor nicht wissen – Auswahl, Fahrplan, Fortschritt und
 Speicherung laufen über die Registry.
 
 ---
+
+## Sensoraufgaben und der Ersatzweg
+
+### Was der Browser hergibt
+
+| | Android (Chrome) | iPhone (Safari) |
+|---|---|---|
+| Neigung (`DeviceOrientationEvent`) | sofort, ohne Dialog | erst nach `requestPermission()` |
+| Bewegung (`DeviceMotionEvent`) | sofort, ohne Dialog | erst nach `requestPermission()` |
+| Schrittzähler | gibt es nicht | gibt es nicht |
+| Luftdruck / Höhe | gibt es nicht | gibt es nicht |
+| Voraussetzung | **HTTPS** | **HTTPS** |
+
+Zwei Fallen stecken darin. Erstens liefert `file://` oder einfaches `http://`
+gar nichts – über GitHub Pages läuft es, beim lokalen Öffnen der Datei nicht.
+Zweitens verlangt iOS ab 13 eine Freigabe, die **aus einer echten Nutzergeste
+heraus** angefordert werden muss; deshalb gibt es dort einen Knopf
+„Sensor freigeben“ statt einer Abfrage beim Laden.
+
+Und die wichtigste Falle: `'DeviceOrientationEvent' in window` ist auch im
+Desktop-Chrome wahr. Die Schnittstelle existiert dort, es feuert nur nie ein
+Ereignis. Geprüft wird deshalb nicht, ob es die Schnittstelle gibt, sondern ob
+innerhalb von 1,6 Sekunden echte Messwerte ankommen.
+
+### Gebunden an die Fähigkeit, nicht an das Gerät
+
+Naheliegend wäre, einen Tresor mit Sensoraufgaben an *dieses eine Gerät* zu
+binden. Das hält aber nicht: Ein Browser hat keine stabile Geräte-Kennung. Eine
+Zufallsmarke im `localStorage` läge genau dort, wo auch der Tresor liegt – beim
+Löschen der Browserdaten oder beim Neuaufsetzen des Handys wäre sie mit weg,
+und das eigene Gerät würde die eigene Sicherung abweisen. Genau im
+Katastrophenfall, für den die Sicherung da ist. Fingerprinting über
+User-Agent, Bildschirm oder Canvas driftet mit jedem Browser-Update.
+
+Die brauchbare Frage ist nicht „ist es dasselbe Gerät?“, sondern „hat dieses
+Gerät den Sensor?“. Das ist direkt prüfbar. Ein Import auf einem anderen
+Android läuft damit ganz normal weiter; eine Sicherung auf einem Laptop
+dagegen landet im Ersatzweg.
+
+### Der Ersatzweg
+
+Fehlt der Sensor – Desktop, oder auf dem iPhone abgelehnte Freigabe –, wird
+die Aufgabe nicht übersprungen, sondern durch Aufwand ersetzt:
+
+* **Mit Rechenzeit**: ein Zeitschloss über das Vielfache der Aufgabendauer,
+  je nach Intensität das 6- bis 20-fache, mindestens 5 Minuten, höchstens
+  2 Stunden. Es wird erst zur Laufzeit geschmiedet – beim Verriegeln steht ja
+  noch nicht fest, auf welchem Gerät die Aufgabe einmal landet. Der
+  Zwischenstand überlebt einen Neustart.
+* **Ohne Rechenzeit**: dieselbe Spanne als Wartezeit. Schwächer, weil die
+  Geräteuhr sich vorstellen lässt – in diesem Modus hängt aber ohnehin alles
+  an der Uhr.
+
+Warum so teuer? Weil der Ersatzweg sonst die bequemste Abkürzung wäre: einfach
+auf dem Laptop importieren und alle Sensoraufgaben abwinken. Aus demselben
+Grund gilt eine abgelehnte iOS-Freigabe als „kein Sensor“ – sonst wäre der
+Ablehnen-Knopf im Systemdialog der Überspringen-Knopf. Einmal begonnen, bleibt
+es beim Ersatzweg; sonst könnte man ihn als Reserve nebenherlaufen lassen.
+
+Beim Einlesen einer Sicherung prüft die App vorher, ob noch offene
+Sensoraufgaben drinstehen, und sagt im Bestätigungsdialog, was das auf diesem
+Gerät kosten würde.
+
+### Was der Schrittzähler kann und was nicht
+
+Es gibt keine Schrittzähler-Schnittstelle im Browser, auf keiner der beiden
+Plattformen. Gezählt wird deshalb selbst: Die Länge des
+Beschleunigungsvektors bekommt einen Tiefpass, jeder Ausschlag darüber ist ein
+Kandidat. Damit Schütteln nicht zählt, muss der Takt stimmen – Ausschläge unter
+260 ms Abstand zählen nicht und verschieben trotzdem den Bezugspunkt (sonst
+wäre schnelles Wedeln billiger als Gehen), und eine Folge mit zu
+ungleichmäßigem Rhythmus zählt gar nicht.
+
+Gemessen an synthetischen Taktmustern: gleichmäßige 500 ms zählen vollständig,
+ein unruhiger Takt zwischen 280 und 1400 ms kommt auf 2 von 14, Wedeln im
+120-ms-Takt auf 0. Wasserdicht ist das nicht – wer lange genug gleichmäßig
+wedelt, kommt durch. Das ist eine Anstrengungsaufgabe, keine
+kryptografische Grenze; wie alle Aufgaben außer den antwortgebundenen wird sie
+von der App durchgesetzt, nicht vom Schlüssel.
+
+### Höhenänderung, und warum sie fehlt
+
+Es gibt keinen Zugriff auf das Barometer – weder auf Android noch auf iOS.
+Höhe liefert allein `navigator.geolocation` als `coords.altitude`, und die
+stammt aus dem GPS: ±10 bis 30 Meter, drinnen gar nichts, dazu eine eigene
+Standortfreigabe. Eine Aufgabe „steig drei Stockwerke“ würde häufiger falsch
+als richtig messen. Waagerechte Strecke wäre deutlich genauer (±5 bis 10 m),
+bliebe aber eine reine Draußen-Aufgabe.
 
 ## Zeitregeln
 
@@ -523,6 +628,8 @@ unverändert.
 | `js/aufgaben-logik.js` | Zahlenfolge, Lügner, Waage, Mastermind |
 | `js/aufgaben-raetsel.js` | Chiffre, Morse, Anagramm, Zahlenrätsel |
 | `js/aufgaben-konzentration.js` | Tonfolge, N-Back, Stroop, Zahlenjagd |
+| `js/sensoren.js` | Lagesensoren: Fähigkeitsprüfung, iOS-Freigabe, Messungen |
+| `js/aufgaben-sensor.js` | Wasserwaage, Lagenfolge, Schritte, Ersatzweg |
 | `js/woerter.js` | Wortvorrat ohne Umlaute |
 | `js/tresor.js` | Aufgabenplan, Verriegeln, Freigabe |
 | `js/foto.js` | Ziffernerkennung im Bild, Zerlegung in Schärfestufen |

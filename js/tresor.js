@@ -20,6 +20,7 @@
       rechenzeit: 2,
       reihenfolge: 'links',
       sicherheit: 'rechenzeit',      // 'rechenzeit' = Zeitschloss, sonst: ohne Rechenzeit
+      sensoren: false,               // Lagesensoren nur, wenn das Gerät sie wirklich hat
       strafe: 0,
       erinnerungen: false,           // gehört zum Tresor: selbst dran denken ist eine Option
       geheimeFrist: {
@@ -93,7 +94,10 @@
       var stufeDerDimension = konfig.stufen[dimension] || 3;
       var module = T.herausforderungen.nachDimension(dimension).filter(function (m) {
         // Manche Aufgaben sind erst ab einer gewissen Intensität sinnvoll
-        return !m.mindestStufe || stufeDerDimension >= m.mindestStufe;
+        if (m.mindestStufe && stufeDerDimension < m.mindestStufe) return false;
+        // Sensoraufgaben nur, wenn sie beim Einrichten zugelassen wurden
+        if (m.sensor && !konfig.sensoren) return false;
+        return true;
       }).map(function (m) { return m.id; });
       if (!module.length) return null;
       var gemischt = zufall.mische(module);

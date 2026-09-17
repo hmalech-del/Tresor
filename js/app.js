@@ -157,6 +157,63 @@
     return util.$$('.dimension-karte input[type=checkbox]:checked').map(function (feld) { return feld.value; });
   }
 
+  /* Sensorlage im Einrichtungsscreen.
+   *
+   * Der Schalter laesst sich nur setzen, wenn wirklich Messwerte ankommen -
+   * geprueft wird also die Faehigkeit des Geraets, nicht seine Identitaet.
+   * Das ist Absicht: Eine Geraetemarke im Speicher laege genau dort, wo auch
+   * der Tresor liegt, und waere beim Loeschen der Browserdaten mit weg. */
+  function sensorlageZeigen(mitGeste) {
+    var schalter = $('#sensoren-aktiv');
+    if (!schalter || !T.sensoren) return;
+    var hinweis = $('#sensoren-hinweis');
+    var knopf = $('#sensoren-freigeben');
+    hinweis.textContent = 'Sensor wird geprüft ...';
+    knopf.classList.add('versteckt');
+    T.sensoren.lage({ freigeben: !!mitGeste, frisch: true }).then(function (ergebnis) {
+      if ($('#sensoren-aktiv') !== schalter) return;    // Bildschirm inzwischen gewechselt
+      if (ergebnis.ok) {
+        schalter.disabled = false;
+        hinweis.textContent = ergebnis.bewegung
+          ? 'Dieses Gerät misst Lage und Bewegung - Sensoraufgaben sind möglich.'
+          : 'Dieses Gerät misst die Lage, aber keine Bewegung - Schritte fallen dann weg.';
+      } else {
+        schalter.checked = false;
+        schalter.disabled = true;
+        if (ergebnis.grund === 'freigabe') {
+          hinweis.textContent = 'Dieses Gerät fragt erst nach, bevor eine Seite die Lagesensoren lesen darf.';
+          knopf.classList.remove('versteckt');
+        } else {
+          hinweis.textContent = T.sensoren.grundText(ergebnis.grund) + ' Sensoraufgaben bleiben deshalb aus.';
+        }
+      }
+      sensorWarnung();
+      schaetzungAktualisieren();
+    });
+  }
+
+  function offeneSensorAufgaben(tresor) {
+    return (tresor.fragmente || []).some(function (fragment) {
+      if (fragment.offen) return false;
+      return (fragment.aufgaben || []).some(function (aufgabe) {
+        if (aufgabe.erledigt) return false;
+        var modul = T.herausforderungen.hole(aufgabe.id);
+        return !!(modul && modul.sensor);
+      });
+    });
+  }
+
+  function sensorWarnung() {
+    var warnung = $('#sensoren-warnung');
+    if (!warnung) return;
+    var an = $('#sensoren-aktiv').checked;
+    warnung.classList.toggle('versteckt', !an);
+    if (!an) return;
+    warnung.textContent = 'Sensoraufgaben binden den Tresor nicht an dieses Gerät, wohl aber an ein Gerät mit Lagesensoren. '
+      + 'Landet eine Sicherung auf einem Rechner ohne Sensor - oder wird die Freigabe abgelehnt -, bleibt nur der Ersatzweg, '
+      + 'und der kostet ein Vielfaches der Aufgabe an Rechenzeit.';
+  }
+
   function konfigurationLesen() {
     var stufen = {};
     aktiveDimensionen().forEach(function (dimension) {
@@ -172,6 +229,7 @@
       rechenzeit: Number($('#rechenzeit').value),
       reihenfolge: $('#reihenfolge').value,
       sicherheit: $('#sicherheit').value,
+      sensoren: !!($('#sensoren-aktiv') && $('#sensoren-aktiv').checked),
       mitPassphrase: $('#passphrase-aktiv').checked,
       strafe: Number($('#strafzeit').value),
       erinnerungen: $('#erinnerungen').checked,
@@ -473,6 +531,14 @@
       ]),
       el('p', { class: 'flaut klein', id: 'sicherheit-hinweis', text: '' }),
       el('label', { class: 'schalterzeile' }, [
+        el('input', { type: 'checkbox', id: 'sensoren-aktiv', disabled: 'disabled' }),
+        el('span', { text: 'Sensoraufgaben zulassen (Wasserwaage, Lagenfolge, Schritte)' })
+      ]),
+      el('p', { class: 'flaut klein', id: 'sensoren-hinweis', text: 'Sensor wird geprüft ...' }),
+      el('button', { class: 'knopf versteckt', type: 'button', id: 'sensoren-freigeben',
+        text: 'Sensor freigeben und prüfen' }),
+      el('p', { class: 'warnung versteckt', id: 'sensoren-warnung', text: '' }),
+      el('label', { class: 'schalterzeile' }, [
         el('input', { type: 'checkbox', id: 'passphrase-aktiv' }),
         el('span', { text: 'Zusätzlich mit einer Passphrase verschließen' })
       ]),
@@ -615,6 +681,12 @@
     aufwandAktualisieren();
     $('#reihenfolge').addEventListener('change', schaetzungAktualisieren);
     $('#sicherheit').addEventListener('change', schaetzungAktualisieren);
+    $('#sensoren-aktiv').addEventListener('change', function () {
+      sensorWarnung();
+      schaetzungAktualisieren();
+    });
+    $('#sensoren-freigeben').addEventListener('click', function () { sensorlageZeigen(true); });
+    sensorlageZeigen(false);
     $('#passphrase-aktiv').addEventListener('change', function () {
       $('#passphrase-felder').classList.toggle('versteckt', !this.checked);
       pruefeBereit();
@@ -1294,6 +1366,20 @@
         var ergebnis = await T.sicherung.importieren(await auswahl.text(), feldEin.value);
         var frage = 'Diese Sicherung einlesen?\n\n' + T.sicherung.beschreibung(ergebnis.tresor)
           + (zustand.tresor ? '\n\nDer Tresor, der gerade auf diesem Gerät liegt, wird dabei ersetzt.' : '');
+
+        /* Offene Sensoraufgaben auf einem Gerät ohne Sensoren? Dann vorher
+         * sagen, was das kostet. Gefragt wird ohne Freigabedialog: Die Geste
+         * des Klicks ist nach dem Entschlüsseln längst verfallen, und ein
+         * noch nicht gefragtes iPhone ist kein Grund zur Warnung. */
+        if (T.sensoren && offeneSensorAufgaben(ergebnis.tresor)) {
+          meldungEin.textContent = 'Sensor dieses Geräts prüfen ...';
+          var lage = await T.sensoren.lage({ freigeben: false, frisch: true });
+          if (!lage.ok && lage.grund !== 'freigabe') {
+            frage += '\n\nAchtung: Dieser Tresor enthält noch Sensoraufgaben. '
+              + T.sensoren.grundText(lage.grund)
+              + ' Für jede dieser Aufgaben bleibt nur der Ersatzweg - ein Vielfaches ihrer Dauer an Rechenzeit.';
+          }
+        }
         if (!global.confirm(frage)) {
           meldungEin.textContent = 'Abgebrochen.';
           knopfEin.disabled = false;
@@ -1444,6 +1530,8 @@
         wurzel: buehne,
         params: aufgabe.params,
         zustand: aufgabe.zustand,
+        konfig: tresor.konfig,
+        rate: tresor.rate,
         speichern: function () { sichern(false); },
         fertig: function () {
           if (beendet) return;

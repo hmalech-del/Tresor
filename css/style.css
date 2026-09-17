@@ -437,3 +437,92 @@ select, input[type=file] {
 .checkliste li.ist-spaet { color: var(--rot); }
 
 .trenner { border: none; border-top: 1px solid var(--rand); margin: 16px 0; }
+
+/* ---------- Sensoraufgaben ---------- */
+
+.sensor-pruefung { text-align: center; padding: 22px 0; }
+
+.knopfzeile { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0 6px; }
+
+.sensorwerte {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  margin: 10px 0 2px;
+}
+
+/* Wasserwaage: Dose mit Libelle */
+.libellendose {
+  position: relative;
+  width: 168px; height: 168px;
+  margin: 18px auto 6px;
+  border-radius: 50%;
+  border: 1px solid var(--rand);
+  background:
+    radial-gradient(circle at 50% 42%, rgba(47, 227, 232, .08), transparent 62%),
+    var(--grund-hoch);
+  transition: border-color .18s, box-shadow .18s;
+}
+.libellendose.ist-mittig {
+  border-color: var(--gruen);
+  box-shadow: 0 0 0 1px rgba(63, 214, 160, .35), 0 0 26px rgba(63, 214, 160, .22);
+}
+.libellenring {
+  position: absolute; left: 50%; top: 50%;
+  width: 54px; height: 54px; margin: -27px 0 0 -27px;
+  border: 1px dashed var(--rand);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.libelle {
+  position: absolute; left: 50%; top: 50%;
+  width: 34px; height: 34px; margin: -17px 0 0 -17px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, var(--neon-hell), var(--neon) 58%, #14707a);
+  box-shadow: 0 0 18px var(--neon-schleier);
+  transition: transform .07s linear;
+}
+.libellendose.ist-mittig .libelle {
+  background: radial-gradient(circle at 34% 30%, #b6f7de, var(--gruen) 58%, #16755a);
+}
+
+/* Lagenfolge */
+.lagenleiste { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 16px 0 10px; }
+.lagenmarke {
+  width: 46px; height: 46px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--rand); border-radius: 10px;
+  background: var(--grund-hoch); color: var(--flaut);
+}
+/* Kleines Geraet, in die Ziellage gedreht - gezeichnet statt als Glyphe,
+   damit es auf jeder Schrift ankommt. */
+.lagenbild {
+  display: block; width: 15px; height: 25px;
+  border: 2px solid currentColor; border-radius: 4px;
+  position: relative;
+}
+.lagenbild::after {
+  content: ''; position: absolute; left: 50%; top: 2px;
+  width: 7px; height: 2px; margin-left: -3.5px;
+  background: currentColor; border-radius: 1px;
+}
+.lagenbild.ist-flach     { transform: scaleY(.34); }
+.lagenbild.ist-hoch      { transform: none; }
+.lagenbild.ist-links     { transform: rotate(-70deg); }
+.lagenbild.ist-rechts    { transform: rotate(70deg); }
+.lagenbild.ist-ruecklage { transform: scaleY(.66) skewX(-20deg); }
+.lagenmarke.ist-dran {
+  border-color: var(--neon); color: var(--neon-hell);
+  background: rgba(47, 227, 232, .12);
+  box-shadow: 0 0 16px var(--neon-schleier);
+}
+.lagenmarke.ist-fertig { border-color: var(--gruen); color: var(--gruen); background: rgba(63, 214, 160, .1); }
+.lagenziel { text-align: center; font-size: 18px; margin: 4px 0 0; }
+
+/* Schritte */
+.schrittzaehler {
+  text-align: center;
+  font-size: 56px; line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  color: var(--neon-hell);
+  margin: 18px 0 0;
+}
