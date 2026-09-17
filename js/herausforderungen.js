@@ -205,6 +205,13 @@
     return box;
   }
 
+  /* Eine Wartezeit auf das Budget stauchen, das der Notausgang aufspannt.
+   * budget 0 heisst: kein Notausgang, also keine Grenze. */
+  function aufBudget(sekunden, budget) {
+    if (!budget) return sekunden;
+    return Math.max(30, Math.min(sekunden, budget));
+  }
+
   function jitter(zufall, wert, anteil) {
     return Math.round(wert * zufall.bereich(1 - anteil, 1 + anteil));
   }
@@ -622,8 +629,8 @@
     dimension: 'zeit',
     name: 'Sperrfrist',
     kurz: 'Eine feste Zeitspanne verstreichen lassen',
-    erzeuge: function (zufall, stufe) {
-      return { sekunden: jitter(zufall, proStufe(stufe, [90, 600, 3600, 14400, 43200]), 0.25) };
+    erzeuge: function (zufall, stufe, budget) {
+      return { sekunden: aufBudget(jitter(zufall, proStufe(stufe, [90, 600, 3600, 14400, 43200]), 0.25), budget) };
     },
     schaetzung: function (p) { return p.sekunden; },
     beschreibe: function (p) { return util.dauer(p.sekunden) + ' Sperrfrist'; },
@@ -681,6 +688,12 @@
     id: 'zeitfenster',
     dimension: 'zeit',
     mindestStufe: 3,
+    /* Eine feste Tageszeit laesst sich nicht stauchen: Wer das Fenster
+     * knapp verpasst, wartet bis zum naechsten Tag. Diese Aufgabe kommt
+     * deshalb nur in Frage, wenn der Notausgang mindestens einen Tag weit
+     * weg ist - sonst waere er schneller als das Warten, und der
+     * Aufgabenweg waere sinnlos. */
+    budgetBedarf: 22 * 3600,
     name: 'Zeitfenster',
     kurz: 'Nur zu einer bestimmten Tageszeit zu öffnen',
     erzeuge: function (zufall, stufe) {
@@ -728,14 +741,23 @@
     dimension: 'zeit',
     name: 'Rückmeldungen',
     kurz: 'Mehrmals in einem Zeitfenster vorbeischauen',
-    erzeuge: function (zufall, stufe) {
+    erzeuge: function (zufall, stufe, budget) {
+      var anzahlBesuche = proStufe(stufe, [2, 3, 3, 4, 5]);
       var abstand = jitter(zufall, proStufe(stufe, [120, 900, 3600, 10800, 21600]), 0.2);
+      /* Gestaucht wird zuerst der Abstand: Dreimal in kurzen Abstaenden
+       * vorbeizuschauen bleibt dieselbe Uebung, nur enger. Unter eine Minute
+       * geht es aber nicht - dann muss die Anzahl der Besuche nachgeben,
+       * sonst hebelt der Mindestabstand die Deckelung aus. */
+      if (budget) {
+        abstand = Math.max(60, Math.min(abstand, Math.floor(budget / Math.max(1, anzahlBesuche - 1))));
+        while (anzahlBesuche > 2 && (anzahlBesuche - 1) * abstand > budget) anzahlBesuche--;
+      }
       /* Das Fenster wird mit der Intensität enger: Bei Stufe 1 hat man fast
        * anderthalb Mal den Abstand Zeit zum Zurückkommen, bei Stufe 5 nur ein
        * Viertel davon. */
       var anteil = [1.5, 1.0, 0.6, 0.4, 0.25][util.grenze(stufe, 1, 5) - 1];
       return {
-        anzahl: proStufe(stufe, [2, 3, 3, 4, 5]),
+        anzahl: anzahlBesuche,
         abstand: abstand,
         fenster: Math.max(60, Math.round(abstand * anteil))
       };
@@ -851,7 +873,7 @@
     dimensionRegistrieren: dimensionRegistrieren,
     dimensionen: dimensionen,
     werkzeug: { buehne: buehne, balken: balken, takt: takt, ton: ton, jitter: jitter,
-      proStufe: proStufe, antwortFeld: antwortFeld, wuerfel: wuerfel, wurf: wurf,
+      proStufe: proStufe, antwortFeld: antwortFeld, wuerfel: wuerfel, wurf: wurf, aufBudget: aufBudget,
       WURF_GEWINN: WURF_GEWINN, WURF_STRECKUNG: WURF_STRECKUNG }
   };
 })(typeof window !== 'undefined' ? window : globalThis);

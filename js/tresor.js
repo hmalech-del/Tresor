@@ -135,12 +135,36 @@
     return Math.max(20, Math.round(sekundenSchaetzung * (f.minFaktor + anteil * (f.maxFaktor - f.minFaktor))));
   }
 
+  /* Das Zeitbudget, das der Notausgang aufspannt.
+   *
+   * Wer den Ausgang auf drei Stunden setzt, sagt damit: laenger als drei
+   * Stunden habe ich nicht. Eine Aufgabe, die allein neunzehn Stunden
+   * wartet, bricht dieses Versprechen - und macht den Aufgabenweg sinnlos,
+   * weil der Ausgang dann immer die bessere Wahl waere.
+   *
+   * Massgeblich ist die Obergrenze der Spanne: Das ist das Schlimmste, worauf
+   * sich der Spieler eingelassen hat. Ohne Notausgang gibt es kein
+   * Versprechen und damit auch keine Grenze. */
+  function zeitBudget(konfig) {
+    var exit = konfig.notausgang || {};
+    var modus = exit.modus || (exit.maxSekunden ? 'geheim' : 'aus');
+    if (modus === 'aus') return 0;
+    if (modus === 'fest') return Math.max(0, exit.sekunden || 0);
+    return Math.max(exit.minSekunden || 0, exit.maxSekunden || 0);
+  }
+
   /* Aufgabenplan: zieht reihum aus einem gemischten Topf, damit sich innerhalb
    * eines Tresors nichts wiederholt, solange der Topf reicht - und variiert
    * danach wenigstens die Parameter. Typen, die zuletzt dran waren, rutschen
    * ans Ende des Topfes. */
   function aufgabenPlan(zufall, konfig, anzahlFragmente, nurVorschau) {
     var vermeiden = T.speicher ? T.speicher.zuletztBenutzt() : [];
+    /* Das Budget verteilt sich gleichmaessig auf alle Aufgabenplaetze: Die
+     * Summe aller Wartezeiten soll unter dem Notausgang bleiben, nicht nur
+     * jede einzelne. */
+    var budget = zeitBudget(konfig);
+    var plaetze = Math.max(1, anzahlFragmente * Math.max(1, konfig.aufgabenProFragment || 1));
+    var proPlatz = budget ? Math.max(30, Math.floor(budget / plaetze)) : 0;
     var toepfe = konfig.dimensionen.map(function (dimension) {
       var stufeDerDimension = konfig.stufen[dimension] || 3;
       var module = T.herausforderungen.nachDimension(dimension).filter(function (m) {
@@ -148,6 +172,10 @@
         if (m.mindestStufe && stufeDerDimension < m.mindestStufe) return false;
         // Sensoraufgaben nur, wenn sie beim Einrichten zugelassen wurden
         if (m.sensor && !konfig.sensoren) return false;
+        /* Aufgaben, deren Wartezeit sich nicht stauchen laesst - eine feste
+         * Tageszeit etwa - kommen nur in Frage, wenn der Notausgang weit
+         * genug weg ist. Sonst waere er schneller als das Warten. */
+        if (m.budgetBedarf && budget && budget < m.budgetBedarf) return false;
         return true;
       }).map(function (m) { return m.id; });
       if (!module.length) return null;
@@ -176,7 +204,7 @@
         var id = zieh(topf);
         var modul = T.herausforderungen.hole(id);
         if (!modul) continue;
-        var params = modul.erzeuge(zufall, stufe);
+        var params = modul.erzeuge(zufall, stufe, proPlatz);
         if (!params) continue;
         var loesung = null;
         if (modul.antwortGebunden) {
@@ -615,6 +643,7 @@
     FRIST_WERTE: FRIST_WERTE,
     standardKonfiguration: standardKonfiguration,
     blindKonfiguration: blindKonfiguration,
+    zeitBudget: zeitBudget,
     geschaetzteDauer: geschaetzteDauer,
     erstellen: erstellen,
     aktuellesFragment: aktuellesFragment,

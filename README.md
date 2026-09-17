@@ -834,6 +834,46 @@ Drei Schalter, die quer über alle Dimensionen wirken:
 
 ---
 
+## Das Zeitbudget
+
+Wer den Notausgang auf drei Stunden setzt, sagt damit: **länger als drei
+Stunden habe ich nicht.** Das ist ein Versprechen, und Aufgaben dürfen es nicht
+brechen. Genau das taten sie: Ein Tresor mit fünf Minuten Höchstzeit konnte ein
+Zeitfenster ziehen, das bis zum nächsten Abend wartet – neunzehn Stunden gegen
+fünf Minuten. Der Aufgabenweg war damit sinnlos, weil der Ausgang immer die
+bessere Wahl gewesen wäre.
+
+Der Notausgang spannt deshalb ein Budget auf (`zeitBudget` in `js/tresor.js`).
+Maßgeblich ist die **Obergrenze** der Spanne: das Schlimmste, worauf sich der
+Spieler eingelassen hat. Es verteilt sich gleichmäßig auf alle Aufgabenplätze,
+und jede wartende Aufgabe bekommt ihren Anteil als Deckel.
+
+| Notausgang | je Platz | längste Sperrfrist | längste Rückmeldung | Zeitfenster |
+|---|---|---|---|---|
+| aus | – | 15 h | 29 h | erlaubt |
+| 5 min | 60 s | 60 s | 60 s | ausgeschlossen |
+| 3 h | 36 min | 36 min | 36 min | ausgeschlossen |
+| 24 h | 4,8 h | 4,8 h | 4,8 h | erlaubt |
+
+**Ohne Notausgang gibt es keine Grenze** – kein Versprechen, keine Schranke.
+Wer keinen Ausgang setzt, hat sich auf alles eingelassen.
+
+Zwei Dinge waren dabei nicht offensichtlich:
+
+* **Was sich nicht stauchen lässt, wird ausgeschlossen.** Eine feste Tageszeit
+  ist keine Dauer – wer das Fenster knapp verpasst, wartet bis zum nächsten
+  Tag. Das Zeitfenster braucht deshalb ein Budget von mindestens 22 Stunden
+  (`budgetBedarf`), sonst kommt es gar nicht erst in den Topf.
+* **Ein Mindestabstand kann eine Deckelung aushebeln.** Bei den Rückmeldungen
+  wird zuerst der Abstand gestaucht, aber unter eine Minute geht es nicht – bei
+  fünf Besuchen blieben so immer vier Minuten stehen, egal wie klein das Budget
+  war. Reicht der Mindestabstand nicht, sinkt jetzt die Zahl der Besuche.
+
+Die **Summe** aller Aufgaben darf das Budget weiterhin überschreiten. Das ist
+kein Widerspruch: Der Notausgang ist die Alternative zum ganzen Weg, nicht zu
+einer einzelnen Prüfung. Ist der Weg länger, nimmt man eben den Ausgang – dafür
+ist er da.
+
 ## Wiederholbarkeit
 
 Damit sich zwei Durchläufe nicht gleich anfühlen:
