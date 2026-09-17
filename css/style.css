@@ -431,3 +431,5 @@ select, input[type=file] {
 .zahlenfeld.ist-weg { opacity: .28; border-color: transparent; background: var(--grund); }
 
 .marke-konzentration { color: #c49bff; border-color: rgba(196,155,255,.4); }
+
+.checkliste li.ist-spaet { color: var(--rot); }

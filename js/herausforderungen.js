@@ -636,20 +636,33 @@
     id: 'intervall',
     dimension: 'zeit',
     name: 'Rückmeldungen',
-    kurz: 'Mehrmals mit Mindestabstand vorbeischauen',
+    kurz: 'Mehrmals in einem Zeitfenster vorbeischauen',
     erzeuge: function (zufall, stufe) {
+      var abstand = jitter(zufall, proStufe(stufe, [120, 900, 3600, 10800, 21600]), 0.2);
+      /* Das Fenster wird mit der Intensität enger: Bei Stufe 1 hat man fast
+       * anderthalb Mal den Abstand Zeit zum Zurückkommen, bei Stufe 5 nur ein
+       * Viertel davon. */
+      var anteil = [1.5, 1.0, 0.6, 0.4, 0.25][util.grenze(stufe, 1, 5) - 1];
       return {
         anzahl: proStufe(stufe, [2, 3, 3, 4, 5]),
-        abstand: jitter(zufall, proStufe(stufe, [120, 900, 3600, 10800, 21600]), 0.2)
+        abstand: abstand,
+        fenster: Math.max(60, Math.round(abstand * anteil))
       };
     },
     schaetzung: function (p) { return (p.anzahl - 1) * p.abstand; },
-    beschreibe: function (p) { return p.anzahl + ' Check-ins im Abstand von ' + util.dauer(p.abstand); },
+    beschreibe: function (p) {
+      return p.anzahl + ' Check-ins alle ' + util.dauer(p.abstand)
+        + ' (Fenster ' + util.dauer(p.fenster || p.abstand) + ')';
+    },
     starte: function (kontext) {
       var p = kontext.params, z = kontext.zustand;
+      var fenster = p.fenster || p.abstand;          // ältere Tresore kannten kein Fenster
       if (!z.checkins) { z.checkins = []; kontext.speichern(); }
+
       var b = buehne(kontext, 'Rückmeldungen',
-        p.anzahl + ' Mal vorbeischauen, jeweils mindestens ' + util.dauer(p.abstand) + ' auseinander.');
+        p.anzahl + ' Mal vorbeischauen: frühestens ' + util.dauer(p.abstand) + ' nach dem letzten Mal, '
+        + 'und dann innerhalb von ' + util.dauer(fenster) + '. Wer zu spät kommt, dessen Besuch zählt nicht - '
+        + 'der Abstand beginnt von vorn.');
       var anzeige = el('div', { class: 'countdown', text: '--:--' });
       var knopf = el('button', { class: 'knopf gross', type: 'button', text: 'Check-in' });
       var liste = el('ul', { class: 'checkliste' });
@@ -659,33 +672,75 @@
 
       function zeichneListe() {
         util.leeren(liste);
-        z.checkins.forEach(function (ts, i) {
-          liste.appendChild(el('li', { text: (i + 1) + '. ' + util.zeitpunkt(ts) }));
+        z.checkins.forEach(function (eintrag) {
+          var ts = typeof eintrag === 'number' ? eintrag : eintrag.ts;
+          var zuSpaet = typeof eintrag === 'object' && eintrag.spaet;
+          liste.appendChild(el('li', {
+            class: zuSpaet ? 'ist-spaet' : '',
+            text: (z.checkins.indexOf(eintrag) + 1) + '. ' + util.zeitpunkt(ts) + (zuSpaet ? ' – zu spät' : '')
+          }));
         });
+      }
+
+      /* Verspätete Besuche stehen in der Liste, zählen aber nicht. Sie einfach
+       * mitzuzählen und dafür einen weiteren zu verlangen, hiesse: Wer immer
+       * zu spät kommt, kommt nie ans Ziel. */
+      function erledigte() {
+        return z.checkins.filter(function (eintrag) {
+          return !(typeof eintrag === 'object' && eintrag.spaet);
+        }).length;
+      }
+
+      function letzterZeitpunkt() {
+        if (!z.checkins.length) return 0;
+        var letzter = z.checkins[z.checkins.length - 1];
+        return typeof letzter === 'number' ? letzter : letzter.ts;
       }
 
       knopf.addEventListener('click', function () {
         if (knopf.disabled) return;
-        z.checkins.push(Date.now());
+        var jetzt = Date.now();
+        var letzter = letzterZeitpunkt();
+        var frei = letzter ? letzter + p.abstand * 1000 : 0;
+        var schluss = frei + fenster * 1000;
+        var zuSpaet = letzter && jetzt > schluss;
+
+        z.checkins.push({ ts: jetzt, spaet: !!zuSpaet });
         kontext.speichern();
         zeichneListe();
+        if (zuSpaet) {
+          b.sag('Zu spät - dieser Besuch zählt nicht. Die ' + util.dauer(p.abstand) + ' laufen von vorn.', 'fehler');
+          if (kontext.fehlschlag('Zeitfenster verpasst.')) return;
+          return;
+        }
         ton(620, 0.12);
-        if (z.checkins.length >= p.anzahl) { stopp(); kontext.fertig(); }
+        b.sag('Notiert.', 'gut');
+        if (erledigte() >= p.anzahl) { stopp(); ton(660, 0.3); kontext.fertig(); }
       });
 
       zeichneListe();
       var stopp = takt(function () {
-        var letzter = z.checkins.length ? z.checkins[z.checkins.length - 1] : 0;
-        var frei = letzter + p.abstand * 1000;
-        var rest = (frei - Date.now()) / 1000;
-        if (rest > 0) {
+        var letzter = letzterZeitpunkt();
+        var frei = letzter ? letzter + p.abstand * 1000 : Date.now();
+        var schluss = frei + fenster * 1000;
+        var jetzt = Date.now();
+        var offen = p.anzahl - erledigte();
+
+        if (jetzt < frei) {
           knopf.disabled = true;
-          anzeige.textContent = util.uhrwerk(rest);
-          b.sag('Nächstes Check-in ' + util.zeitpunkt(frei) + '.', '');
+          anzeige.textContent = util.uhrwerk((frei - jetzt) / 1000);
+          b.sag('Noch ' + offen + ' Mal. Fenster öffnet ' + util.zeitpunkt(frei)
+            + ' und bleibt ' + util.dauer(fenster) + ' offen.', '');
+          return;
+        }
+        knopf.disabled = false;
+        if (jetzt <= schluss) {
+          anzeige.textContent = util.uhrwerk((schluss - jetzt) / 1000);
+          b.sag('Fenster ist offen - noch ' + util.dauer((schluss - jetzt) / 1000) + '.', 'gut');
         } else {
-          knopf.disabled = false;
-          anzeige.textContent = 'bereit';
-          b.sag('Check-in ' + (z.checkins.length + 1) + ' von ' + p.anzahl + ' möglich.', 'gut');
+          anzeige.textContent = '+' + util.uhrwerk((jetzt - schluss) / 1000);
+          b.sag('Fenster seit ' + util.dauer((jetzt - schluss) / 1000) + ' zu. Ein Besuch jetzt zählt nicht mehr - '
+            + 'der Abstand würde von vorn beginnen.', 'fehler');
         }
       });
 

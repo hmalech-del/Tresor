@@ -217,7 +217,7 @@ Reihenfolge wird je Tresor gemischt, damit es nicht immer dieselbe trifft.
 |---|---|
 | **Sperrfrist** | Feste Wartezeit von Minuten bis Stunden, App darf zu sein |
 | **Zeitfenster** | Nur zu einer bestimmten Tageszeit zu öffnen (ab Intensität 3) |
-| **Rückmeldungen** | Mehrmals vorbeischauen, mit Mindestabstand dazwischen |
+| **Rückmeldungen** | Mehrmals vorbeischauen – frühestens nach dem Mindestabstand und dann **innerhalb eines Fensters**. Wer zu spät kommt, dessen Besuch zählt nicht: Der Abstand beginnt von vorn, dazu gibt es Strafzeit. Das Fenster wird mit der Intensität enger (Stufe 1: das 1,5-Fache des Abstands, Stufe 5: ein Viertel davon) |
 | **Zeitschloss** | Die echte Rechenarbeit – immer die letzte Hürde vor der Ziffer |
 
 ### Glück
