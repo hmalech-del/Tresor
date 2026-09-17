@@ -136,7 +136,7 @@
       ? !!zustand.bild
       : /^\d+$/.test(zustand.geheimnis) && zustand.geheimnis.length === zustand.laenge;
     var blind = $('#blindgang') && $('#blindgang').checked;
-    var dimensionen = blind ? ['blindgang'] : aktiveDimensionen();
+    var dimensionen = blind ? ['meine-regeln'] : aktiveDimensionen();
     var passAn = $('#passphrase-aktiv') && $('#passphrase-aktiv').checked;
     var pass = passAn ? $('#passphrase').value : '';
     var passWdh = passAn ? $('#passphrase-wdh').value : '';
@@ -205,7 +205,7 @@
     });
   }
 
-  /* Blindgang: keine Zahl, die die Zukunft verrät.
+  /* "Meine Regeln": keine Zahl, die die Zukunft verrät.
    *
    * Was schon passiert ist, darf stehen bleiben - drei von fünf Fragmenten
    * sind offen, das sieht man ohnehin am Band. Weg muss alles, woraus sich
@@ -370,7 +370,7 @@
     var anzeige = $('#schaetzung');
     if (!anzeige) return;
 
-    /* Im Blindgang gibt es nichts zu schätzen - das ist der Punkt. Der
+    /* Unter "meinen Regeln" gibt es nichts zu schätzen - das ist der Punkt. Der
      * Notausgang zahlt dort immer in Rechenzeit. */
     if ($('#blindgang') && $('#blindgang').checked) {
       anzeige.textContent = 'Das erfährst du nicht.';
@@ -679,13 +679,14 @@
     var blindTeil = el('section', { class: 'karte blindkarte' }, [
       el('label', { class: 'schalterzeile' }, [
         el('input', { type: 'checkbox', id: 'blindgang' }),
-        el('span', { class: 'blindtitel', text: 'Blindgang' })
+        el('span', { class: 'blindtitel', text: 'Meine Regeln' })
       ]),
       el('p', { class: 'flaut klein', text:
-        'Du setzt den Notausgang. Den Rest bestimme ich - wie viele Prüfungen, welche, wie hart. '
+        'Du setzt den Notausgang. Alles andere bestimme ich - wie viele Prüfungen, welche, wie hart. '
         + 'Kein Fahrplan, keine Schätzung, keine Uhr. Du erfährst nichts, bis es so weit ist.' }),
       el('p', { class: 'warnung versteckt', id: 'blindgang-warnung', text:
-        'Immer eisern. Setz den Notausgang so, dass du damit leben kannst - du weisst nicht, wie lang der Weg wird.' })
+        'Immer eisern, immer mit Strafen. Setz den Notausgang so, dass du damit leben kannst - '
+        + 'du weisst nicht, wie lang der Weg wird.' })
     ]);
 
     var stationTeil = el('section', { class: 'karte versteckt', id: 'stationkarte' }, [
@@ -823,10 +824,10 @@
     });
     $('#sensoren-freigeben').addEventListener('click', function () { sensorlageZeigen(true); });
     sensorlageZeigen(false);
-    /* Im Blindgang zieht der Game Master die Dimensionen selbst - Stationen
+    /* Unter "meinen Regeln" zieht der Game Master die Dimensionen selbst - Stationen
      * kämen ohne beschriebene Marken nicht zustande. */
 
-    /* Blindgang blendet alles aus, was der Game Master selbst entscheidet - bis
+    /* Der Modus blendet alles aus, was der Game Master selbst entscheidet - bis
      * auf den Notausgang, der in den Zeitregeln stehen bleibt. */
     function blindgangAnwenden() {
       var an = $('#blindgang').checked;
@@ -1171,21 +1172,24 @@
       exitAnzeigeAktualisieren();          // erst jetzt hängt die Karte im Dokument
     }
 
-    if (!(tresor.konfig || {}).blind) {
+    /* Unter "meinen Regeln" gibt es keinen Fahrplan - auch keine leere Karte,
+     * die daran erinnert. Was es nicht gibt, soll auch keinen Platz belegen. */
+    if (!imDunkeln()) {
       wurzel.appendChild(el('section', { class: 'karte' }, [
         el('h2', { text: 'Fahrplan' }),
         fragmentUebersicht()
       ]));
-    } else {
-      wurzel.appendChild(el('section', { class: 'karte' }, [
-        el('h2', { text: 'Fahrplan' }),
-        el('p', { class: 'wachterwort', text: T.stimme.sag('dunkel') })
-      ]));
     }
 
-    /* Kurzurteil oben, Innenleben zugeklappt darunter. */
+    /* Verlauf, Sicherung, Löschen und das Innenleben sind Verwaltung. Sie
+     * müssen erreichbar sein, aber sie gehören nicht in den Weg: Auf dem
+     * Bildschirm, auf dem man eine Prüfung ablegt, ist jede Karte, die nichts
+     * mit ihr zu tun hat, Lärm. Deshalb eine einzige zugeklappte Lade. */
     var gebunden = gebundeneAufgaben(tresor);
-    var infoKarte = el('section', { class: 'karte flaut klein' }, [
+    var lade = el('details', { class: 'verwaltung' });
+    lade.appendChild(el('summary', { text: 'Verwaltung' }));
+
+    lade.appendChild(el('section', { class: 'karte flaut klein' }, [
       el('p', { text: tresor.fragmente[0].schloss
         ? 'Eisern. Jedes Fragment liegt unter einem Bann, den nur Zeit bricht.'
         : 'Nachsichtig. Es hält dich nichts als dein eigener Vorsatz.' }),
@@ -1194,28 +1198,28 @@
         : 'Keine Prüfung hält den Schlüssel. Du hältst dich selbst auf.' }),
       T.tresorLogik.brauchtPassphrase(tresor)
         ? el('p', { text: 'Dazu die Passphrase. Ohne sie: nichts. Auch nicht der Notausgang.' })
-        : null
-    ]);
-    infoKarte.appendChild(technikZeile(
-      (tresor.fragmente[0].schloss
-        ? 'Zeitschlösser: ' + tresor.fragmente[0].schloss.t.toLocaleString('de-DE')
-          + ' sequentielle Quadrierungen modulo einer 1024-Bit-Zahl, gemessen mit '
-          + (tresor.rate || 0).toLocaleString('de-DE') + ' Quadrierungen/s auf diesem Gerät. '
-        : 'Ohne Zeitschloss liegen die Schlüsselanteile offen im Browser-Speicher. ')
-      + (gebunden
-        ? gebunden + ' Aufgaben sind an den Schlüssel gebunden: gespeichert ist nur ein Prüfwert mit '
-          + (tresor.fragmente[0].iterationen || 0).toLocaleString('de-DE') + ' PBKDF2-Runden. '
-        : '')
-      + (T.tresorLogik.brauchtPassphrase(tresor)
-        ? 'Die Passphrase geht über PBKDF2 in jeden Fragmentschlüssel und in den Notausgang ein und liegt nirgends - auch nicht in einer Sicherung. '
-        : '')
-      + 'Fragmente sind einzeln AES-256-GCM-verschlüsselt.'));
-    infoKarte.appendChild(el('button', { class: 'knopf gefahr', type: 'button', text: 'Tresor löschen', onclick: tresorLoeschen }));
-    wurzel.appendChild(infoKarte);
+        : null,
+      technikZeile(
+        (tresor.fragmente[0].schloss
+          ? 'Zeitschlösser: ' + tresor.fragmente[0].schloss.t.toLocaleString('de-DE')
+            + ' sequentielle Quadrierungen modulo einer 1024-Bit-Zahl, gemessen mit '
+            + (tresor.rate || 0).toLocaleString('de-DE') + ' Quadrierungen/s auf diesem Gerät. '
+          : 'Ohne Zeitschloss liegen die Schlüsselanteile offen im Browser-Speicher. ')
+        + (gebunden
+          ? gebunden + ' Aufgaben sind an den Schlüssel gebunden: gespeichert ist nur ein Prüfwert mit '
+            + (tresor.fragmente[0].iterationen || 0).toLocaleString('de-DE') + ' PBKDF2-Runden. '
+          : '')
+        + (T.tresorLogik.brauchtPassphrase(tresor)
+          ? 'Die Passphrase geht über PBKDF2 in jeden Fragmentschlüssel und in den Notausgang ein und liegt nirgends - auch nicht in einer Sicherung. '
+          : '')
+        + 'Fragmente sind einzeln AES-256-GCM-verschlüsselt.'),
+      el('button', { class: 'knopf gefahr', type: 'button', text: 'Tresor löschen', onclick: tresorLoeschen })
+    ]));
 
-    wurzel.appendChild(sicherungsKarte());
+    lade.appendChild(sicherungsKarte());
     var verlauf = verlaufKarte();
-    if (verlauf) wurzel.appendChild(verlauf);
+    if (verlauf) lade.appendChild(verlauf);
+    wurzel.appendChild(lade);
   }
 
   /* Wie lange der Notausgang dauert - bei blinden Schlössern ist das

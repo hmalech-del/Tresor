@@ -22,7 +22,7 @@
       sicherheit: 'rechenzeit',      // 'rechenzeit' = Zeitschloss, sonst: ohne Rechenzeit
       sensoren: false,               // Lagesensoren nur, wenn das Gerät sie wirklich hat
       gluecksspiel: false,           // Wartezeiten dürfen verwürfelt werden
-      blind: false,                  // Blindgang: der Game Master wuerfelt alles aus und sagt nichts
+      blind: false,                  // "Meine Regeln": der Game Master wuerfelt alles aus und sagt nichts
       strafe: 0,
       erinnerungen: false,           // gehört zum Tresor: selbst dran denken ist eine Option
       geheimeFrist: {

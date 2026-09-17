@@ -650,3 +650,22 @@ select, input[type=file] {
 @media (prefers-reduced-motion: reduce) {
   .nfcwelle > i { animation: none; opacity: .3; }
 }
+
+/* ---------- Verwaltung: erreichbar, aber nicht im Weg ---------- */
+
+.verwaltung { margin-top: 26px; }
+.verwaltung > summary {
+  cursor: pointer;
+  list-style: none;
+  color: var(--flaut);
+  font-size: 14px;
+  padding: 10px 2px;
+  text-align: center;
+  letter-spacing: .06em;
+  text-transform: lowercase;
+}
+.verwaltung > summary::-webkit-details-marker { display: none; }
+.verwaltung > summary::before { content: '▸ '; }
+.verwaltung[open] > summary::before { content: '▾ '; }
+.verwaltung > summary:hover { color: var(--text); }
+.verwaltung .karte { margin-top: 12px; }

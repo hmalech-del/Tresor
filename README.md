@@ -623,6 +623,23 @@ Sensoraufgaben.
 mit einem gefälschten `NDEFReader` im Test. Der erste Lauf mit echten Marken
 auf einem echten Android steht noch aus.
 
+## Was auf den Bildschirm gehört
+
+Verlauf, Sicherung, Löschen und das technische Innenleben sind Verwaltung. Sie
+müssen erreichbar sein, aber sie gehören nicht in den Weg: Auf dem Bildschirm,
+auf dem man eine Prüfung ablegt, ist jede Karte, die nichts mit ihr zu tun hat,
+Lärm. Sie liegen deshalb in einer einzigen zugeklappten Lade („verwaltung") am
+Fuß der Seite.
+
+Übrig bleiben drei Karten: das Band mit dem, was schon frei ist, die aktuelle
+Prüfung, der Notausgang. Unter „meinen Regeln" fällt der Fahrplan ganz weg –
+auch keine leere Karte, die daran erinnert. Was es nicht gibt, soll auch
+keinen Platz belegen.
+
+Der Einrichtungsbildschirm bleibt, wie er ist: Dort ist Konfigurieren die
+Aufgabe, und die Sicherung einzulesen ist der Weg zurück, wenn ein Tresor
+verloren ging.
+
 ## Der Ton
 
 Die Oberfläche bedient niemanden. Sie gehört einem **Game Master**, der die
@@ -645,7 +662,12 @@ Zeitschloss ist der **Bann**, die Strafzeit die **Strafe**, Aufgaben sind
 zugeklappt hinter „Was dahintersteckt". Diese README bleibt davon unberührt;
 sie ist für Entwickler und darf erklären.
 
-## Blindgang
+## Meine Regeln
+
+Der harte Modus. Er hieß zuerst „Blindgang" – ein schlechtes Wort, weil es auf
+Deutsch auch die Fehlzündung meint. Der Game Master spricht in der ersten
+Person, also heißt der Modus, was er ist: **seine** Regeln. Der Schlüssel in
+der Konfiguration bleibt `blind`; der beschreibt die Mechanik.
 
 Der harte Modus. Du setzt genau einen Wert: den Notausgang. Alles andere zieht
 der Wächter selbst – wie viele Aufgaben je Fragment, aus welchen Dimensionen,
@@ -655,22 +677,22 @@ nur die Aufgabe, die gerade vor dir liegt.
 
 Gezogen wird mit `crypto.getRandomValues`, nicht mit dem Saat-Strom des
 Tresors. Das ist wichtig: Die Saat liegt gespeichert im Tresor, aus ihr ließe
-sich der ganze Plan nachrechnen. Der Blindgang läuft immer eisern, Strafen sind
+sich der ganze Plan nachrechnen. Der Modus läuft immer eisern, Strafen sind
 immer an, das Glücksspiel ist immer an.
 
 ### Keine Zahl, die die Zukunft verrät
 
-Im Blindgang verschwindet jede Anzeige, aus der sich ablesen ließe, wie lange
+Unter „meinen Regeln" verschwindet jede Anzeige, aus der sich ablesen ließe, wie lange
 es noch dauert. Was bereits geschehen ist, bleibt stehen – drei von fünf
 Fragmenten offen sieht man ohnehin am Band.
 
-| | normal | Blindgang |
+| | normal | Meine Regeln |
 |---|---|---|
 | Bann | Countdown und Prozent | `· · ·`, kein Balken |
 | Strafe | Countdown | `· · ·` |
 | Sperrfrist | Countdown und Termin | `· · ·`, „Komm wieder, wenn du glaubst, dass es so weit ist." |
 | Notausgang | verstrichen / verbleibend, Balken | nur der Knopf |
-| Fahrplan | alle Fragmente und Prüfungen | ein Satz des Game Masters |
+| Fahrplan | alle Fragmente und Prüfungen | gibt es nicht |
 | Schätzung | „ungefähr 2 h 40 min" | „Das erfährst du nicht." |
 
 Ausgenommen sind Prüfungen, die ohne Uhrzeit **unlösbar** wären: Wer zu einem
@@ -685,7 +707,7 @@ Einzige, was du selbst festlegst.
 
 ## Das Glücksspiel
 
-Optional, in den Zeitregeln zuschaltbar (im Blindgang immer an). Bei jeder
+Optional, in den Zeitregeln zuschaltbar (unter „meinen Regeln" immer an). Bei jeder
 Sperrfrist und jeder Strafe darfst du **einmal** würfeln:
 
 * **5 oder 6** – die Wartezeit fällt weg.

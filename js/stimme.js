@@ -92,7 +92,7 @@
       'Keine Ausrüstung, kein Rabatt.',
       'Du weichst aus. Das kostet.'
     ],
-    /* Blindgang: was der Spieler nicht erfährt */
+    /* "Meine Regeln": was der Spieler nicht erfaehrt */
     dunkel: [
       'Du erfährst es nicht.',
       'Das geht dich nichts an.',
