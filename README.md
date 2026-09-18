@@ -403,6 +403,37 @@ Details – warum das an die Fähigkeit und nicht an das Gerät gebunden ist, un
 was passiert, wenn der Sensor fehlt – stehen unter
 [Sensoraufgaben und der Ersatzweg](#sensoraufgaben-und-der-ersatzweg).
 
+### Probelauf
+
+Ob eine Übung zu schaffen ist, zeigt sich erst beim Spielen – und dann steht
+der Tresor schon zu. Der Knopf „Prüfungen ausprobieren" am Fuß der Einrichtung
+führt auf einen Bildschirm, der jede Prüfung einzeln startet, in jeder
+Intensität, ohne Folgen: kein Tresor wird angefasst, nichts gespeichert, keine
+Strafe droht.
+
+Je Prüfung ein Regler für die Intensität, darunter die gezogenen Parameter und
+die Schätzung. Nach einem Lauf meldet der Bericht, **wie lange du wirklich
+gebraucht hast, was geschätzt war und wie oft es danebenging** – genau die drei
+Zahlen, um die es bei der Frage „ist das fair?" geht.
+
+Drei Anpassungen machen den Modus erst brauchbar:
+
+* **Wartezeiten sind auf 45 Sekunden gestaucht.** Niemand testet eine
+  zwölfstündige Sperrfrist in Echtzeit. Dafür dient das Budget, das
+  `erzeuge(zufall, stufe, budget)` ohnehin kennt.
+* **Gebundene Rätsel zeigen ihre Lösung auf Knopfdruck.** Hier geht es um
+  Spielbarkeit, nicht ums Bestehen.
+* **Bei Stationen zählt jede lesbare Marke.** Es gibt noch keine richtige – die
+  Frage ist, ob das Gerät überhaupt NFC liest. Dafür wird ein Markenvorrat
+  vorgetäuscht, der beim Verlassen wieder geleert wird, damit der nächste
+  Tresor nicht auf Marken baut, die es nicht gibt.
+* **Der Ersatzweg hält sich heraus** (`kontext.probe`). Wer eine Sensoraufgabe
+  testen will, hat den Sensor oder nicht; zehn Minuten Rechnen beantworten die
+  Frage nicht.
+
+Die Ruhige Hand war zu streng, die Schritte hatten zu wenig Zeit – beides wäre
+hier in zwei Minuten aufgefallen statt in einem verriegelten Tresor.
+
 ### Eine eigene Aufgabe hinzufügen
 
 Alle sechs Dimensionen sind besetzt; weitere Aufgaben brauchen nur ein Objekt
@@ -969,4 +1000,5 @@ unverändert.
 | `js/speicher.js` | `localStorage`, Verlauf, benutzte Aufgabentypen |
 | `js/sicherung.js` | Export und Import als Datei, optional verschlüsselt |
 | `js/erinnerung.js` | Anlässe für Benachrichtigungen, Erlaubnis, Versand |
+| `js/probe.js` | Probelauf: jede Prüfung einzeln, ohne Folgen |
 | `js/app.js` | Oberfläche und Ablauf |

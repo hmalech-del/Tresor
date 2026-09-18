@@ -735,3 +735,33 @@ select, input[type=file] {
    ist - deshalb sticht sie in der Reihe hervor. */
 .stufenbild.ist-entscheidend img { border-color: var(--gold); }
 .stufenbild.ist-entscheidend figcaption { color: var(--gold-hell); }
+
+/* ---------- Probelauf ---------- */
+
+.probe-zeile {
+  border-top: 1px solid var(--rand);
+  padding: 14px 0 4px;
+}
+.probe-zeile:first-of-type { border-top: none; }
+.probe-kopf { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.probe-marke {
+  font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
+  border: 1px solid var(--rand); border-radius: 6px;
+  padding: 1px 6px; color: var(--flaut);
+}
+.probe-regler { display: flex; align-items: center; gap: 10px; margin: 8px 0 4px; }
+.probe-regler .probe-stufe { flex: 1; }
+.probe-stufenzahl { color: var(--neon); min-width: 18px; text-align: right; font-variant-numeric: tabular-nums; }
+.probe-vorschau { margin: 2px 0 10px; min-height: 1.4em; }
+
+.probe-gruppe > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px;
+  padding: 2px 0;
+}
+.probe-gruppe > summary::-webkit-details-marker { display: none; }
+.probe-gruppe > summary strong::before { content: '▸ '; color: var(--flaut); }
+.probe-gruppe[open] > summary strong::before { content: '▾ '; }
+.probe-gruppe > summary:hover strong { color: var(--neon-hell); }

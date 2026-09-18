@@ -141,6 +141,18 @@
       };
     }
 
+    /* Im Probelauf gibt es keinen Ersatzweg: Wer eine Sensoraufgabe testen
+     * will, hat entweder den Sensor oder eben nicht - zehn Minuten rechnen
+     * beantwortet die Frage nicht. */
+    if (kontext.probe) {
+      util.leeren(b.koerper);
+      b.koerper.appendChild(el('p', { class: 'warnung', text: grund }));
+      b.koerper.appendChild(el('p', { class: 'flaut klein', text:
+        'Im Ernstfall gäbe es hier den Ersatzweg: ' + util.dauer(sekunden)
+        + (mitRechenzeit ? ' rechnen.' : ' warten.') + ' Im Probelauf nicht.' }));
+      return function () {};
+    }
+
     // Schon begonnen? Dann gibt es kein Zurück mehr.
     if (z.ersatzFertig) { kontext.fertig(); return function () {}; }
     if (z.ersatz) rechnen();

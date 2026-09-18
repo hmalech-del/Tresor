@@ -746,6 +746,15 @@
     wurzel.appendChild(feinTeil);
     wurzel.appendChild(abschluss);
 
+    /* Probelauf: Ob eine Uebung zu schaffen ist, zeigt sich erst beim
+     * Spielen - und dann steht der Tresor schon zu. */
+    wurzel.appendChild(el('section', { class: 'karte' }, [
+      el('p', { class: 'flaut klein', text:
+        'Unsicher, ob eine Prüfung zu schaffen ist? Probier sie aus, bevor du verriegelst.' }),
+      el('button', { class: 'knopf', type: 'button', text: 'Prüfungen ausprobieren',
+        onclick: function () { T.probe.zeige(zeichneEinrichten); } })
+    ]));
+
     ziffernFelder($('#ziffernfelder'));
 
     $('#laenge').addEventListener('change', function () {
