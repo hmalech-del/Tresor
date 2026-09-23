@@ -114,7 +114,7 @@ kabel_d   = 12;
 /* Welche Platine eingebaut wird, entscheidet nur das Bett - nicht die Kiste.
  * Hinter dem Block liegen 120 x 42 mm freier Boden; da passt jedes gaengige
  * ESP32-Board hinein. Waehle hier, wofuer der Sockel gedruckt wird. */
-platine = "supermini";       // supermini | devkit
+platine = "devkit";          // devkit | supermini
 platine_x = (platine == "devkit") ? 55 : 24;   // Laenge, zeigt zur Buchse hin
 platine_y = (platine == "devkit") ? 28 : 19;   // Breite
 

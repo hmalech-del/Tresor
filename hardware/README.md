@@ -34,19 +34,56 @@ konstruiert.
 
 | # | Teil | Worauf achten | ca. |
 |---|---|---|---|
-| 1 | **ESP32-C3 Supermini** *oder* **ESP32 DevKitC** | beide passen. Der Sockel wird für eines von beiden gedruckt – siehe unten. Mit **vorverlöteter Stiftleiste** kaufen, sonst brauchst du einen Lötkolben | 4 € |
-| 2 | **Servo SG90** (9 g) | Rumpf 23,2 × 12,4 × 23 mm, Flanschabstand 32,5 mm. **MG90S** (Metallgetriebe) ist maßgleich und hält länger | 3 € |
+| 1 | **ESP32 DevKitC**, 30 oder 38 Pin | Platine bis 55 × 28 mm. **Stiftleisten vorverlötet** – sonst brauchst du einen Lötkolben. Gleich **zwei** nehmen | 6 € |
+| 2 | **Servo MG90S** (9 g) | Rumpf 23,2 × 12,4 × 23 mm, Flanschabstand 32,5 mm. Der billigere **SG90** ist maßgleich, hat aber Plastikgetriebe | 3 € |
 | 3 | **Servohorn, einarmig** | liegt dem Servo bei. Braucht ein Loch **9 mm von der Mitte** – die äußerste Bohrung, notfalls auf 3 mm aufbohren | – |
 | 4 | **Elko 1000 µF, ≥ 6,3 V** | radial, Raster 5 mm | 0,50 € |
 | 5 | **M3-Schraube, 12 mm** | Zylinderkopf, plus **eine M3-Mutter** zum Kontern | 0,20 € |
-| 6 | **Dupont-Litzen, 3 ×** | weiblich/weiblich, 10–20 cm | 1 € |
-| 7 | **USB-Kabel + 5-V-Netzteil, ≥ 1 A** | passend zum Board (C oder Micro). Eine Powerbank geht auch | 5 € |
-| 8 | **Kabelbinder, klein** | Zugentlastung innen an der Wand | – |
-| 9 | **PETG-Filament, ca. 175 g** | **kein PLA** – das kriecht unter Dauerlast | 4 € |
+| 6 | **Dupont-Litzen** | weiblich/weiblich, 10–20 cm. Gebraucht werden 3, gekauft wird ein 40er-Satz | 2 € |
+| 7 | **USB-Kabel + 5-V-Netzteil, ≥ 1 A** | **Datenkabel**, kein reines Ladekabel. Steckertyp prüfen: ältere DevKits haben Micro-USB | 5 € |
+| 8 | **Kabelbinder, klein** | Zugentlastung, kommt durch den Tunnel im Platinensockel | – |
+| 9 | **PETG-Filament, ca. 180 g** | **kein PLA** – das kriecht unter Dauerlast | 4 € |
 
-**Zusammen rund 18 €**, ohne Filament 14 €.
+**Zusammen rund 21 €**, ohne Filament 17 € – inklusive des zweiten Boards.
 
 Schrauben fürs Servo (2 ×, selbstschneidend) liegen dem Servo bei.
+
+### Wo kaufen
+
+| | Preis | Lieferung | wofür |
+|---|---|---|---|
+| **AliExpress** | am niedrigsten | 2–4 Wochen | wenn du Zeit hast und mehrere Boards auf Vorrat nimmst |
+| **BerryBase, Eckstein, AZ-Delivery** | × 2 | 2–3 Tage | genau dafür gemacht: Pinout-Zettel liegt bei, Ersatz ohne Diskussion |
+| **Reichelt, Conrad** | × 2–3 | 2–3 Tage | wenn du ohnehin Kleinteile brauchst – Kondensator, Schrauben, Kabelbinder |
+| **Amazon** | × 2–3 | 1–2 Tage | dieselben Klone, nur schneller und teurer |
+
+Praktisch: Netzteil, Kabelbinder und M3-Schraube hast du vermutlich schon.
+Wirklich bestellen musst du nur Board, Servo und Kondensator – das geht in
+**einer** Bestellung bei einem der deutschen Händler.
+
+### Tipps
+
+**Zwei Boards.** Sie kosten 3 €. Eines wirst du irgendwann mit einer
+verdrehten Leitung oder einem Kurzschluss am 5-V-Pin verlieren, und dann ist
+Samstagabend.
+
+**MG90S statt SG90.** Maßgleich, ein Euro mehr, Metallgetriebe. Das Plastik-
+getriebe des SG90 rundet ab, wenn der Riegel mal klemmt – und beim Einmessen
+klemmt er.
+
+**Servo-Set statt Einzelservo.** Vierer- oder Fünferpacks kosten kaum mehr
+als zwei einzelne, und die Hörner streuen: Du willst das auswählen, dessen
+äußerstes Loch am nächsten an 9 mm liegt.
+
+**Kondensator nicht einzeln bestellen.** Ein Elko kostet 30 Cent, das Porto
+das Zehnfache. Nimm ein Sortiment, oder leg ihn einer größeren Bestellung bei.
+
+**Datenkabel prüfen.** Das häufigste Gerät-meldet-sich-nicht-Problem ist ein
+reines Ladekabel ohne Datenadern. Wenn der Rechner beim Einstecken gar nichts
+sagt, liegt es fast immer daran und nicht am Board.
+
+**Nicht kaufen:** Servotester, Breadboard, Netzteilplatine. Drei Litzen gehen
+direkt vom Board ans Servo.
 
 ### Nur fürs Prüfstück
 
@@ -57,23 +94,18 @@ Zehntel. ESP32, Kondensator und Kabel brauchst du erst mit der Firmware.
 
 ### Warum diese Teile
 
-**Supermini oder DevKit – die Kiste ist beiden egal.** Hinter dem
-Verschlussblock liegen 120 × 42 mm freier Boden; selbst das größte
-38-Pin-DevKit misst 55 × 28. Gedruckt wird nur der Sockel unterschiedlich:
+**Der DevKit, nicht der kleine Supermini.** Die Kiste nimmt beide – hinter
+dem Verschlussblock liegen 120 × 42 mm freier Boden, das größte 38-Pin-Board
+misst 55 × 28. Der DevKit ist der bequemere: Stiftleisten angelötet, Pins
+beschriftet, Dupont-Litzen stecken direkt drauf, und geflasht wird über einen
+USB-UART-Wandler – das verzeiht mehr als der native USB des C3, der sich nach
+einem abgestürzten Sketch gern nur noch mit gedrückter BOOT-Taste meldet.
+
+Wer es doch klein will, druckt den Körper mit dem anderen Sockel:
 
 ```
-openscad -D 'teil="koerper"' -D 'platine="devkit"' -o koerper.stl tresorbox.scad
+openscad -D 'teil="koerper"' -D 'platine="supermini"' -o koerper.stl tresorbox.scad
 ```
-
-Nimm den **DevKit**, wenn du nicht löten willst: Stiftleisten sind
-angelötet, die Pins sind beschriftet, Dupont-Litzen stecken direkt drauf,
-und geflasht wird über einen USB-UART-Wandler – das verzeiht mehr als der
-native USB des C3.
-
-Nimm den **Supermini**, wenn du es klein und mit USB-C willst. Zwei Haken:
-Die Stiftleisten liegen meist lose bei, und die Antenne dieser Klone
-funkt schlecht. Für ein Schloss, vor dem du stehst, reicht sie – fürs
-halbe Haus nicht.
 
 **Der Kondensator ist nicht optional.** Ohne ihn bricht die Spannung beim
 Anlaufen des Servos ein und der ESP32 startet neu – jedes Mal, wenn das
