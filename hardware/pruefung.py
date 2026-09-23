@@ -134,6 +134,19 @@ pruefe("Riegel traegt genug", flaeche * 12 > 800,
        f"{flaeche:.0f} mm2 Scherflaeche -> etwa {flaeche*12/1000:.1f} kN bei PETG")
 print(f"  [info] Bauraum                      {innen_x+2*wand:.0f} x {innen_y+2*wand:.0f} x {innen_z+boden:.0f} mm")
 
+print("\nNutzraum")
+frei_y = innen_y - block_y
+platine_x, platine_y = p("platine_x"), p("platine_y")
+brutto = innen_x * frei_y * innen_z / 1000
+netto = (innen_x * frei_y * innen_z - platine_x * platine_y * 15) / 1000
+pruefe("Hinter dem Block bleibt Platz", frei_y > 25,
+       f"{innen_x:.0f} x {frei_y:.0f} x {innen_z:.0f} mm = {netto:.0f} cm3 nach Abzug der Platinenecke")
+print(f"  [info] Der Block frisst             {block_y:.0f} von {innen_y:.0f} mm Tiefe "
+      f"({block_y/innen_y*100:.0f} %)")
+handy_x, handy_y = 160, 75
+passt = innen_x >= handy_x and frei_y >= handy_y
+print(f"  [info] Handy (160 x 75) liegt flach {'ja' if passt else 'nein - innen_y muesste >= ' + str(int(block_y + handy_y)) + ' sein'}")
+
 print()
 if fehler:
     print("FEHLGESCHLAGEN: " + ", ".join(fehler))

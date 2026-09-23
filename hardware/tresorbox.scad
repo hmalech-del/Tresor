@@ -33,8 +33,14 @@ $fn = 48;
 innen_x = 120;               // Breite des Innenraums
 innen_y = 80;                // Tiefe
 innen_z = 45;                // Hoehe
-/* Handy flach hinlegen: innen_x = 165, innen_y = 85, innen_z = 30.
-   Das ist ein langer Druck - fang mit der kleinen Kiste an. */
+/* Der Verschlussblock steht vorn ueber die volle Breite und frisst die
+   ersten block_y Millimeter der Tiefe. Nutzbar ist also
+   innen_x x (innen_y - block_y) x innen_z; pruefung.py rechnet es aus.
+
+   Handy flach hinlegen: innen_x = 175, innen_y = 125, innen_z = 25.
+   In der ersten Fassung stand hier innen_y = 85 - das waren nach Abzug des
+   Blocks 47 mm freie Tiefe, und ein Handy ist 75 breit. Es haette nicht
+   hineingepasst. Das ist ein langer Druck; fang mit der kleinen Kiste an. */
 
 /* ---------- Druck ---------- */
 wand    = 3;
@@ -337,8 +343,11 @@ module pruefstueck() {
     difference() {
       intersection() {
         koerper();
-        translate([-30, wand + zunge_y - scheibe/2, boden])
-          cube([46, scheibe, innen_z]);
+        /* Reicht bis hinter die Servotasche: So laesst sich auch das Servo
+         * probehalber einsetzen. Klone streuen um bis zu drei Zehntel, und
+         * das merkt man lieber am Pruefstueck als an der fertigen Kiste. */
+        translate([servo_achse_x - servo_achse_versatz - 8, wand + zunge_y - scheibe/2, boden])
+          cube([(riegel_spitze_zu + 10) - (servo_achse_x - servo_achse_versatz - 8), scheibe, innen_z]);
       }
       translate([-60, -10, 0]) cube([200, 200, schnitt_z]);
     }

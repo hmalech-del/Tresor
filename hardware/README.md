@@ -72,10 +72,20 @@ nach oben offen.
 openscad -D 'teil="pruefstueck"' -o pruefstueck.stl tresorbox.scad
 ```
 
-53 × 57 × 21 mm, rund 20 Minuten. Darin steckt der Ausschnitt des Blocks mit
-Riegelbohrung und Zungenschlitz, dazu ein kurzer Riegel und eine kurze Zunge –
-erzeugt aus **denselben Modulen** wie die Kiste. Baute man es nach, prüfte es
-seine eigene Kopie.
+60 × 57 × 21 mm, rund 25 Minuten. Darin steckt der Ausschnitt des Blocks mit
+Riegelbohrung, Zungenschlitz **und der vollständigen Servotasche**, dazu ein
+kurzer Riegel und eine kurze Zunge – erzeugt aus **denselben Modulen** wie die
+Kiste. Baute man es nach, prüfte es seine eigene Kopie.
+
+**Was du dafür brauchst:** für den rein mechanischen Test gar nichts außer den
+drei gedruckten Teilen. Riegel von Hand durch die Bohrung schieben, Zunge in
+den Schlitz fallen lassen – das beantwortet schon die meisten Fragen.
+
+Wenn du **Servo und M3-Schraube** schon da hast, setz sie gleich mit ein: Die
+Tasche ist vollständig enthalten, und Klone streuen um bis zu drei Zehntel.
+Das merkt man lieber jetzt als an der fertigen Kiste. **ESP32, Kondensator und
+Kabel brauchst du für den Test nicht** – die kommen erst mit der Firmware ins
+Spiel, und die gibt es noch nicht.
 
 Damit beantwortest du in 20 Minuten die einzige Frage, die sich vorher nicht
 rechnen lässt: ob *dein* Drucker diese Passungen trifft. Der Riegel soll unter
@@ -185,14 +195,43 @@ Vorderwand brach; einen Riegel, der offen nur 0,3 mm vor der Zunge stand und
 den Deckel nicht freigegeben hätte; und eine Zunge, unter deren Riegelloch nur
 2,6 mm Material stehen blieben.
 
-## Für ein Handy
+## Was hineinpasst
+
+Der Verschlussblock steht vorn über die volle Breite und frisst die ersten
+38 mm der Tiefe – **48 % bei der kleinen Kiste**. Übrig bleibt:
+
+| | |
+|---|---|
+| Innenraum brutto | 120 × 80 × 45 mm = 432 cm³ |
+| davon Block | 120 × 38 × 39 mm |
+| **nutzbar** | **120 × 42 × 45 mm ≈ 220 cm³** |
+
+Abzüglich der Platinenecke hinten rechts (24 × 19 mm Grundfläche). Das ist
+eine Grundfläche wie eine Postkarte, 45 mm hoch: Schlüssel, ein gefalteter
+Zettel, ein USB-Stick, eine Uhr, eine Tafel Schokolade. **Kein Handy** – das
+ist 160 × 75 mm und scheitert an der Tiefe.
+
+`pruefung.py` rechnet den Nutzraum bei jeder Parameteränderung mit aus.
+
+### Für ein Handy
 
 ```
-innen_x = 165;  innen_y = 85;  innen_z = 30;
+innen_x = 175;  innen_y = 125;  innen_z = 25;
 ```
 
-Danach `pruefung.py` laufen lassen. Das wird ein langer Druck – fang mit der
-kleinen Kiste an.
+Damit bleiben 175 × 87 mm frei. In der ersten Fassung stand hier
+`innen_y = 85` – nach Abzug des Blocks wären das 47 mm freie Tiefe gewesen,
+und ein Handy ist 75 breit. Es hätte nicht hineingepasst.
+
+Das wird ein langer Druck (Grundfläche 181 × 131 mm). Fang mit der kleinen
+Kiste an.
+
+### Mehr Platz herausholen
+
+`block_y` folgt aus der Zungenbreite und dem Servorumpf. Mit `zunge_b = 22`
+und `zunge_y = 18` ginge `block_y = 32` – sechs Millimeter mehr Nutztiefe.
+Dann bleiben aber nur noch 3 mm Material neben dem Riegelloch. Lauf danach
+unbedingt `pruefung.py`.
 
 ## Was das ist und was nicht
 
