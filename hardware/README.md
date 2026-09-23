@@ -36,17 +36,52 @@ konstruiert.
 |---|---|---|---|
 | 1 | **ESP32 DevKitC**, 30 oder 38 Pin | Platine bis 55 × 28 mm. **Stiftleisten vorverlötet** – sonst brauchst du einen Lötkolben. Gleich **zwei** nehmen | 6 € |
 | 2 | **Servo MG90S** (9 g) | Rumpf 23,2 × 12,4 × 23 mm, Flanschabstand 32,5 mm. Der billigere **SG90** ist maßgleich, hat aber Plastikgetriebe | 3 € |
-| 3 | **Servohorn, einarmig** | liegt dem Servo bei. Braucht ein Loch **9 mm von der Mitte** – die äußerste Bohrung, notfalls auf 3 mm aufbohren | – |
+| 3 | **Servohorn + Schräubchen** | liegen dem Servo bei – siehe unten. Das einarmige Horn braucht ein Loch **9 mm von der Mitte**, notfalls auf 3 mm aufbohren | – |
 | 4 | **Elko 1000 µF, ≥ 6,3 V** | radial, Raster 5 mm | 0,50 € |
 | 5 | **M3-Schraube, 12 mm** | Zylinderkopf, plus **eine M3-Mutter** zum Kontern | 0,20 € |
-| 6 | **Dupont-Litzen** | weiblich/weiblich, 10–20 cm. Gebraucht werden 3, gekauft wird ein 40er-Satz | 2 € |
+| 6 | **Dupont-Litzen** | **männlich/weiblich**, 10–20 cm. Am besten ein gemischter Satz – für den Kondensator sind zwei weiblich/weibliche praktisch | 2 € |
 | 7 | **USB-Kabel + 5-V-Netzteil, ≥ 1 A** | **Datenkabel**, kein reines Ladekabel. Steckertyp prüfen: ältere DevKits haben Micro-USB | 5 € |
 | 8 | **Kabelbinder, klein** | Zugentlastung, kommt durch den Tunnel im Platinensockel | – |
 | 9 | **PETG-Filament, ca. 180 g** | **kein PLA** – das kriecht unter Dauerlast | 4 € |
 
 **Zusammen rund 21 €**, ohne Filament 17 € – inklusive des zweiten Boards.
 
-Schrauben fürs Servo (2 ×, selbstschneidend) liegen dem Servo bei.
+### Was beim Servo dabei sein muss
+
+Im Tütchen eines MG90S oder SG90 liegen üblicherweise:
+
+| | brauchen wir | wofür |
+|---|---|---|
+| **3 Hörner** (einarmig, zweiarmig, Kreuz) | **das einarmige** | trägt den M3-Mitnehmer |
+| **1 Schräubchen** für die Abtriebswelle | **ja** | hält das Horn auf der Verzahnung. Fehlt es, arbeitet sich das Horn los |
+| **2 Blechschrauben** für die Flansche | **ja** | schrauben das Servo in die Tasche |
+| 2 Gummitüllen + 2 Messinghülsen | nein | Schwingungsdämpfung für Modellflieger |
+
+**Das Schräubchen für die Welle ist das kritische Teil.** Ohne es sitzt das
+Horn nur auf der Verzahnung und rutscht nach ein paar Dutzend Schaltspielen
+durch – der Riegel fährt dann nicht mehr weit genug. Gibt es einzeln kaum;
+wenn es fehlt, ist das ein Reklamationsgrund.
+
+Achte beim Kaufen darauf, dass die Anzeige **"mit Zubehör"** oder **"with
+horns"** sagt. Manche Angebote sind Servos pur, besonders die ganz billigen.
+Die Hörner sind zwischen SG90 und MG90S austauschbar (beide 21 Zähne) – wenn
+du irgendwo noch eins liegen hast, geht das auch.
+
+Was **nicht** dabei ist: die M3-Schraube und die Mutter aus der Liste. Das
+beiliegende Schräubchen hält nur das Horn auf der Welle; der Mitnehmer, der
+in den Riegelschlitz greift, ist ein eigenes Teil.
+
+### Das Servo steckt nicht direkt auf das Board
+
+Die Servolitze endet in einer **dreipoligen Buchse**, das DevKit hat
+**Stiftleisten**. Zwei Buchsen passen nicht zusammen, und die drei Pins liegen
+auf dem Board auch nicht nebeneinander. Deshalb **männlich/weiblich**:
+weibliches Ende auf den Boardpin, männliches Ende in die Servobuchse.
+
+Für den Kondensator sind zusätzlich zwei **weiblich/weibliche** Litzen
+nützlich: eine von 5V, eine von GND, und in deren freie Enden steckst du die
+beiden Beinchen. Hält ohne Löten. Ein gemischter Satz deckt beides ab.
+
 
 ### Welches Board genau
 
@@ -118,6 +153,9 @@ das Zehnfache. Nimm ein Sortiment, oder leg ihn einer größeren Bestellung bei.
 **Datenkabel prüfen.** Das häufigste Gerät-meldet-sich-nicht-Problem ist ein
 reines Ladekabel ohne Datenadern. Wenn der Rechner beim Einstecken gar nichts
 sagt, liegt es fast immer daran und nicht am Board.
+
+**Servo mit Zubehör.** Ohne das Wellenschräubchen rutscht das Horn irgendwann
+durch. Siehe den Abschnitt oben.
 
 **Nicht kaufen:** Servotester, Breadboard, Netzteilplatine. Drei Litzen gehen
 direkt vom Board ans Servo.
@@ -233,10 +271,14 @@ Erst wenn das sitzt, die große Kiste drucken.
    heiß und stirbt.
 5. **Mittelstellung finden.** Servo auf 90° fahren, *dann* das Horn
    aufstecken – der Riegel soll dabei auf halbem Weg stehen. Steckst du es
-   schief auf, fehlt an einem Ende der Hub.
-6. **Verdrahten** (siehe unten), Platine ins Bett legen. Das Kabel von außen
-   durch das 12-mm-Loch schieben – der Stecker passt hindurch – und innen mit
-   einem Kabelbinder gegen Zug sichern.
+   schief auf, fehlt an einem Ende der Hub. Sitzt es richtig, das
+   **beiliegende Schräubchen in die Abtriebswelle drehen**. Ohne das rutscht
+   das Horn nach ein paar Dutzend Schaltspielen auf der Verzahnung durch, und
+   der Riegel fährt nicht mehr weit genug.
+6. **Verdrahten** (siehe unten), Platine auf den Sockel setzen und mit dem
+   Kabelbinder durch den Tunnel festziehen. Das Kabel von außen durch das
+   12-mm-Loch in der rechten Wand schieben – der Stecker passt hindurch – und
+   bei offenem Deckel einstecken.
 
 ## Verdrahtung
 
