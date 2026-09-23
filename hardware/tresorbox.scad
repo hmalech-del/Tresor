@@ -110,8 +110,31 @@ riegel_weg = 2 * stift_radius * sin(schwenk);   // 12,7 mm
  * misst mit Umspritzung etwa 11 x 7 mm; mit 6,5 mm bekaeme man das Kabel gar
  * nicht erst hinein, denn einfaedeln laesst es sich von keiner Seite. */
 kabel_d   = 12;
-platine_x = 24;              // ESP32-C3 Supermini
-platine_y = 19;
+
+/* Welche Platine eingebaut wird, entscheidet nur das Bett - nicht die Kiste.
+ * Hinter dem Block liegen 120 x 42 mm freier Boden; da passt jedes gaengige
+ * ESP32-Board hinein. Waehle hier, wofuer der Sockel gedruckt wird. */
+platine = "supermini";       // supermini | devkit
+platine_x = (platine == "devkit") ? 55 : 24;   // Laenge, zeigt zur Buchse hin
+platine_y = (platine == "devkit") ? 28 : 19;   // Breite
+
+/* Der Sockel hebt die Platine an, damit die USB-Buchse auf Hoehe des
+ * Kabellochs liegt. Laege das Board flach auf dem Boden, saesse die Buchse
+ * bei etwa 3 mm - das Loch muesste dann in den Boden schneiden. */
+sockel_h  = 4;
+
+/* Platz zwischen dem Buchsenende der Platine und der Innenwand. Ein
+ * USB-Stecker ist mit Umspritzung etwa 25 mm lang und laesst sich in einem
+ * 3 mm duennen Wandloch nicht um die Ecke kippen - er muss also gerade
+ * einfahren und braucht die Laenge innen. */
+stecker_raum = 28;
+
+/* Lage des Platinensockels: rechts buendig minus Steckerraum, hinten an der
+   Rueckwand mit 5 mm Luft. */
+platine_x0    = innen_x/2 - stecker_raum - platine_x;
+platine_y0    = innen_y - platine_y - 5;
+platine_mitte_y = platine_y0 + platine_y/2;
+buchse_z      = sockel_h + 3.2;   // Leiterplatte 1,6 + halbe Buchse
 
 aussen_x = innen_x + 2 * wand;
 aussen_y = innen_y + 2 * wand;
@@ -205,6 +228,10 @@ module koerper() {
       // 2 mm unter dem Deckelrand bleiben, sonst setzt der Deckel auf dem
       // Block auf statt auf den Waenden
       translate([-block_b/2, wand, boden]) cube([block_b, block_y, innen_z - rand_h - 2]);
+
+      // Sockel fuer die Platine
+      translate([platine_x0, wand + platine_y0, boden])
+        cube([platine_x, platine_y, sockel_h]);
     }
 
     zungenschlitz_cut();
@@ -226,13 +253,16 @@ module koerper() {
                  wand + servo_achse_y - servo_y/2 - 2, boden + servo_oben - 4.5])
         cube([6, servo_y + 4, 3]);
 
-    // Kabeldurchlass hinten, gross genug fuer den Stecker
-    translate([aussen_x/2 - 22, aussen_y + 1, boden + 9])
-      rotate([90, 0, 0]) cylinder(d = kabel_d, h = wand + 3);
+    // Kabeldurchlass in der rechten Wand, auf Hoehe der USB-Buchse und in
+    // einer Flucht mit ihr. Vorher sass er in der Rueckwand - der Stecker
+    // waere quer zur Buchse angekommen und haette sich nicht einfaedeln
+    // lassen.
+    translate([innen_x/2 - 1, wand + platine_mitte_y, boden + buchse_z])
+      rotate([0, 90, 0]) cylinder(d = kabel_d, h = wand + 3);
 
-    // Flache Mulde als Bett fuer die Platine
-    translate([innen_x/2 - platine_x - 6, wand + innen_y - platine_y - 6, boden - 1])
-      cube([platine_x, platine_y, 2]);
+    // Kabelbinder-Tunnel quer durch den Sockel
+    translate([platine_x0 + platine_x/2 - 1.5, wand + platine_y0 - 1, boden + 1])
+      cube([3, platine_y + 2, 2]);
   }
 }
 

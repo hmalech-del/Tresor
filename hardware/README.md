@@ -34,7 +34,7 @@ konstruiert.
 
 | # | Teil | Worauf achten | ca. |
 |---|---|---|---|
-| 1 | **ESP32-C3 Supermini** | Platine ≤ 24 × 19 mm. Ein normales DevKit-Board (52 × 28) passt nicht ins Bett | 4 € |
+| 1 | **ESP32-C3 Supermini** *oder* **ESP32 DevKitC** | beide passen. Der Sockel wird für eines von beiden gedruckt – siehe unten. Mit **vorverlöteter Stiftleiste** kaufen, sonst brauchst du einen Lötkolben | 4 € |
 | 2 | **Servo SG90** (9 g) | Rumpf 23,2 × 12,4 × 23 mm, Flanschabstand 32,5 mm. **MG90S** (Metallgetriebe) ist maßgleich und hält länger | 3 € |
 | 3 | **Servohorn, einarmig** | liegt dem Servo bei. Braucht ein Loch **9 mm von der Mitte** – die äußerste Bohrung, notfalls auf 3 mm aufbohren | – |
 | 4 | **Elko 1000 µF, ≥ 6,3 V** | radial, Raster 5 mm | 0,50 € |
@@ -57,9 +57,23 @@ Zehntel. ESP32, Kondensator und Kabel brauchst du erst mit der Firmware.
 
 ### Warum diese Teile
 
-**Der ESP32-C3 Supermini, nicht irgendein ESP32.** Das Platinenbett ist
-24 × 19 mm; die verbreiteten DevKit-Boards sind doppelt so groß und passen
-nicht. BLE, genug Strom am 5-V-Pin und Arduino-IDE-Unterstützung hat er.
+**Supermini oder DevKit – die Kiste ist beiden egal.** Hinter dem
+Verschlussblock liegen 120 × 42 mm freier Boden; selbst das größte
+38-Pin-DevKit misst 55 × 28. Gedruckt wird nur der Sockel unterschiedlich:
+
+```
+openscad -D 'teil="koerper"' -D 'platine="devkit"' -o koerper.stl tresorbox.scad
+```
+
+Nimm den **DevKit**, wenn du nicht löten willst: Stiftleisten sind
+angelötet, die Pins sind beschriftet, Dupont-Litzen stecken direkt drauf,
+und geflasht wird über einen USB-UART-Wandler – das verzeiht mehr als der
+native USB des C3.
+
+Nimm den **Supermini**, wenn du es klein und mit USB-C willst. Zwei Haken:
+Die Stiftleisten liegen meist lose bei, und die Antenne dieser Klone
+funkt schlecht. Für ein Schloss, vor dem du stehst, reicht sie – fürs
+halbe Haus nicht.
 
 **Der Kondensator ist nicht optional.** Ohne ihn bricht die Spannung beim
 Anlaufen des Servos ein und der ESP32 startet neu – jedes Mal, wenn das
@@ -68,6 +82,13 @@ Schloss aufgehen soll. Das ist der Fehler, den man zwei Abende lang sucht.
 **M3 mit 12 mm.** Sie steckt von oben durchs Horn und greift als Mitnehmer in
 den Querschlitz des Riegels. Die Länge ist unkritisch: 8 bis 12 mm dürfen
 unten herausstehen, darunter liegt ein Freigang.
+
+**Das Kabelloch sitzt rechts, nicht hinten.** Die Platine steht auf einem
+4 mm hohen Sockel, damit die USB-Buchse auf Lochhöhe liegt, und 28 mm vor der
+Wand, damit der Stecker überhaupt Platz hat – überspritzt ist er etwa 25 mm
+lang und lässt sich in einem 3 mm dünnen Wandloch nicht um die Ecke kippen.
+Kabel durchfädeln, bei offenem Deckel einstecken, Schlaufe zurückziehen, mit
+dem Kabelbinder durch den Tunnel im Sockel sichern.
 
 **Netzteil mit mindestens 1 A.** Ein SG90 zieht beim Anlaufen kurz ein halbes
 Ampere. Am Handy-Ladegerät mit 500 mA startet der ESP32 neu.

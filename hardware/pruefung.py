@@ -139,13 +139,50 @@ pruefe("Riegel traegt genug", flaeche * 12 > 800,
        f"{flaeche:.0f} mm2 Scherflaeche -> etwa {flaeche*12/1000:.1f} kN bei PETG")
 print(f"  [info] Bauraum                      {innen_x+2*wand:.0f} x {innen_y+2*wand:.0f} x {innen_z+boden:.0f} mm")
 
-print("\nNutzraum")
+print("\nElektronik")
 frei_y = innen_y - block_y
-platine_x, platine_y = p("platine_x"), p("platine_y")
+sockel_h, stecker_raum = p("sockel_h"), p("stecker_raum")
+
+def pw(name):
+    """Holt einen Parameter, der per Ternaer an der Platinenwahl haengt.
+
+    Die Masse werden aus der SCAD-Datei gelesen statt hier wiederholt -
+    sonst haetten beide Dateien eine eigene Wahrheit, und die Pruefung
+    bestaende weiter, nachdem jemand das Modell geaendert hat."""
+    t = re.search(rf'^{name}\s*=\s*\(platine\s*==\s*"(\w+)"\)\s*\?\s*([\d.]+)\s*:\s*([\d.]+)\s*;',
+                  quelle, re.M)
+    if not t:
+        sys.exit(f"Parameter {name} nicht gefunden")
+    return {t.group(1): float(t.group(2)), "supermini": float(t.group(3))}
+
+masse_x, masse_y = pw("platine_x"), pw("platine_y")
+for wahl in masse_x:
+    px, py = masse_x[wahl], masse_y[wahl]
+    x0 = innen_x / 2 - stecker_raum - px
+    y0 = innen_y - py - 5
+    pruefe(f"Sockel {wahl}: passt auf den Boden",
+           x0 >= -innen_x / 2 and y0 > block_y,
+           f"{px:.0f} x {py:.0f} mm, links {x0 + innen_x/2:.0f} mm Rand, "
+           f"{y0 - block_y:.0f} mm vor dem Block")
+    pruefe(f"Sockel {wahl}: Stecker hat Laenge",
+           stecker_raum >= 25,
+           f"{stecker_raum:.0f} mm zwischen Buchse und Wand; ein USB-Stecker misst ueberspritzt ~25 mm")
+
+buchse_z = sockel_h + 3.2
+pruefe("Kabelloch bleibt ueber dem Boden",
+       boden + buchse_z - kabel_d / 2 > boden,
+       f"Unterkante {boden + buchse_z - kabel_d/2:.1f}, Boden endet bei {boden:.0f} "
+       f"-> {buchse_z - kabel_d/2:.1f} mm Luft")
+pruefe("Kabelloch liegt auf Buchsenhoehe",
+       abs(buchse_z - (sockel_h + 1.6 + 1.6)) < 1.0,
+       f"Lochmitte {buchse_z:.1f} ueber Boden, Buchsenmitte {sockel_h + 3.2:.1f}")
+
+print("\nNutzraum")
+platine_x, platine_y = masse_x["supermini"], masse_y["supermini"]
 brutto = innen_x * frei_y * innen_z / 1000
-netto = (innen_x * frei_y * innen_z - platine_x * platine_y * 15) / 1000
+netto = (innen_x * frei_y * innen_z - (platine_x + stecker_raum) * platine_y * 15) / 1000
 pruefe("Hinter dem Block bleibt Platz", frei_y > 25,
-       f"{innen_x:.0f} x {frei_y:.0f} x {innen_z:.0f} mm = {netto:.0f} cm3 nach Abzug der Platinenecke")
+       f"{innen_x:.0f} x {frei_y:.0f} x {innen_z:.0f} mm = {netto:.0f} cm3 nach Abzug der Elektronikecke")
 print(f"  [info] Der Block frisst             {block_y:.0f} von {innen_y:.0f} mm Tiefe "
       f"({block_y/innen_y*100:.0f} %)")
 handy_x, handy_y = 160, 75
