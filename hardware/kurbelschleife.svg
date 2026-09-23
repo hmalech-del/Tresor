@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="495" height="438" viewBox="0 0 495 438" font-family="system-ui,-apple-system,sans-serif">
+<g transform="translate(0,14)">
+<text x="10.0" y="2.0" fill="#8b95a1" font-size="13" font-weight="600">verriegelt – Servo auf +45°</text>
+<rect x="305.0" y="35.0" width="30.0" height="120.0" fill="none" stroke="#6aa84f" stroke-width="1" stroke-dasharray="3 2.5" opacity="0.8"/>
+<rect x="305.0" y="35.0" width="30.0" height="20.0" fill="#6aa84f" fill-opacity="0.32" stroke="#6aa84f" stroke-width="1.4"/>
+<rect x="305.0" y="135.0" width="30.0" height="20.0" fill="#6aa84f" fill-opacity="0.32" stroke="#6aa84f" stroke-width="1.4"/>
+<rect x="152.5" y="60.0" width="200.0" height="70.0" rx="2" fill="#5b8dd9" fill-opacity="0.20" stroke="#5b8dd9" stroke-width="1.8"/>
+<rect x="192.8198051533946" y="66.81980515339464" width="18.0" height="56.36038969321072" rx="1.5" fill="#fbfcfd" stroke="#5b8dd9" stroke-width="1.3"/>
+<circle cx="170.0" cy="56.59009742330268" r="45.0" fill="none" stroke="#9aa4b0" stroke-width="1" stroke-dasharray="3 3" opacity="0.65"/>
+<line x1="170.0" y1="56.59009742330268" x2="201.81980515339464" y2="88.40990257669732" stroke="#e08a45" stroke-width="3.4" stroke-linecap="round"/>
+<circle cx="170.0" cy="56.59009742330268" r="3.2" fill="#fbfcfd" stroke="#6f7b88" stroke-width="1.8"/>
+<circle cx="201.81980515339464" cy="88.40990257669732" r="7.5" fill="#e08a45"/>
+<text x="147.5" y="44.09009742330268" fill="#6f7b88" font-size="10.5" text-anchor="end">Servoachse</text>
+<text x="272.5" y="102.5" fill="#5b8dd9" font-size="10.5" text-anchor="middle">Riegel</text>
+<text x="350.0" y="47.5" fill="#6aa84f" font-size="10.5" text-anchor="start">Zunge am Deckel</text>
+<line x1="201.81980515339464" y1="123.18019484660536" x2="201.81980515339464" y2="135.18019484660533" stroke="#5b8dd9" stroke-width="1"/>
+<text x="201.81980515339464" y="150.18019484660533" fill="#5b8dd9" font-size="10.5" text-anchor="middle">Querschlitz, quer zur Fahrt</text>
+<line x1="138.18019484660536" y1="32.5" x2="201.81980515339464" y2="32.5" stroke="#6f7b88" stroke-width="1.1"/>
+<line x1="138.18019484660536" y1="24.5" x2="138.18019484660536" y2="40.5" stroke="#6f7b88" stroke-width="1.1"/>
+<line x1="201.81980515339464" y1="24.5" x2="201.81980515339464" y2="40.5" stroke="#6f7b88" stroke-width="1.1"/>
+<text x="170.0" y="19.5" fill="#6f7b88" font-size="10.5" text-anchor="middle">Hub 12.7 mm</text>
+</g>
+<g transform="translate(0,204.0)">
+<text x="10.0" y="2.0" fill="#8b95a1" font-size="13" font-weight="600">offen – Servo auf −45°</text>
+<rect x="305.0" y="35.0" width="30.0" height="120.0" fill="none" stroke="#6aa84f" stroke-width="1" stroke-dasharray="3 2.5" opacity="0.8"/>
+<rect x="305.0" y="35.0" width="30.0" height="20.0" fill="#6aa84f" fill-opacity="0.32" stroke="#6aa84f" stroke-width="1.4"/>
+<rect x="305.0" y="135.0" width="30.0" height="20.0" fill="#6aa84f" fill-opacity="0.32" stroke="#6aa84f" stroke-width="1.4"/>
+<rect x="88.8603896932107" y="60.0" width="200.0" height="70.0" rx="2" fill="#5b8dd9" fill-opacity="0.20" stroke="#5b8dd9" stroke-width="1.8"/>
+<rect x="129.18019484660536" y="66.81980515339464" width="18.0" height="56.36038969321072" rx="1.5" fill="#fbfcfd" stroke="#5b8dd9" stroke-width="1.3"/>
+<circle cx="170.0" cy="56.59009742330268" r="45.0" fill="none" stroke="#9aa4b0" stroke-width="1" stroke-dasharray="3 3" opacity="0.65"/>
+<line x1="170.0" y1="56.59009742330268" x2="138.18019484660536" y2="88.40990257669732" stroke="#e08a45" stroke-width="3.4" stroke-linecap="round"/>
+<circle cx="170.0" cy="56.59009742330268" r="3.2" fill="#fbfcfd" stroke="#6f7b88" stroke-width="1.8"/>
+<circle cx="138.18019484660536" cy="88.40990257669732" r="7.5" fill="#e08a45"/>
+<text x="147.5" y="44.09009742330268" fill="#6f7b88" font-size="10.5" text-anchor="end">Servoachse</text>
+<text x="208.86038969321072" y="102.5" fill="#5b8dd9" font-size="10.5" text-anchor="middle">Riegel</text>
+<text x="350.0" y="47.5" fill="#6aa84f" font-size="10.5" text-anchor="start">Zunge am Deckel</text>
+<line x1="138.18019484660536" y1="123.18019484660536" x2="138.18019484660536" y2="135.18019484660533" stroke="#5b8dd9" stroke-width="1"/>
+<text x="138.18019484660536" y="150.18019484660533" fill="#5b8dd9" font-size="10.5" text-anchor="middle">Querschlitz, quer zur Fahrt</text>
+</g>
+<line x1="10.0" y1="396.0" x2="40.0" y2="396.0" stroke="#e08a45" stroke-width="3.4" stroke-linecap="round"/>
+<circle cx="40.0" cy="396.0" r="7.5" fill="#e08a45"/>
+<text x="60.0" y="399.5" fill="#8b95a1" font-size="11">Servohorn mit Mitnehmerstift – dreht sich, schiebt aber nur in x</text>
+<text x="10.0" y="415.0" fill="#8b95a1" font-size="11">Hub 12.7 mm = 2 × 9 mm × sin 45°</text>
+<text x="10.0" y="430.0" fill="#8b95a1" font-size="11">Quer wandert der Stift dabei 2.6 mm – das schluckt der 11.3 mm lange Querschlitz</text>
+</svg>

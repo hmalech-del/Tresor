@@ -27,6 +27,48 @@ Der Hub ergibt sich aus der Kurbel: 9 mm Stiftradius, ±45° Schwenk, macht
 12,7 mm. Verriegelt steht die Spitze 3,5 mm hinter der Zunge, offen 3,2 mm
 davor.
 
+## Wie aus Drehen ein Schieben wird
+
+![Kurbelschleife](kurbelschleife.svg)
+
+Das Servo dreht, der Riegel schiebt – dazwischen steht **keine Umlenkung, kein
+Gelenk, kein Gewinde**. Nur ein Stift in einem Schlitz.
+
+Am Servohorn sitzt ein M3-Stift, 9 mm von der Achse. Dreht das Horn, läuft der
+Stift auf einem Kreis. Dieser Stift steckt in einem Schlitz, der **quer zur
+Fahrtrichtung** durch den Riegel geht.
+
+Damit zerfällt die Kreisbewegung in zwei Anteile:
+
+| | was der Stift tut | was der Riegel merkt |
+|---|---|---|
+| **längs** (x) | wandert ±6,4 mm | wird geschoben – das ist der Hub |
+| **quer** (y) | wandert 2,6 mm | **nichts** – der Stift gleitet im Schlitz auf und ab |
+
+Der Schlitz führt den Riegel also nur in einer Richtung und lässt ihn in der
+anderen los. Deshalb muss er quer liegen und 11,3 mm lang sein: 2,6 mm für die
+Seitwärtsbewegung, 3 mm für den Stift, Rest Luft.
+
+In der Mechanik heißt das **Kurbelschleife** (englisch *scotch yoke*) –
+dasselbe Prinzip wie in einer Stichsäge, nur dass dort ein Motor durchdreht und
+hier ein Servo zwischen zwei Anschlägen pendelt.
+
+Warum diese Bauart und nicht ein Gestänge:
+
+- **Sie verträgt Toleranzen.** Ein Schubgestänge bräuchte zwei Gelenke, und
+  jedes gedruckte Gelenk hat Spiel, das sich addiert. Hier gibt es genau eine
+  Passung, und die darf grob sein – der Schlitz ist absichtlich weit.
+- **Sie hält nichts.** Zieht jemand am Deckel, drückt die Zunge gegen den
+  Riegel und der gegen die Wand seiner Bohrung. Über den Stift läuft dabei
+  keine Kraft, weil die Zugrichtung quer zu seinem Schlitz steht. Das Getriebe
+  des Servos bleibt lastfrei – sonst wäre es das erste, was bricht.
+- **Sie kennt zwei Endlagen.** −45° und +45°, mehr muss die Firmware nicht
+  wissen. Es gibt keine Zwischenstellung, die man anfahren müsste.
+
+Die Zeichnung entsteht mit `python3 kurbelschleife.py` aus denselben Parametern
+wie die Kiste. Eine von Hand gezeichnete Skizze wäre nach der ersten
+Parameteränderung falsch.
+
 ## Einkaufszettel
 
 Die Maße stammen aus `tresorbox.scad` – die Tasche ist auf genau diese Teile
