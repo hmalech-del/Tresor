@@ -39,9 +39,41 @@ innen_z = 45;                // Hoehe
 /* ---------- Druck ---------- */
 wand    = 3;
 boden   = 3;
-rand_h  = 6;                 // wie tief der Deckelrand in die Kiste faellt
-spiel   = 0.35;              // Spiel beweglicher Passungen.
-                             // Zu stramm? auf 0.45. Zu wackelig? auf 0.25.
+rand_h  = 4;                 // wie tief der Deckelrand in die Kiste faellt
+
+/* Spiel - getrennt nach Aufgabe.
+ *
+ * Erst stand hier ein einziger Wert fuer alles. Das ist der haeufigste
+ * Konstruktionsfehler bei gedruckten Mechaniken: Ein Gleitsitz, ein
+ * Steckfall, eine Schraubtasche und ein Deckelrand haben nichts miteinander
+ * zu tun. Wer den einen Wert anpasst, bis der Riegel laeuft, macht damit den
+ * Deckel wacklig.
+ *
+ * Grundsatz fuer die Ausrichtung: EIN Merkmal fuehrt, alle anderen sind lose.
+ * Hier fuehrt die Zunge, denn nur ihre Lage entscheidet, ob der Riegel
+ * trifft. Der Deckelrand haelt bloss Staub ab und ist deshalb absichtlich
+ * weit - waeren beide stramm, wuerden sie gegeneinander arbeiten, und der
+ * Deckel klemmte, sobald der Druck ein Zehntel daneben liegt. */
+spiel_riegel = 0.35;         // Gleitsitz: Riegel in seiner Bohrung
+spiel_decke  = 0.8;          // zusaetzlich oben - die Bohrungsdecke ist eine
+                             // Bruecke und haengt beim Drucken durch
+spiel_zunge  = 0.5;          // Steckfall: Zunge in ihren Schlitz (fuehrend)
+/* Das Loch in der Zunge braucht in den beiden Achsen verschieden viel.
+ *
+ * Quer (Y) stapeln sich zwei Lagefehler: Der Riegel darf in seiner Bohrung
+ * um 0,35 mm wandern, die Zunge in ihrem Schlitz um 0,5 mm - zusammen 0,85.
+ * Weniger Loch, und der Riegel stiesse im ungluecklichen Fall stumpf gegen
+ * die Zunge.
+ *
+ * Hoch (Z) stapelt sich nichts: Der Riegel liegt auf dem Boden seiner
+ * Bohrung, der Deckel sitzt auf den Waenden. Beides ist bestimmt. Hier waere
+ * viel Spiel sogar schaedlich, denn genau darum wackelt der Deckel spaeter. */
+spiel_loch_y = 1.0;          // Riegel durch das Loch der Zunge, quer
+spiel_loch_z = 0.5;          // ... und hoch
+spiel_loch   = spiel_loch_z; // Rueckfall
+spiel_rand   = 0.8;          // Deckelrand - bewusst lose
+spiel_servo  = 0.5;          // Servotasche; gehalten wird es von den Schrauben
+spiel        = spiel_riegel; // Rueckfall fuer alte Formeln
 
 /* ---------- Verschluss ---------- */
 zunge_b    = 24;             // Zunge: Breite quer zum Riegel (Y)
@@ -96,6 +128,16 @@ servo_achse_y = zunge_y - (stift_radius * (1 + cos(schwenk)) / 2);
 servo_oben    = riegel_z + 3;   // Oberkante Servo: das Horn liegt knapp
                                 // ueber dem Querschlitz des Riegels
 
+/* Die Bohrung ist unten knapp und oben weit.
+ *
+ * Der Riegel liegt durch die Schwerkraft ohnehin auf dem Boden der Bohrung;
+ * nur dort braucht es einen Gleitsitz. Die Decke ueberbrueckt 14 mm und sackt
+ * beim Drucken um zwei bis drei Zehntel durch - gaebe man ihr dasselbe Spiel,
+ * klemmte der Riegel genau in der Mitte seines Weges. */
+bohrung_b  = riegel_b + 2 * spiel_riegel;
+bohrung_h  = riegel_h + spiel_riegel + spiel_decke;
+bohrung_z0 = riegel_z - riegel_h / 2 - spiel_riegel / 2;   // Unterkante
+
 /* Wo die Riegelspitze steht, wenn zu.
  *
  * Der Hub ist durch die Kurbel festgelegt (12,7 mm), also bestimmt diese eine
@@ -105,6 +147,40 @@ servo_oben    = riegel_z + 3;   // Oberkante Servo: das Horn liegt knapp
  * Deckel waere nicht abgegangen. */
 riegel_spitze_zu = zunge_d / 2 + 3.5;
 schlitz_von_links = riegel_l - (riegel_spitze_zu - servo_achse_x) + stift_radius * sin(schwenk);
+
+/* ---------- Gemeinsame Aussparungen ----------
+ *
+ * Bohrung und Zungenschlitz stecken in eigenen Modulen, weil das Pruefstueck
+ * sie benutzt. Baute man es aus eigenem Code nach, pruefte es seine eigene
+ * Kopie und nicht die Kiste. */
+
+module bohrung_cut(von_x, laenge) {
+  union() {
+    translate([von_x, wand + zunge_y - bohrung_b/2, boden + bohrung_z0])
+      cube([laenge, bohrung_b, bohrung_h]);
+    /* Freigang fuer den Mitnehmerstift unter der Bohrung. Ohne ihn muesste
+     * die Schraube auf ein Zehntel genau abgelaengt werden: zu kurz greift
+     * sie nicht, zu lang schlaegt sie auf dem Boden auf. */
+    translate([servo_achse_x - stift_radius * sin(schwenk) - stift_d,
+               wand + zunge_y - (stift_d + 2)/2, boden + bohrung_z0 - 3])
+      cube([2 * stift_radius * sin(schwenk) + 2 * stift_d, stift_d + 2, 4]);
+  }
+}
+
+module zungenschlitz_cut() {
+  union() {
+    translate([-(zunge_d + 2*spiel_zunge)/2, wand + zunge_y - (zunge_b + 2*spiel_zunge)/2,
+               boden + innen_z - zunge_l - 3])
+      cube([zunge_d + 2*spiel_zunge, zunge_b + 2*spiel_zunge, zunge_l + 12]);
+    /* Trichter am Schlitzmund: faengt die Zunge auf, wenn der Deckel schief
+     * aufgesetzt wird. */
+    translate([0, wand + zunge_y, boden + innen_z - 2])
+      hull() {
+        translate([0, 0, 2]) cube([zunge_d + 2*spiel_zunge + 5, zunge_b + 2*spiel_zunge + 5, 0.1], center = true);
+        cube([zunge_d + 2*spiel_zunge, zunge_b + 2*spiel_zunge, 0.1], center = true);
+      }
+  }
+}
 
 module koerper() {
   /* Reihenfolge ist hier alles: erst die Huelle aushoehlen, DANN den Block
@@ -122,21 +198,14 @@ module koerper() {
       translate([-block_b/2, wand, boden]) cube([block_b, block_y, innen_z - rand_h - 2]);
     }
 
-    // Schlitz fuer die Zunge, nach oben offen
-    translate([-(zunge_d + 2*spiel)/2, wand + zunge_y - (zunge_b + 2*spiel)/2,
-               boden + innen_z - zunge_l - 3])
-      cube([zunge_d + 2*spiel, zunge_b + 2*spiel, zunge_l + 12]);
-
-    // Riegelbohrung, quer durch den Zungenschlitz. Links offen, damit sich
-    // der Riegel von innen einschieben laesst.
-    translate([-block_b/2 - 1, wand + zunge_y - (riegel_b + 2*spiel)/2,
-               boden + riegel_z - (riegel_h + 2*spiel)/2])
-      cube([block_b/2 + riegel_spitze_zu + 4, riegel_b + 2*spiel, riegel_h + 2*spiel]);
+    zungenschlitz_cut();
+    // Links offen, damit sich der Riegel von innen einschieben laesst
+    bohrung_cut(-block_b/2 - 1, block_b/2 + riegel_spitze_zu + 4);
 
     // Servotasche, nach oben offen
-    translate([servo_achse_x - servo_achse_versatz - spiel,
-               wand + servo_achse_y - servo_y/2 - spiel, boden + servo_oben - servo_z])
-      cube([servo_x + 2*spiel, servo_y + 2*spiel, servo_z + 30]);
+    translate([servo_achse_x - servo_achse_versatz - spiel_servo,
+               wand + servo_achse_y - servo_y/2 - spiel_servo, boden + servo_oben - servo_z])
+      cube([servo_x + 2*spiel_servo, servo_y + 2*spiel_servo, servo_z + 30]);
 
     // Freiraum fuer Horn und Stift
     translate([servo_achse_x, wand + servo_achse_y, boden + riegel_z - riegel_h/2 - 1])
@@ -158,25 +227,45 @@ module koerper() {
   }
 }
 
+module zunge() {
+  difference() {
+    translate([-zunge_d/2, wand + zunge_y - zunge_b/2, -zunge_l])
+      cube([zunge_d, zunge_b, zunge_l]);
+
+    /* Loch fuer den Riegel, mit Trichter auf der Seite, aus der er kommt.
+     * Ohne den muesste der Deckel auf ein Zehntel genau sitzen: Haengt er
+     * durch Schmutz oder eine dicke erste Schicht zwei Zehntel zu hoch,
+     * stiesse der Riegel stumpf gegen die Zunge statt hindurchzugleiten. */
+    translate([-zunge_d/2 - 1, wand + zunge_y - (riegel_b + 2*spiel_loch_y)/2,
+               -(innen_z - riegel_z) - (riegel_h + 2*spiel_loch_z)/2])
+      cube([zunge_d + 2, riegel_b + 2*spiel_loch_y, riegel_h + 2*spiel_loch_z]);
+    translate([-zunge_d/2, wand + zunge_y, -(innen_z - riegel_z)])
+      hull() {
+        translate([-0.1, 0, 0])
+          cube([0.1, riegel_b + 2*spiel_loch_y + 3, riegel_h + 2*spiel_loch_z + 3], center = true);
+        translate([1.6, 0, 0])
+          cube([0.1, riegel_b + 2*spiel_loch_y, riegel_h + 2*spiel_loch_z], center = true);
+      }
+
+    /* Anfasung an der Spitze der Zunge: faedelt in den Schlitz ein. */
+    for (sx = [-1, 1])
+      translate([sx * zunge_d/2, wand + zunge_y, -zunge_l])
+        rotate([0, 45, 0]) cube([2.4, zunge_b + 2, 2.4], center = true);
+  }
+}
+
 module deckel() {
   union() {
     translate([-aussen_x/2, 0, 0]) cube([aussen_x, aussen_y, wand]);
-    // Rand, faellt in den Innenraum und richtet den Deckel aus
-    translate([-innen_x/2 + spiel, wand + spiel, -rand_h])
+    /* Rand: bewusst lose. Er haelt Staub ab und begrenzt das seitliche
+     * Rutschen - fuehren tut die Zunge. */
+    translate([-innen_x/2 + spiel_rand, wand + spiel_rand, -rand_h])
       difference() {
-        cube([innen_x - 2*spiel, innen_y - 2*spiel, rand_h]);
-        translate([2.4, 2.4, -1]) cube([innen_x - 2*spiel - 4.8, innen_y - 2*spiel - 4.8, 8]);
+        cube([innen_x - 2*spiel_rand, innen_y - 2*spiel_rand, rand_h]);
+        translate([2.4, 2.4, -1])
+          cube([innen_x - 2*spiel_rand - 4.8, innen_y - 2*spiel_rand - 4.8, rand_h + 2]);
       }
-    // Zunge quer zur Fahrtrichtung, mit Loch fuer den Riegel
-    difference() {
-      translate([-zunge_d/2, wand + zunge_y - zunge_b/2, -zunge_l])
-        cube([zunge_d, zunge_b, zunge_l]);
-      // Das Loch sitzt so tief unter der Deckelunterseite, wie der Riegel
-      // unter der Oberkante des Innenraums liegt.
-      translate([-zunge_d/2 - 1, wand + zunge_y - (riegel_b + 2*spiel)/2,
-                 -(innen_z - riegel_z) - (riegel_h + 2*spiel)/2])
-        cube([zunge_d + 2, riegel_b + 2*spiel, riegel_h + 2*spiel]);
-    }
+    zunge();
   }
 }
 
@@ -187,9 +276,12 @@ module riegel() {
     translate([-riegel_l/2 + schlitz_von_links, 0, 0])
       cube([stift_d + 0.6, 2 * stift_radius * (1 - cos(schwenk)) + stift_d + 3, riegel_h + 2],
            center = true);
-    // Fase an der Spitze, damit er leichter einfaedelt
+    /* Fase an der Spitze - faedelt in das Loch der Zunge ein, auch wenn der
+     * Deckel ein Zehntel zu hoch sitzt. Rundum, nicht nur oben und unten. */
     translate([riegel_l/2, 0, 0]) rotate([0, 45, 0])
-      cube([4, riegel_b + 2, 4], center = true);
+      cube([3, riegel_b + 2, 3], center = true);
+    translate([riegel_l/2, 0, 0]) rotate([45, 0, 0])
+      cube([3, 3, riegel_h + 2], center = true);
   }
 }
 
@@ -226,7 +318,47 @@ module mechanik() {
     cylinder(d = stift_d, h = riegel_h);
 }
 
-if (teil == "mechanik") mechanik();
+/* ---------- Pruefstueck ----------
+ *
+ * Ein Ausschnitt des Blocks mit Bohrung und Zungenschlitz, dazu ein kurzer
+ * Riegel und eine kurze Zunge. Druckt in etwa 20 Minuten statt in sechs
+ * Stunden und beantwortet die einzige Frage, die sich vorher nicht rechnen
+ * laesst: ob DEIN Drucker diese Passungen trifft.
+ *
+ * Es benutzt dieselben Module wie die Kiste. Baute man es nach, pruefte es
+ * seine eigene Kopie. */
+module pruefstueck() {
+  scheibe = zunge_b + 12;
+  schnitt_z = boden + bohrung_z0 - 6;
+  /* Ausschnitt des Blocks um Zunge und Riegelbohrung, unten abgeschnitten
+   * und auf null gesetzt - ein Ausschnitt behaelt sonst seine urspruengliche
+   * Hoehe und schwebt im Slicer 20 mm ueber der Platte. */
+  translate([0, 0, -schnitt_z])
+    difference() {
+      intersection() {
+        koerper();
+        translate([-30, wand + zunge_y - scheibe/2, boden])
+          cube([46, scheibe, innen_z]);
+      }
+      translate([-60, -10, 0]) cube([200, 200, schnitt_z]);
+    }
+  // kurzer Riegel daneben
+  translate([0, scheibe + 14, riegel_h/2])
+    intersection() {
+      translate([riegel_l/2 - 16, 0, 0]) riegel();
+      cube([32, riegel_b + 2, riegel_h + 2], center = true);
+    }
+  // kurze Zunge daneben
+  translate([-34, scheibe + 14, 0])
+    rotate([0, 0, 0])
+      intersection() {
+        translate([0, -(wand + zunge_y), zunge_l]) zunge();
+        translate([0, 0, 9]) cube([zunge_d + 2, zunge_b + 2, 18], center = true);
+      }
+}
+
+if (teil == "pruefstueck") pruefstueck();
+else if (teil == "mechanik") mechanik();
 else if (teil == "koerper") koerper();
 else if (teil == "deckel") deckel();
 else if (teil == "riegel") riegel();

@@ -5,6 +5,11 @@ Drei gedruckte Teile, drei gekaufte, rund 14 Euro.
 
 ![Körper](koerper.png)
 
+![Prüfstück](pruefstueck.png)
+
+*Oben die Kiste, darunter das Prüfstück: Blockausschnitt mit Bohrung und
+Schlitz, dazu kurzer Riegel und kurze Zunge. 20 Minuten Druck.*
+
 ## Wie sie hält
 
 Am Deckel hängt eine Zunge nach unten – ein flaches Blatt **quer** zur
@@ -58,22 +63,53 @@ openscad -D 'teil="riegel"'  -o riegel.stl  tresorbox.scad
 | Riegel | liegend | nein |
 
 0,2 mm Schichten, **4 Perimeter**, 30 % Füllung. Bauraum: 126 × 86 × 48 mm.
+Keines der Teile braucht Stützmaterial – Servotasche und Zungenschlitz sind
+nach oben offen.
 
-Die Riegelbohrung überbrückt 14 mm. Das schafft jeder Drucker, die Decke wird
-nur etwas rau. Klemmt der Riegel danach: `spiel` in der SCAD-Datei von 0,35 auf
-0,45 setzen und neu drucken. Wackelt er: auf 0,25.
+### Erst das Prüfstück
+
+```
+openscad -D 'teil="pruefstueck"' -o pruefstueck.stl tresorbox.scad
+```
+
+53 × 57 × 21 mm, rund 20 Minuten. Darin steckt der Ausschnitt des Blocks mit
+Riegelbohrung und Zungenschlitz, dazu ein kurzer Riegel und eine kurze Zunge –
+erzeugt aus **denselben Modulen** wie die Kiste. Baute man es nach, prüfte es
+seine eigene Kopie.
+
+Damit beantwortest du in 20 Minuten die einzige Frage, die sich vorher nicht
+rechnen lässt: ob *dein* Drucker diese Passungen trifft. Der Riegel soll unter
+seinem eigenen Gewicht durch die Bohrung rutschen, die Zunge ohne Kraft in den
+Schlitz fallen.
+
+| Befund | Stellschraube |
+|---|---|
+| Riegel klemmt | `spiel_riegel` von 0,35 auf 0,45 |
+| Riegel klappert hörbar | `spiel_riegel` auf 0,25 |
+| Riegel hakt in der Mitte | `spiel_decke` auf 1,0 – die Brücke sackt durch |
+| Zunge geht schwer in den Schlitz | `spiel_zunge` auf 0,65 |
+| Riegel trifft das Loch nicht | `spiel_loch_y` auf 1,3 |
+
+Erst wenn das sitzt, die große Kiste drucken.
 
 ## Zusammenbau
 
-1. **Horn vorbereiten.** Einarmiges Servohorn nehmen, das äußerste Loch auf
-   3 mm aufbohren. M3-Schraube von oben durchstecken, sodass sie nach unten
-   zeigt, mit der Mutter oben kontern. Etwa 6 mm sollen unten herausstehen.
+1. **Horn vorbereiten.** Einarmiges Servohorn nehmen, das äußerste Loch (9 mm
+   von der Mitte) auf 3 mm aufbohren. M3-Schraube von oben durchstecken,
+   sodass sie nach unten zeigt, mit der Mutter oben kontern. 8 bis 12 mm
+   dürfen unten herausstehen – die Länge ist unkritisch, unter der Bohrung
+   liegt ein Freigang.
 2. **Riegel einschieben.** Von innen links in die Bohrung, bis der Querschlitz
    unter der Servoachse steht.
 3. **Servo einsetzen.** Von oben in die Tasche, der Stift muss in den
    Querschlitz fallen. Flansche festschrauben.
 4. **Von Hand prüfen.** Horn hin und her drehen – der Riegel muss über die
-   vollen 12,7 mm laufen, ohne zu haken. Erst danach Strom anschließen.
+   vollen 12,7 mm laufen, ohne zu haken. **Erst danach Strom anschließen.**
+   Ein Servo, das gegen einen klemmenden Riegel drückt, zieht 700 mA, wird
+   heiß und stirbt.
+5. **Mittelstellung finden.** Servo auf 90° fahren, *dann* das Horn
+   aufstecken – der Riegel soll dabei auf halbem Weg stehen. Steckst du es
+   schief auf, fehlt an einem Ende der Hub.
 5. **Verdrahten** (siehe unten), Platine ins Bett legen, Kabel durch das Loch
    hinten, mit einem Kabelbinder gegen Zug sichern.
 
@@ -90,6 +126,45 @@ langes Bein an 5V.
 
 Das USB-Kabel versorgt die Platine, das Servo hängt an deren 5V-Pin. Achte auf
 ein Netzteil mit mindestens 1 A; ein SG90 zieht beim Anlaufen kurz ein halbes.
+
+## Toleranzen
+
+Die Passungen sind **nach Aufgabe getrennt**, nicht über einen Wert geregelt:
+
+| Parameter | | wofür |
+|---|---|---|
+| `spiel_riegel` | 0,35 | Gleitsitz des Riegels in seiner Bohrung |
+| `spiel_decke` | 0,8 | zusätzlich oben – die Bohrungsdecke ist eine Brücke |
+| `spiel_zunge` | 0,5 | Zunge in ihren Schlitz; **dieses Merkmal führt** |
+| `spiel_loch_y` | 1,0 | Riegel durch das Loch der Zunge, quer |
+| `spiel_loch_z` | 0,5 | … und hoch |
+| `spiel_rand` | 0,8 | Deckelrand – bewusst lose |
+| `spiel_servo` | 0,5 | Servotasche; gehalten wird es von den Schrauben |
+
+Drei Überlegungen stecken dahinter:
+
+**Nur ein Merkmal darf führen.** Deckelrand und Zunge richten beide den Deckel
+aus. Wären beide stramm, arbeiteten sie gegeneinander, und der Deckel klemmte,
+sobald der Druck ein Zehntel daneben liegt – erst recht bei PETG, das über
+120 mm um ein halbes Millimeter schrumpft. Deshalb führt die Zunge (nur ihre
+Lage entscheidet, ob der Riegel trifft) und der Rand ist absichtlich weit.
+
+**Die Bohrung ist unten knapp und oben weit.** Der Riegel liegt durch die
+Schwerkraft ohnehin auf dem Boden; nur dort braucht es einen Gleitsitz. Die
+Decke überbrückt 14,7 mm und sackt beim Drucken um zwei bis drei Zehntel
+durch – mit gleichem Spiel klemmte der Riegel genau in der Mitte seines Weges.
+
+**Quer stapeln sich zwei Fehler, hoch keiner.** Der Riegel darf in seiner
+Bohrung um 0,35 mm wandern, die Zunge in ihrem Schlitz um 0,5 – zusammen
+0,85 mm. Deshalb ist das Loch **quer** 1,0 mm weit. Hoch stapelt sich nichts:
+Der Riegel liegt auf dem Bohrungsboden, der Deckel sitzt auf den Wänden.
+Beides ist bestimmt, und viel Spiel hieße dort nur, dass der Deckel wackelt.
+
+Dazu drei Fasen, die Maßabweichungen abfangen statt sie zu verbieten: ein
+Trichter am Schlitzmund, eine Anfasung an der Zungenspitze und eine rundum
+laufende Fase an der Riegelspitze. Und ein Freigang unter der Bohrung für den
+Mitnehmerstift – ohne ihn müsste die M3-Schraube auf ein Zehntel genau
+abgelängt werden.
 
 ## Maße nachrechnen
 
@@ -131,6 +206,13 @@ kleinen Kiste an.
   sondern ein Steckerwechsel. Das ist der Grund gegen eine Batterie im Inneren.
 * **Sperr nichts Dringendes ein.** Keine Medikamente, keine Ausweise, keine
   Autoschlüssel.
+* **Die ersten fünfzig Zyklen mit leerer Kiste.** Erst wenn der Riegel
+  fünfzigmal sauber gefahren ist, kommt etwas hinein, das dir etwas bedeutet.
+  Ein PETG-Riegel, der sich einläuft, wird leichtgängiger – einer, der sich
+  verzieht, klemmt irgendwann verriegelt.
+* **Die Firmware soll das Servo nach der Fahrt abschalten** (`detach`). Ein
+  dauerhaft angesteuertes Servo brummt, zittert und verbraucht Strom, obwohl
+  die Last längst in der Bohrungswand hängt.
 
 ## Noch nicht gebaut
 
