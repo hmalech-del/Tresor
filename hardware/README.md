@@ -81,6 +81,10 @@ Stiftleisten gelötet"** – und dann die Modulbeschriftung auf dem Foto
 gegenprüfen, nicht den Anzeigentitel. Die Titel sind Stichwortsalat; das
 Blech auf dem Modul lügt nicht.
 
+Nur: Viele Anzeigenbilder sind gerenderte Hochglanzfotos, auf denen das Blech
+**leer** ist. Dann hilft das Foto nicht, und es bleibt der Anzeigentext – dort
+muss ESP32-**WROOM-32** stehen. Ein S2-Board sieht von oben fast gleich aus.
+
 ### Wo kaufen
 
 | | Preis | Lieferung | wofür |
