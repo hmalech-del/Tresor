@@ -29,24 +29,48 @@ davor.
 
 ## Einkaufszettel
 
-| Teil | Suchbegriff | ca. |
-|---|---|---|
-| Mikrocontroller | **ESP32-C3 Supermini** | 4 € |
-| Servo | **SG90** (Kunststoffgetriebe) oder **MG90S** (Metall, hält länger) | 3 € |
-| Kondensator | Elko **1000 µF, ≥ 6,3 V** | 0,50 € |
-| Mitnehmerstift | M3-Schraube, 12 mm, mit Mutter | 0,20 € |
-| Kabel | Dupont-Litzen, weiblich, 3 Stück | 1 € |
-| Strom | USB-Kabel + Netzteil **oder Powerbank** | 5 € |
-| Filament | **PETG**, ca. 130 g | 3 € |
+Die Maße stammen aus `tresorbox.scad` – die Tasche ist auf genau diese Teile
+konstruiert.
 
-Schrauben fürs Servo liegen dem Servo bei.
+| # | Teil | Worauf achten | ca. |
+|---|---|---|---|
+| 1 | **ESP32-C3 Supermini** | Platine ≤ 24 × 19 mm. Ein normales DevKit-Board (52 × 28) passt nicht ins Bett | 4 € |
+| 2 | **Servo SG90** (9 g) | Rumpf 23,2 × 12,4 × 23 mm, Flanschabstand 32,5 mm. **MG90S** (Metallgetriebe) ist maßgleich und hält länger | 3 € |
+| 3 | **Servohorn, einarmig** | liegt dem Servo bei. Braucht ein Loch **9 mm von der Mitte** – die äußerste Bohrung, notfalls auf 3 mm aufbohren | – |
+| 4 | **Elko 1000 µF, ≥ 6,3 V** | radial, Raster 5 mm | 0,50 € |
+| 5 | **M3-Schraube, 12 mm** | Zylinderkopf, plus **eine M3-Mutter** zum Kontern | 0,20 € |
+| 6 | **Dupont-Litzen, 3 ×** | weiblich/weiblich, 10–20 cm | 1 € |
+| 7 | **USB-Kabel + 5-V-Netzteil, ≥ 1 A** | passend zum Board (C oder Micro). Eine Powerbank geht auch | 5 € |
+| 8 | **Kabelbinder, klein** | Zugentlastung innen an der Wand | – |
+| 9 | **PETG-Filament, ca. 175 g** | **kein PLA** – das kriecht unter Dauerlast | 4 € |
 
-**Nimm PETG, nicht PLA.** PLA kriecht unter Dauerlast und wird im warmen Zimmer
-weich – ein Riegel, der wochenlang unter Spannung steht, verformt sich.
+**Zusammen rund 18 €**, ohne Filament 14 €.
+
+Schrauben fürs Servo (2 ×, selbstschneidend) liegen dem Servo bei.
+
+### Nur fürs Prüfstück
+
+**Nichts davon.** Die drei gedruckten Teile reichen für den mechanischen Test
+(ca. 22 g Filament). Wenn Servo und M3-Schraube schon da sind, nimm sie mit –
+die Tasche ist vollständig enthalten und SG90-Klone streuen um bis zu drei
+Zehntel. ESP32, Kondensator und Kabel brauchst du erst mit der Firmware.
+
+### Warum diese Teile
+
+**Der ESP32-C3 Supermini, nicht irgendein ESP32.** Das Platinenbett ist
+24 × 19 mm; die verbreiteten DevKit-Boards sind doppelt so groß und passen
+nicht. BLE, genug Strom am 5-V-Pin und Arduino-IDE-Unterstützung hat er.
 
 **Der Kondensator ist nicht optional.** Ohne ihn bricht die Spannung beim
-Anlaufen des Servos ein und der ESP32 startet neu – jedes Mal, wenn das Schloss
-aufgehen soll. Das ist der Fehler, den man zwei Abende lang sucht.
+Anlaufen des Servos ein und der ESP32 startet neu – jedes Mal, wenn das
+Schloss aufgehen soll. Das ist der Fehler, den man zwei Abende lang sucht.
+
+**M3 mit 12 mm.** Sie steckt von oben durchs Horn und greift als Mitnehmer in
+den Querschlitz des Riegels. Die Länge ist unkritisch: 8 bis 12 mm dürfen
+unten herausstehen, darunter liegt ein Freigang.
+
+**Netzteil mit mindestens 1 A.** Ein SG90 zieht beim Anlaufen kurz ein halbes
+Ampere. Am Handy-Ladegerät mit 500 mA startet der ESP32 neu.
 
 ## Drucken
 
@@ -120,8 +144,9 @@ Erst wenn das sitzt, die große Kiste drucken.
 5. **Mittelstellung finden.** Servo auf 90° fahren, *dann* das Horn
    aufstecken – der Riegel soll dabei auf halbem Weg stehen. Steckst du es
    schief auf, fehlt an einem Ende der Hub.
-5. **Verdrahten** (siehe unten), Platine ins Bett legen, Kabel durch das Loch
-   hinten, mit einem Kabelbinder gegen Zug sichern.
+6. **Verdrahten** (siehe unten), Platine ins Bett legen. Das Kabel von außen
+   durch das 12-mm-Loch schieben – der Stecker passt hindurch – und innen mit
+   einem Kabelbinder gegen Zug sichern.
 
 ## Verdrahtung
 

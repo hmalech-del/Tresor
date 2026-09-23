@@ -106,7 +106,10 @@ schwenk = 45;                // Servoausschlag in beide Richtungen
 riegel_weg = 2 * stift_radius * sin(schwenk);   // 12,7 mm
 
 /* ---------- Elektronik ---------- */
-kabel_d   = 6.5;
+/* Das Loch muss den STECKER durchlassen, nicht das Kabel. Ein USB-C-Stecker
+ * misst mit Umspritzung etwa 11 x 7 mm; mit 6,5 mm bekaeme man das Kabel gar
+ * nicht erst hinein, denn einfaedeln laesst es sich von keiner Seite. */
+kabel_d   = 12;
 platine_x = 24;              // ESP32-C3 Supermini
 platine_y = 19;
 
@@ -223,8 +226,8 @@ module koerper() {
                  wand + servo_achse_y - servo_y/2 - 2, boden + servo_oben - 4.5])
         cube([6, servo_y + 4, 3]);
 
-    // Kabeldurchlass hinten
-    translate([aussen_x/2 - 22, aussen_y + 1, boden + 8])
+    // Kabeldurchlass hinten, gross genug fuer den Stecker
+    translate([aussen_x/2 - 22, aussen_y + 1, boden + 9])
       rotate([90, 0, 0]) cylinder(d = kabel_d, h = wand + 3);
 
     // Flache Mulde als Bett fuer die Platine

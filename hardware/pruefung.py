@@ -121,6 +121,11 @@ pruefe("Loch hoch bleibt knapp",
        s_loch_z <= 0.6,
        f"{s_loch_z} mm - mehr hiesse nur, dass der Deckel wackelt")
 
+kabel_d = p("kabel_d")
+pruefe("Kabelloch laesst den Stecker durch",
+       kabel_d >= 11,
+       f"{kabel_d:.0f} mm; ein USB-C-Stecker misst mit Umspritzung etwa 11 x 7 mm")
+
 print("\nDruckbarkeit")
 pruefe("Servotasche ist nach oben offen", True, "kein Stuetzmaterial noetig")
 pruefe("Zungenschlitz ist nach oben offen", True, "kein Stuetzmaterial noetig")
