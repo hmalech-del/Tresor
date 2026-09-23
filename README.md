@@ -1001,4 +1001,5 @@ unverändert.
 | `js/sicherung.js` | Export und Import als Datei, optional verschlüsselt |
 | `js/erinnerung.js` | Anlässe für Benachrichtigungen, Erlaubnis, Versand |
 | `js/probe.js` | Probelauf: jede Prüfung einzeln, ohne Folgen |
+| `hardware/` | Tresorbox: druckbare Kiste mit Servoverschluss (noch ohne Firmware) |
 | `js/app.js` | Oberfläche und Ablauf |
