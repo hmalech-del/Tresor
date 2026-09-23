@@ -48,6 +48,39 @@ konstruiert.
 
 Schrauben fürs Servo (2 ×, selbstschneidend) liegen dem Servo bei.
 
+### Welches Board genau
+
+Unter "ESP32" wird alles Mögliche verkauft, und ein Teil davon kann kein
+Bluetooth. Auf dem Modul selbst muss **ESP32-WROOM-32** stehen (auch -32D
+oder -32E), 30 oder 38 Pins – beides passt. Ein **ESP32-S3-DevKitC** geht
+genauso.
+
+**Finger weg von:**
+
+| | warum |
+|---|---|
+| **ESP32-S2** | **kein Bluetooth.** Heisst fast gleich, sieht gleich aus, kann nur WLAN. Das Schloss ginge nie auf |
+| **ESP8266 / NodeMCU** | **kein Bluetooth.** Oft billiger und mit sehr ähnlichen Produktfotos |
+| **ESP32-CAM** | keine USB-Buchse, braucht einen extra Programmieradapter |
+| **WROOM-32*U*** | das U steht für eine externe Antennenbuchse statt Platinenantenne. Ohne gekaufte Antenne funkt es nicht |
+| nacktes **Modul** ohne Trägerplatine | hat nur Lötfahnen, keine Pins und kein USB |
+
+**Worauf es sonst ankommt:**
+
+- **Stiftleisten angelötet.** Auf dem Produktfoto sichtbar. Sonst brauchst du
+  einen Lötkolben – genau der Grund, aus dem wir den DevKit nehmen.
+- **Ein 5V- oder VIN-Pin.** Daran hängt das Servo. Steht im Pinout-Bild der
+  Anzeige; jedes echte DevKit hat ihn.
+- **USB-Wandler CP2102** statt CH340, wenn du die Wahl hast. CP2102 meldet
+  sich ohne Treiberinstallation, CH340 braucht auf macOS gern noch einen.
+- **Buchse passend zu deinen Kabeln.** Neuere Boards haben USB-C, ältere
+  Micro-USB. Beides funktioniert, aber ärgerlich, wenn das Kabel fehlt.
+
+Als Suchbegriff funktioniert **"ESP32 DevKitC WROOM-32 USB-C 38 Pin
+Stiftleisten gelötet"** – und dann die Modulbeschriftung auf dem Foto
+gegenprüfen, nicht den Anzeigentitel. Die Titel sind Stichwortsalat; das
+Blech auf dem Modul lügt nicht.
+
 ### Wo kaufen
 
 | | Preis | Lieferung | wofür |
@@ -203,17 +236,28 @@ Erst wenn das sitzt, die große Kiste drucken.
 
 ## Verdrahtung
 
-| Servo | ESP32-C3 |
+| Servo | ESP32 DevKit |
 |---|---|
 | braun (GND) | GND |
-| rot (+) | 5V |
-| orange (Signal) | GPIO 4 |
+| rot (+) | 5V (oder VIN) |
+| orange (Signal) | GPIO 18 |
+
+Nimm nicht irgendeinen freien Pin: **GPIO 0, 2, 12 und 15** entscheiden beim
+Einschalten, wie der ESP32 startet. Hängt dort ein Servo, das den Pin im
+falschen Moment zieht, bootet das Board nicht oder landet im Flash-Modus.
+GPIO 18, 19, 21, 22 und 23 sind unverdächtig.
 
 Der Kondensator kommt **zwischen 5V und GND, möglichst nah am Servo** –
 langes Bein an 5V.
 
 Das USB-Kabel versorgt die Platine, das Servo hängt an deren 5V-Pin. Achte auf
-ein Netzteil mit mindestens 1 A; ein SG90 zieht beim Anlaufen kurz ein halbes.
+ein Netzteil mit mindestens 1 A; ein SG90 zieht beim Anlaufen kurz ein halbes,
+ein MG90S mehr.
+
+Sollte das Board trotz Kondensator beim Anfahren neu starten, läuft der Strom
+durch eine zu knappe Schutzdiode auf der Platine. Dann hängst du das Servo
+nicht an den 5V-Pin, sondern direkt an die 5 V des Kabels und verbindest nur
+noch GND und Signal mit dem Board.
 
 ## Toleranzen
 
