@@ -1032,50 +1032,42 @@
     return !!z.kapituliert && !aufgabe.erledigt && !(z.strafeBis && Date.now() < z.strafeBis);
   }
 
-  /* Der Stein: Zeit in Haeppchen, fuer stumpfes Schieben. Man rollt ihn
-   * Stoss fuer Stoss den Hang hinauf; oben rollt er wieder hinunter, und
-   * dafuer gibt es ein Stueck Zeit. Mehr nicht - eine Pruefung zaehlt
-   * zwanzigmal so viel.
+  /* Der Stein: Zeit fuer stumpfes Schieben - jederzeit, so lange man will,
+   * losgeloest von den Pruefungen. Man rollt ihn Stoss fuer Stoss den Hang
+   * hinauf; oben rollt er wieder hinunter, und dafuer gibt es ein Stueck
+   * Zeit. Jeder Gipfel gleich viel: Er soll monoton sein, nicht klug.
    *
-   * Jeder Gipfel der letzten 24 Stunden macht den naechsten schwerer. So
-   * bleibt er ein Zubrot fuer die Wartezeit und wird nie der Weg, einen
-   * Tresor abzukuerzen: Bei vier Stoessen je Sekunde dauern die ersten
-   * zwanzig Gipfel eine halbe Stunde, die naechsten zwanzig mehr als doppelt
-   * so lang.
-   *
-   *   am Netz: Die Freigabe rueckt nach vorn, um ein Zwanzigstel der
-   *     Normalgutschrift - bei 2 bis 5 Tagen und zehn Pruefungen 22 min.
-   *   in einer Wartezeit: Sie schrumpft um 15 % dessen, was noch uebrig ist.
-   *     Ganz auf null schiebt man sie so nie.
+   *   am Netz: Die Freigabe rueckt nach vorn, um ein Tausendstel des
+   *     Zeitrahmens (oben minus unten). Bei vier Stoessen je Sekunde sind das
+   *     rund 10 % des Rahmens je Stunde - bei 2 bis 5 Tagen gut 4 min je
+   *     Gipfel, 7 h je Stunde Schieben. Unter die untere Grenze kommt auch
+   *     der Stein nicht; das bleibt die Zusage des Rahmens.
+   *   sonst: 20 s je Gipfel auf einen Vorrat. Laeuft gerade eine Wartezeit,
+   *     schrumpft sie sofort; sonst wird die naechste damit bezahlt.
    *
    * Unter Willkuer ist jeder Bissen gezogen, und manchmal rutscht der Stein
    * kurz vor dem Gipfel ab. Als Objekt, damit Tests es stauchen koennen. */
   var STEIN = {
     stoesse: 150,
-    schwerer: 0.15,
-    fenster: 24 * 3600,
-    netzAnteil: 0.05,
-    wartenAnteil: 0.15,
-    wartenMin: 5,
+    netzAnteil: 0.001,
+    wartenBissen: 20,
     abrutschen: 0.15
   };
 
-  function steinGipfel24(tresor, jetzt) {
-    jetzt = jetzt || Date.now();
-    tresor.stein = (tresor.stein || []).filter(function (t) { return jetzt - t < STEIN.fenster * 1000; });
-    return tresor.stein.length;
-  }
-
-  /* Wie viele Stoesse der naechste Gipfel kostet. */
-  function steinStoesse(tresor, jetzt) {
-    return Math.round(STEIN.stoesse * (1 + STEIN.schwerer * steinGipfel24(tresor, jetzt)));
-  }
-
-  /* Der Normalwert eines Bissens am Netz; 0, wenn es dort nichts zu holen gibt. */
-  function steinBissenNetz(tresor) {
+  /* Wo der Stein wirkt: 'netz' (Zeitkonto), 'vorrat' (Wartezeiten) oder
+   * null (nichts mehr zu holen: freigegeben, oder am Netz ohne Spielraum). */
+  function steinArt(tresor) {
+    if (!tresor || alleOffen(tresor)) return null;
     var f = tresor.freigabe;
-    if (!f || f.z || !f.gutschrift) return 0;
-    return Math.max(1, Math.round(f.gutschrift * STEIN.netzAnteil));
+    if (f) return (!f.z && f.leiter[f.leiter.length - 1] > f.leiter[0] && f.rahmen[1] > f.rahmen[0]) ? 'netz' : null;
+    return 'vorrat';
+  }
+
+  /* Normalwert eines Gipfels in Sekunden. */
+  function steinBissen(tresor) {
+    var art = steinArt(tresor);
+    if (art === 'netz') return Math.max(1, Math.round((tresor.freigabe.rahmen[1] - tresor.freigabe.rahmen[0]) * STEIN.netzAnteil));
+    return art === 'vorrat' ? STEIN.wartenBissen : 0;
   }
 
   function steinAmBoden(tresor) {
@@ -1083,33 +1075,48 @@
     return !!f && f.konto.zielSek <= f.leiter[0];
   }
 
-  /* Oben angekommen. aufgabe: die gesperrte Pruefung, deren Wartezeit
-   * schrumpfen soll; ohne sie geht es um die Freigabe am Netz. */
-  function steinGipfel(tresor, aufgabe, jetzt) {
+  /* Die Wartezeit, die gerade laeuft - ausserhalb des Netzes. */
+  function laufendeWartezeit(tresor, jetzt) {
     jetzt = jetzt || Date.now();
-    var willkuer = !!(tresor.konfig || {}).blind;
-    var ausschlag = willkuer ? ausschlagZiehen(tresor.konfig) : 1;
-    var ergebnis;
-    if (aufgabe) {
-      var z = aufgabe.zustand || {};
-      var rest = Math.max(0, ((z.strafeBis || 0) - jetzt) / 1000);
-      if (!rest) return null;
-      var weg = Math.min(rest, Math.max(STEIN.wartenMin, Math.round(rest * STEIN.wartenAnteil * ausschlag)));
-      z.strafeBis -= weg * 1000;
-      ergebnis = { art: 'warten', sekunden: weg };
-    } else {
-      var bissen = steinBissenNetz(tresor);
-      if (!bissen) return null;
+    var fragment = aktuellesFragment(tresor);
+    var aufgabe = fragment && offeneAufgabe(fragment);
+    return aufgabe && aufgabe.zustand && aufgabe.zustand.strafeBis > jetzt ? aufgabe : null;
+  }
+
+  /* Den Vorrat gegen eine laufende Wartezeit tauschen. Gibt die Sekunden
+   * zurueck, die abgebucht wurden. */
+  function steinVorratEinloesen(tresor, aufgabe, jetzt) {
+    jetzt = jetzt || Date.now();
+    var z = aufgabe && aufgabe.zustand;
+    if (!z || !(tresor.steinVorrat > 0) || !(z.strafeBis > jetzt)) return 0;
+    var weg = Math.min(tresor.steinVorrat, (z.strafeBis - jetzt) / 1000);
+    z.strafeBis -= weg * 1000;
+    tresor.steinVorrat = Math.round((tresor.steinVorrat - weg) * 1000) / 1000;
+    return weg;
+  }
+
+  /* Oben angekommen. */
+  function steinGipfel(tresor, jetzt) {
+    jetzt = jetzt || Date.now();
+    var art = steinArt(tresor);
+    if (!art) return null;
+    var ausschlag = (tresor.konfig || {}).blind ? ausschlagZiehen(tresor.konfig) : 1;
+    var bissen = Math.max(1, Math.round(steinBissen(tresor) * ausschlag));
+    var ergebnis = { art: art, ausschlag: ausschlag };
+    if (art === 'netz') {
       /* Gezaehlt wird, was ankommt: Am Boden des Rahmens ist nichts mehr zu holen. */
       var vorher = tresor.freigabe.konto.zielSek;
-      var zug = zeitkontoVerschieben(tresor, -Math.round(bissen * ausschlag));
-      ergebnis = { art: 'freigabe', sekunden: Math.round(vorher - tresor.freigabe.konto.zielSek),
-                   amBoden: !!(zug && zug.amBoden) };
+      var zug = zeitkontoVerschieben(tresor, -bissen);
+      ergebnis.sekunden = Math.round(vorher - tresor.freigabe.konto.zielSek);
+      ergebnis.amBoden = !!(zug && zug.amBoden);
+    } else {
+      tresor.steinVorrat = (tresor.steinVorrat || 0) + bissen;
+      ergebnis.sekunden = bissen;
+      ergebnis.eingeloest = steinVorratEinloesen(tresor, laufendeWartezeit(tresor, jetzt), jetzt);
+      ergebnis.vorrat = tresor.steinVorrat;
     }
-    steinGipfel24(tresor, jetzt);
-    tresor.stein.push(jetzt);
-    ergebnis.ausschlag = ausschlag;
-    ergebnis.naechste = steinStoesse(tresor, jetzt);
+    tresor.steinGipfel = (tresor.steinGipfel || 0) + 1;
+    tresor.steinSumme = (tresor.steinSumme || 0) + ergebnis.sekunden;
     return ergebnis;
   }
 
@@ -1235,10 +1242,11 @@
     kapitulationAbgesessen: kapitulationAbgesessen,
     notausgangUeberNetz: notausgangUeberNetz,
     STEIN: STEIN,
-    steinStoesse: steinStoesse,
-    steinBissenNetz: steinBissenNetz,
+    steinArt: steinArt,
+    steinBissen: steinBissen,
     steinAmBoden: steinAmBoden,
     steinGipfel: steinGipfel,
+    steinVorratEinloesen: steinVorratEinloesen,
     steinRutscht: steinRutscht,
     strafzeit: strafzeit,
     neueFrist: neueFrist,

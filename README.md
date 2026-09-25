@@ -267,26 +267,31 @@ selbst bleibt unangetastet. **Ohne Zeitschloss gibt es kein Pfand** – dort ist
 die Lösung der einzige echte Schutz. Rätsel lassen sich dann nicht aufgeben,
 alle anderen Prüfungen schon.
 
-**Der Stein.** Wer nicht warten will, darf schieben. Solange die nächste
-Prüfung auf sich warten lässt – oder wenn alle abgelegt sind und nur noch die
-Zeit hält –, steht unter der Uhr „Den Stein rollen". Zwei Knöpfe, links und
+**Der Stein.** Neben den Prüfungen, losgelöst von ihrer Reihenfolge, steht
+jederzeit eine eigene Karte: „Den Stein rollen". Zwei Knöpfe, links und
 rechts, im Wechsel; dieselbe Hand zweimal zählt nicht, zu schnelles Tippen
 auch nicht. Wer anderthalb Sekunden innehält, verliert Boden: Der Stein rollt
-zurück. Oben rollt er wieder hinunter, und dafür gibt es ein Stück Zeit:
+zurück. Nach 150 Stößen ist er oben, rollt wieder hinunter, und dafür gibt es
+Zeit – jedes Mal gleich viel, so lange man will:
 
-| wo | ein Gipfel bringt |
+| Zeitschloss | ein Gipfel bringt |
 |---|---|
-| am Netz | ein Zwanzigstel der Normalgutschrift – bei 2 bis 5 Tagen und zehn Prüfungen gut 20 min |
-| in einer Wartezeit (Strafe, Kapitulation) | 15 % dessen, was noch übrig ist, mindestens 5 s |
+| fern (Netz) | ein Tausendstel des Zeitrahmens (oben minus unten); die Freigabe rückt sofort nach vorn |
+| eisern, nachsichtig | 20 s auf einen Vorrat; läuft gerade eine Wartezeit (Strafe, Kapitulation), schrumpft sie sofort, sonst bezahlt der Vorrat die nächste |
 
-Der erste Gipfel kostet 150 Stöße, jeder weitere der letzten 24 Stunden 15 %
-mehr. Bei vier Stößen je Sekunde dauern zwanzig Gipfel so eine halbe Stunde,
-die nächsten zwanzig mehr als doppelt so lang – ein Zubrot für die Wartezeit, kein Weg,
-einen Tresor abzukürzen. Unter die untere Grenze des Rahmens schiebt auch der
-Stein nicht, und eine Wartezeit schrumpft mit jedem Gipfel nur um einen
-Anteil: Auf null bringt man sie nie. Ein halber Aufstieg wird nicht
-gespeichert; wer geht, fängt unten an. Unter Willkür ist jeder Bissen gezogen,
-und etwa jedes siebte Mal rutscht der Stein kurz vor dem Gipfel ab.
+Bei vier Stößen je Sekunde ist ein Gipfel rund 40 s Arbeit. Eine Stunde
+Schieben holt am Netz so etwa 10 % des Rahmens – bei 2 bis 5 Tagen gut 4 min
+je Gipfel, rund 7 h je Stunde. Grenzen gibt es genau eine: Unter die untere
+Grenze des Rahmens schiebt auch der Stein nicht; ist sie erreicht, verschwindet
+die Karte. Am Netz ohne Spielraum im Rahmen gibt es ihn nicht. Der
+Rechenschloss-Anteil eines eisernen Tresors bleibt unberührt – dort wirkt der
+Stein nur auf Wartezeiten.
+
+Die Karte übersteht es, wenn die Ansicht sich neu zeichnet (eine Prüfung
+kommt frei, eine Wartezeit endet); ein halber Aufstieg wird aber nicht
+gespeichert – wer die App schließt, fängt unten an. Unter Willkür ist jeder
+Bissen gezogen, und etwa jedes siebte Mal rutscht der Stein kurz vor dem
+Gipfel ab.
 
 **Das Band.** Am Netz gehen die Fragmente nicht einzeln auf, sondern alle zur
 Freigabe – jede Ziffer braucht den gemeinsamen Zeitschlüssel. Das Band sagt
