@@ -100,14 +100,16 @@ hilft auch der Notausgang nicht.
 
 ---
 
-## Zwei Sicherheitsstufen
+## Drei Zeitschlösser
 
 | Modus | Was die Fragmente schützt | Notausgang | Kosten |
 |---|---|---|---|
-| **sicher** (Standard) | Echte, nicht abkürzbare Rechenzeit je Fragment | zweites Zeitschloss, zufällige **Rechenzeit** | ein Kern unter Volllast, Akku |
-| **weniger sicher** | Nichts – der Schlüsselanteil liegt offen daneben | zufällige **Wartezeit** ab dem Verriegeln | keine |
+| **eisern** (Standard) | Echte, nicht abkürzbare Rechenzeit je Fragment | zweites Zeitschloss, **Rechenzeit**, höchstens 1 Tag | ein Kern unter Volllast, Akku |
+| **fern** | Das drand-Netz: vor der Freigabezeit öffnet ihn niemand | eigene Runde im Netz, **bis 28 Tage** | keine – aber Internet zum Öffnen |
+| **nachsichtig** | Nichts – der Schlüsselanteil liegt offen daneben | **Wartezeit**, bis 28 Tage | keine |
 
-Beide Modi stellen den Notausgang über dieselben zwei Felder ein.
+Alle drei stellen den Notausgang über dieselben Felder ein. Rechenzeit über
+einen Tag bietet die App nicht an: Das schafft kein Handy.
 
 Im weniger sicheren Modus sind die Aufgaben reine Oberflächenhürden: Wer den
 `localStorage` liest, kommt sofort an das Geheimnis. Dafür kostet nichts Strom,
@@ -115,7 +117,7 @@ und es gibt keine Wartezeit auf den Rechner. **Antwortgebundene Rätsel wirken
 auch dort**, weil ihre Lösung in den Schlüssel eingeht – ein solcher Tresor mit
 Logik- und Rätselaufgaben ist also nicht ganz ungeschützt.
 
-Den **Notausgang gibt es in beiden Modi**, denn er ist ein Sicherheitsnetz für
+Den **Notausgang gibt es in allen Modi**, denn er ist ein Sicherheitsnetz für
 den Fall, dass man eine Aufgabe nicht packt – kein Bonus fürs Zeitschloss. Ohne
 Rechenzeit hilft nur die Uhr: Er öffnet irgendwann zwischen den beiden von dir
 gesetzten Grenzen, gezogen beim Verriegeln, und der Termin wird nicht angezeigt.
@@ -202,6 +204,65 @@ Tresor oder ein gelöschter Tresor nehmen es nicht mit.
 Der Verlauf ist bewusst **unverschlüsselt** – der Tresor war ja offen, das
 Geheimnis ist raus. Er hält die letzten zwölf Einträge; wird der Speicher eng,
 fliegen die ältesten. Jeder Eintrag lässt sich einzeln löschen.
+
+## Fern: das Zeitschloss im Netz
+
+Rechenzeit hält nur, solange das Gerät rechnet – mit ausgeschaltetem
+Bildschirm hört ein Browser auf. Für Tage und Wochen taugt das nicht.
+
+[drand](https://drand.love) ist ein öffentliches Netz unabhängiger Betreiber
+(u. a. Cloudflare, Protocol Labs, EPFL), das alle drei Sekunden eine Signatur
+veröffentlicht. Mit **tlock** lässt sich auf eine *künftige* Signatur
+verschlüsseln. Solange sie nicht existiert, öffnet es niemand – nicht die App,
+nicht du, keine verstellte Geräteuhr. Das Gerät rechnet nicht, der Bildschirm
+darf aus sein, die App geschlossen.
+
+**Tresorzeit.** Du gibst eine Spanne an (10 Minuten bis 4 Wochen), beim
+Verriegeln wird daraus gezogen, wann der Tresor frühestens aufgeht.
+
+**Strafen verschieben die Freigabe.** Eine verhauene Aufgabe sperrt nichts,
+sie schiebt die Freigabe nach hinten – um einen Anteil der Tresorzeit (mild
+6 %, hart 15 %, jede Wiederholung das Anderthalbfache). Mit Glücksspiel darf
+jede Strafe einmal verwürfelt werden: 5–6 nimmt sie zurück, 1–4 streckt sie
+um die Hälfte.
+
+**Die Leiter.** Beim Verriegeln entsteht ein Zeitschlüssel `Z` für den ganzen
+Tresor. Er wird auf eine Leiter künftiger Runden verschlossen, von der
+Tresorzeit bis zum Notausgang (ohne Notausgang bis zum Zehnfachen). Die
+Sprossen liegen rund 5 % auseinander – bei einer Stunde drei Minuten, bei drei
+Tagen dreieinhalb Stunden – und es sind höchstens 90, denn jede kostet beim
+Verriegeln gut 50 ms (auf dem Handy mehr). Jedes Fragment braucht `Z` *und*
+seine Antworten. `Z` selbst wird nicht gespeichert, erst nach dem Abholen –
+dann ist die Signatur ohnehin öffentlich.
+
+Was davon Kryptografie ist und was App-Logik:
+
+| | durchgesetzt durch |
+|---|---|
+| **frühestens** zur gezogenen Tresorzeit | das Netz – darunter gibt es keine Sprosse |
+| **spätestens** zum Notausgang | das Netz – darüber gibt es keine Sprosse |
+| die einzelne Strafe dazwischen | die App: Sie bietet frühere Sprossen nicht mehr an, gelöscht sind sie nicht |
+
+Was man dafür eintauscht:
+
+* **Zum Öffnen braucht es Internet.** Zum Verschließen nicht – die Kettendaten
+  (quicknet) sind fest eingetragen, nicht abgefragt.
+* **Verschwindet das Netz vor dem Termin, ist das Geheimnis verloren.** drand
+  läuft seit 2019. Für Wochen ist das Risiko gering, für ein Jahr würde ich es
+  nicht eingehen.
+* Früher öffnen könnte nur eine Mehrheit der Betreiber gemeinsam. Jede
+  Signatur wird gegen den öffentlichen Schlüssel der Kette geprüft; ein
+  manipulierter Spiegelserver kann keinen Schlüssel zu früh liefern, nur gar
+  keinen.
+* „Geheim" beim Notausgang verbirgt die Dauer nur in der Anzeige. Die Runde
+  steht im Chiffrat selbst – ohne sie ließe er sich nicht öffnen.
+
+Die Bibliothek ist [tlock-js](https://github.com/drand/tlock-js) 0.9.0 mit
+`@noble/curves`, mit esbuild zu `js/vendor/tlock.min.js` gebündelt (168 KB,
+gzip 58 KB). Wie sie neu gebaut wird, steht in `js/drand.js`. Geprüft ist das
+Zusammenspiel gegen eine eigene Kette mit bekanntem Schlüssel; **das echte
+Netz ist aus der Entwicklungsumgebung nicht erreichbar** – der erste
+Durchlauf am echten Gerät ist der erste echte Test.
 
 ---
 
