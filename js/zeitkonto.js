@@ -61,6 +61,32 @@
     return heraus;
   }
 
+  /* Leiter mit relativem Raster: jede Sprosse rund 5 % ueber der vorigen.
+   *
+   * Fuer drand. Dort kostet jede Sprosse eine Verschluesselung von gut 50 ms,
+   * auf dem Handy eher 200 - eine Leiter im Minutenraster ueber eine Woche
+   * waere nicht zu bauen. Relativ gerastert bleibt sie klein und ist trotzdem
+   * dort fein, wo es zaehlt: Bei einer Stunde liegen die Sprossen drei
+   * Minuten auseinander, bei drei Tagen dreieinhalb Stunden. Wer bei drei
+   * Tagen steht, spuert keine Viertelstunde.
+   *
+   * Reicht die Zahl nicht, wird das Raster groeber statt die Leiter laenger:
+   * `hoechstens` ist eine Obergrenze fuer die Wartezeit beim Anlegen. */
+  function relativeLeiter(minSek, maxSek, hoechstens) {
+    hoechstens = Math.max(2, hoechstens || 90);
+    var min = Math.max(1, Math.round(minSek));
+    var max = Math.max(min, Math.round(maxSek));
+    if (max === min) return [min];
+    var faktor = 1 + Math.max(0.05, Math.pow(max / min, 1 / (hoechstens - 1)) - 1);
+    var leiter = [min], s = min;
+    while (s < max) {
+      // mindestens eine drand-Runde Abstand, und die letzte Sprosse ist der Deckel
+      s = Math.min(max, Math.max(s + 3, Math.ceil(s * faktor)));
+      leiter.push(s);
+    }
+    return leiter;
+  }
+
   /* Ein laufendes Konto.
    *
    * leiterSek  aufsteigende Sprossen in Sekunden (nur zum Rechnen und Anzeigen)
@@ -110,6 +136,7 @@
     STUFEN: STUFEN,
     sekundenLeiter: sekundenLeiter,
     schritteLeiter: schritteLeiter,
+    relativeLeiter: relativeLeiter,
     Konto: Konto
   };
 })(typeof window !== 'undefined' ? window : globalThis);
