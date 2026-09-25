@@ -19,7 +19,10 @@
       aufgabenProFragment: 2,
       rechenzeit: 2,
       reihenfolge: 'links',
-      sicherheit: 'rechenzeit',      // 'rechenzeit' = Zeitschloss, sonst: ohne Rechenzeit
+      sicherheit: 'rechenzeit',      // 'rechenzeit' | 'drand' (Netz) | 'ohne-rechenzeit'
+      /* Nur fuer drand: Wann der Tresor fruehestens aufgeht, gezogen aus
+       * dieser Spanne. Strafen schieben die Freigabe von dort nach hinten. */
+      tresorzeit: { minSekunden: 3600, maxSekunden: 7200 },
       sensoren: false,               // Lagesensoren nur, wenn das Gerät sie wirklich hat
       gluecksspiel: false,           // Wartezeiten dürfen verwürfelt werden
       blind: false,                  // "Meine Regeln": der Game Master wuerfelt alles aus und sagt nichts
@@ -43,6 +46,29 @@
 
   function rechenzeitModus(konfig) {
     return (konfig.sicherheit || 'rechenzeit') === 'rechenzeit';
+  }
+
+  function drandModus(konfig) {
+    return konfig.sicherheit === 'drand';
+  }
+
+  /* Ohne Notausgang gibt es keine Zusage, wann spaetestens Schluss ist - aber
+   * eine Leiter braucht eine oberste Sprosse, weil jede beim Verriegeln
+   * entstehen muss. Das Zehnfache der Tresorzeit ist praktisch unerreichbar. */
+  var DRAND_DECKEL_FAKTOR = 10;
+
+  /* Strafe im drand-Modus: ein Anteil der gezogenen Tresorzeit, nicht ein
+   * fester Wert. Zwanzig Sekunden waeren bei einem Wochentresor nichts,
+   * eine Stunde bei einem Stundentresor alles. Jede Wiederholung wiegt
+   * anderthalbmal so schwer, eine einzelne Strafe hoechstens die ganze
+   * Tresorzeit. */
+  var DRAND_STRAFE_ANTEIL = [0, 0.06, 0.15];                 // aus, mild, hart
+
+  function drandStrafe(konfig, fehlversuche, tresorzeitSek) {
+    var anteil = DRAND_STRAFE_ANTEIL[util.grenze(konfig.strafe || 0, 0, 2)];
+    if (!anteil || !tresorzeitSek) return 0;
+    var roh = tresorzeitSek * anteil * Math.pow(1.5, Math.max(0, fehlversuche - 1));
+    return Math.round(Math.min(tresorzeitSek, roh));
   }
 
   function zufallsHex(bytes) {
@@ -279,6 +305,25 @@
     };
   }
 
+  /* Notausgang-Dauer ziehen. Vorab, weil drand sie als Obergrenze seiner
+   * Leiter braucht, bevor das erste Fragment verschluesselt wird. */
+  function notausgangZiehen(konfig) {
+    var exitKonfig = konfig.notausgang || {};
+    var modus = exitKonfig.modus || (exitKonfig.maxSekunden ? 'geheim' : 'aus');
+    if (modus === 'aus') return null;
+    var min, max;
+    if (modus === 'fest') {
+      min = max = Math.max(1, exitKonfig.sekunden || 0);
+    } else {
+      min = Math.max(1, Math.min(exitKonfig.minSekunden || 0, exitKonfig.maxSekunden || 0));
+      max = Math.max(min, Math.max(exitKonfig.minSekunden || 0, exitKonfig.maxSekunden || 0));
+    }
+    return {
+      modus: modus, min: min, max: max,
+      gezogen: min === max ? min : Math.round(min + zufallsAnteil() * (max - min))
+    };
+  }
+
   /* Verriegeln: für jedes Fragment ein Zeitschloss schmieden, die Antworten der
    * gebundenen Aufgaben in den Schlüssel rechnen und die Ziffer damit
    * verschlüsseln. Danach sind Klartext und Lösungen weg. */
@@ -291,6 +336,40 @@
     var zufall = new T.Zufall(saat);
     var laenge = teile.length;
     var mitRechenzeit = rechenzeitModus(konfig);
+    var mitDrand = drandModus(konfig);
+    var exitZug = notausgangZiehen(konfig);
+    var start = Date.now();
+
+    /* drand: Ein Zeitschluessel Z fuer den ganzen Tresor, verschlossen auf
+     * eine Leiter kuenftiger Runden. Jedes Fragment braucht Z und seine
+     * Antworten - vor der Freigabezeit geht also keines auf, egal wie gut
+     * gespielt wurde. Die Leiter reicht von der gezogenen Tresorzeit bis zum
+     * Notausgang; was darueber liegt, existiert nicht. */
+    var zeitschluessel = null, freigabe = null;
+    if (mitDrand) {
+      var tz = konfig.tresorzeit || {};
+      var tzMin = Math.max(10, Math.min(tz.minSekunden || 3600, tz.maxSekunden || 3600));
+      var tzMax = Math.max(tzMin, Math.max(tz.minSekunden || 3600, tz.maxSekunden || 3600));
+      var tresorzeit = Math.round(tzMin + zufallsAnteil() * (tzMax - tzMin));
+      var deckel = exitZug ? exitZug.gezogen : tzMax * DRAND_DECKEL_FAKTOR;
+      deckel = Math.max(tresorzeit, deckel);
+      var leiter = T.zeitkonto.relativeLeiter(tresorzeit, deckel, 90);
+      var runden = leiter.map(function (sek) { return T.drand.rundeZu(start + sek * 1000); });
+      zeitschluessel = zufallsHex(32);
+      melde({ phase: 'schmieden', text: 'Freigabe an das Netz binden ...', anteil: 0 });
+      var pakete = await T.drand.verschliessen(runden, zeitschluessel, function (fertig, von) {
+        melde({ phase: 'schmieden', text: 'Freigabe an das Netz binden ... ' + fertig + ' / ' + von,
+          anteil: fertig / von * 0.8 });
+      });
+      freigabe = {
+        art: 'drand', kette: T.drand.kette().hash, start: start,
+        rahmen: [tzMin, tzMax], tresorzeit: tresorzeit, deckel: deckel,
+        leiter: leiter, runden: runden, pakete: pakete,
+        konto: { zielSek: tresorzeit },
+        z: null
+      };
+      tresorzeit = null;
+    }
 
     /* Passphrase, falls gesetzt: Material einmal ableiten, Salze und Prüfwert
      * merken - die Passphrase selbst wird nirgends gespeichert. */
@@ -342,10 +421,11 @@
        * offen daneben. Das kostet keinen Strom und hält niemanden auf, der den
        * Speicher liest - die Aufgaben bleiben trotzdem eine Hürde, und
        * antwortgebundene Rätsel wirken weiter. */
-      var schluessel = mitRechenzeit ? null : zufallsHex(32);
+      var schluessel = (mitRechenzeit || mitDrand) ? null : zufallsHex(32);
       var puzzle = mitRechenzeit ? await T.zeitschloss.erzeugen(schritte) : null;
       var geheimteil = teile[positionen[i]];
-      var paket = await T.krypto.verschluesseln(i, mitRechenzeit ? puzzle.b : schluessel, geheimteil, material, passMat);
+      var zeitteil = mitRechenzeit ? puzzle.b : (mitDrand ? zeitschluessel : schluessel);
+      var paket = await T.krypto.verschluesseln(i, zeitteil, geheimteil, material, passMat);
 
       fragmente.push({
         index: i,
@@ -355,6 +435,7 @@
         iterationen: T.krypto.ITERATIONEN,
         schluessel: schluessel,                               // nur im leichten Modus
         schloss: puzzle ? { n: puzzle.n, a: puzzle.a, t: puzzle.t } : null,   // b wird bewusst nicht gespeichert
+        drand: mitDrand,                                      // Zeitteil ist der Zeitschluessel des Tresors
         paket: paket,
         stand: puzzle ? { erledigt: 0, x: puzzle.a } : { erledigt: 0, x: null },
         offen: false,
@@ -383,22 +464,33 @@
      * Ohne Rechenzeit zahlt derselbe Notausgang in Wartezeit statt in
      * Quadrierungen. */
     var notausgang = null;
-    var exitKonfig = konfig.notausgang || {};
-    var exitModus = exitKonfig.modus || (exitKonfig.maxSekunden ? 'geheim' : 'aus');
-    if (exitModus !== 'aus') {
-      var exitMin, exitMax;
-      if (exitModus === 'fest') {
-        exitMin = exitMax = Math.max(1, exitKonfig.sekunden || 0);
-      } else {
-        exitMin = Math.max(1, Math.min(exitKonfig.minSekunden || 0, exitKonfig.maxSekunden || 0));
-        exitMax = Math.max(exitMin, Math.max(exitKonfig.minSekunden || 0, exitKonfig.maxSekunden || 0));
-      }
-      var gezogen = exitMin === exitMax ? exitMin
-        : Math.round(exitMin + zufallsAnteil() * (exitMax - exitMin));
+    if (exitZug) {
+      var exitModus = exitZug.modus, exitMin = exitZug.min, exitMax = exitZug.max;
+      var gezogen = exitZug.gezogen;
+      exitZug = null;
 
       melde({ phase: 'notausgang', text: 'Notausgang schmieden ...', anteil: 1 });
 
-      if (mitRechenzeit && exitModus === 'geheim') {
+      if (mitDrand) {
+        /* Ueber das Netz: Die Runde steht im Paket selbst, "geheim" verbirgt
+         * sie deshalb nur in der Anzeige, nicht vor jemandem, der den
+         * Speicher liest. Dafuer gilt die Zusage wirklich - frueher oeffnet
+         * es niemand, spaeter jeder. */
+        var exitZeitschluessel = zufallsHex(32);
+        var exitRunde = T.drand.rundeZu(start + gezogen * 1000);
+        var exitZeitpaket = (await T.drand.verschliessen([exitRunde], exitZeitschluessel))[0];
+        notausgang = {
+          art: 'drand', modus: exitModus,
+          rahmen: [exitMin, exitMax],
+          sekunden: exitModus === 'geheim' ? null : gezogen,
+          frei: T.drand.zeitVon(exitRunde),
+          runde: exitRunde,
+          zeitpaket: exitZeitpaket,
+          paket: await T.krypto.verschluesseln('notausgang', exitZeitschluessel, JSON.stringify(teile), null, passMat),
+          benutzt: false
+        };
+        exitZeitschluessel = null;
+      } else if (mitRechenzeit && exitModus === 'geheim') {
         var untergrenze = aufRaster(rate * exitMin);
         var obergrenze = Math.max(untergrenze + PRUEFSCHRITT, aufRaster(rate * exitMax));
         var exitSchritte = Math.min(Math.max(aufRaster(rate * gezogen), untergrenze), obergrenze);
@@ -462,6 +554,7 @@
 
     melde({ phase: 'fertig', text: 'Verriegelt.', anteil: 1 });
     passMat = null;
+    zeitschluessel = null;
     return {
       version: 3,
       passSalz: passSalz,
@@ -477,7 +570,8 @@
       rate: rate,
       sekundenProSchloss: sekundenProSchloss,
       fragmente: fragmente,
-      notausgang: notausgang
+      notausgang: notausgang,
+      freigabe: freigabe
     };
   }
 
@@ -571,6 +665,59 @@
     return teile;
   }
 
+  /* drand: die Sprosse, auf die das Zeitkonto gerade zeigt. */
+  function freigabeKonto(tresor) {
+    return new T.zeitkonto.Konto(tresor.freigabe.leiter, tresor.freigabe.konto);
+  }
+
+  function freigabeZiel(tresor) {
+    var f = tresor.freigabe;
+    if (!f) return null;
+    var i = freigabeKonto(tresor).sprosse();
+    return { index: i, sekunden: f.leiter[i], runde: f.runden[i],
+             zeit: T.drand.zeitVon(f.runden[i]), paket: f.pakete[i] };
+  }
+
+  function freigabeErreicht(tresor) {
+    var f = tresor.freigabe;
+    if (!f) return false;
+    return !!f.z || Date.now() >= freigabeZiel(tresor).zeit;
+  }
+
+  /* Den Zeitschluessel beim Netz abholen. Einmal geholt, bleibt er gespeichert -
+   * der Beacon ist dann ohnehin oeffentlich, und so geht der Tresor auch
+   * offline weiter auf, sobald die Aufgaben erledigt sind. */
+  async function freigabeHolen(tresor) {
+    var f = tresor.freigabe;
+    if (f.z) return f.z;
+    var ziel = freigabeZiel(tresor);
+    f.z = await T.drand.oeffnen(ziel.runde, ziel.paket);
+    return f.z;
+  }
+
+  /* Strafe im drand-Modus: das Zeitkonto nach hinten schieben. Gibt zurueck,
+   * was wirklich angekommen ist - am Deckel nichts mehr, und der Spieler soll
+   * das sehen. Ist Z schon geholt, ist die Freigabe vorbei; dann wirkt keine
+   * Strafe mehr auf die Zeit. */
+  function strafeBuchen(tresor, fehlversuche) {
+    var f = tresor.freigabe;
+    if (!f || f.z) return null;
+    var sekunden = drandStrafe(tresor.konfig, fehlversuche, f.tresorzeit);
+    if (!sekunden) return null;
+    var konto = freigabeKonto(tresor);
+    var ergebnis = konto.verschieben(sekunden);
+    f.konto = konto.stand();
+    ergebnis.neueZeit = freigabeZiel(tresor).zeit;
+    return ergebnis;
+  }
+
+  /* Notausgang ueber das Netz: erst den Zeitschluessel holen, dann wie immer. */
+  async function notausgangUeberNetz(tresor, passMat) {
+    var exit = tresor.notausgang;
+    var hex = await T.drand.oeffnen(exit.runde, exit.zeitpaket);
+    return notausgangOeffnen(tresor, hex, passMat);
+  }
+
   /* Eintrag für den Verlauf: das Ergebnis, damit ein neuer Tresor oder ein
    * geschlossener Tab es nicht mitnimmt. Bei Bildern wird nur die schärfste
    * Stufe aufbewahrt. */
@@ -660,6 +807,13 @@
     notausgangBereit: notausgangBereit,
     notausgangUhrPruefen: notausgangUhrPruefen,
     rechenzeitModus: rechenzeitModus,
+    drandModus: drandModus,
+    drandStrafe: drandStrafe,
+    freigabeZiel: freigabeZiel,
+    freigabeErreicht: freigabeErreicht,
+    freigabeHolen: freigabeHolen,
+    strafeBuchen: strafeBuchen,
+    notausgangUeberNetz: notausgangUeberNetz,
     strafzeit: strafzeit,
     neueFrist: neueFrist,
     RECHENZEIT_STUFEN: RECHENZEIT_STUFEN,
