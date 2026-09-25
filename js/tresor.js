@@ -1037,20 +1037,20 @@
    * hinauf; oben rollt er wieder hinunter, und dafuer gibt es ein Stueck
    * Zeit. Jeder Gipfel gleich viel: Er soll monoton sein, nicht klug.
    *
-   *   am Netz: Die Freigabe rueckt nach vorn, um ein Tausendstel des
+   *   am Netz: Die Freigabe rueckt nach vorn, um anderthalb Tausendstel des
    *     Zeitrahmens (oben minus unten). Bei vier Stoessen je Sekunde sind das
-   *     rund 10 % des Rahmens je Stunde - bei 2 bis 5 Tagen gut 4 min je
-   *     Gipfel, 7 h je Stunde Schieben. Unter die untere Grenze kommt auch
+   *     rund 15 % des Rahmens je Stunde - bei 2 bis 5 Tagen gut 6 min je
+   *     Gipfel, gut 10 h je Stunde Schieben. Unter die untere Grenze kommt auch
    *     der Stein nicht; das bleibt die Zusage des Rahmens.
-   *   sonst: 20 s je Gipfel auf einen Vorrat. Laeuft gerade eine Wartezeit,
+   *   sonst: 30 s je Gipfel auf einen Vorrat. Laeuft gerade eine Wartezeit,
    *     schrumpft sie sofort; sonst wird die naechste damit bezahlt.
    *
    * Unter Willkuer ist jeder Bissen gezogen, und manchmal rutscht der Stein
    * kurz vor dem Gipfel ab. Als Objekt, damit Tests es stauchen koennen. */
   var STEIN = {
     stoesse: 150,
-    netzAnteil: 0.001,
-    wartenBissen: 20,
+    netzAnteil: 0.0015,
+    wartenBissen: 30,
     abrutschen: 0.15
   };
 

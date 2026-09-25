@@ -276,12 +276,12 @@ Zeit – jedes Mal gleich viel, so lange man will:
 
 | Zeitschloss | ein Gipfel bringt |
 |---|---|
-| fern (Netz) | ein Tausendstel des Zeitrahmens (oben minus unten); die Freigabe rückt sofort nach vorn |
-| eisern, nachsichtig | 20 s auf einen Vorrat; läuft gerade eine Wartezeit (Strafe, Kapitulation), schrumpft sie sofort, sonst bezahlt der Vorrat die nächste |
+| fern (Netz) | anderthalb Tausendstel des Zeitrahmens (oben minus unten); die Freigabe rückt sofort nach vorn |
+| eisern, nachsichtig | 30 s auf einen Vorrat; läuft gerade eine Wartezeit (Strafe, Kapitulation), schrumpft sie sofort, sonst bezahlt der Vorrat die nächste |
 
 Bei vier Stößen je Sekunde ist ein Gipfel rund 40 s Arbeit. Eine Stunde
-Schieben holt am Netz so etwa 10 % des Rahmens – bei 2 bis 5 Tagen gut 4 min
-je Gipfel, rund 7 h je Stunde. Grenzen gibt es genau eine: Unter die untere
+Schieben holt am Netz so etwa 15 % des Rahmens – bei 2 bis 5 Tagen gut 6 min
+je Gipfel, gut 10 h je Stunde. Grenzen gibt es genau eine: Unter die untere
 Grenze des Rahmens schiebt auch der Stein nicht; ist sie erreicht, verschwindet
 die Karte. Am Netz ohne Spielraum im Rahmen gibt es ihn nicht. Der
 Rechenschloss-Anteil eines eisernen Tresors bleibt unberührt – dort wirkt der
