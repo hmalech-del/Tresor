@@ -1327,7 +1327,7 @@
              * statt als schmale Spalte neben dem Text zu klemmen. */
             el('span', { class: 'aufgabentext' }, [
               modul.name + ': ' + modul.beschreibe(aufgabe.params)
-                + (aufgabe.zustand && aufgabe.zustand.kapituliert ? ' - aufgegeben' : ''),
+                + (aufgabe.zustand && aufgabe.zustand.kapituliert ? ' - aufgegeben' : aufgabe.verfallen ? ' - verfallen' : ''),
               !aufgabe.erledigt && aufgabe.frei && aufgabe.frei > Date.now()
                 ? el('span', { class: 'freischaltung', text: 'kommt ' + util.zeitpunkt(aufgabe.frei) }) : null
             ]),
@@ -1994,14 +1994,12 @@
     var fragment, aufgabe, lage = null;
     if (tresor.freigabe) {
       lage = T.tresorLogik.netzLage(tresor);
-      /* Erst abholen, was abzuholen ist: Ist die Freigabe erreicht, gehen
-       * alle Fragmente auf, deren Pruefungen erledigt sind - auch wenn
-       * anderswo noch Pruefungen offen sind. */
-      /* "Erst weiter pruefen" gilt nur, solange es etwas zu pruefen gibt -
-       * sonst zeichnete die Warteansicht sich endlos selbst neu. */
-      if (lage.bereit.length && T.tresorLogik.freigabeErreicht(tresor)
-          && !(zustand.netzSpaeter && lage.aufgabe)) {
-        netzAbholen(karte, lage);
+      /* Ist die Zeit um, geht der Tresor auf - offene Pruefungen verfallen.
+       * Zu bleibt nur ein Fragment mit einem Raetsel ohne Pfand; dessen
+       * Pruefung laeuft weiter, und danach kommt es hier wieder vorbei. */
+      if (T.tresorLogik.freigabeErreicht(tresor)
+          && tresor.fragmente.some(T.tresorLogik.freigabeOeffenbar)) {
+        netzAbholen(karte);
         return;
       }
       if (!lage.aufgabe) { netzWarten(karte, lage); return; }
@@ -2222,7 +2220,10 @@
     var f = tresor.freigabe;
     var karte = el('section', { class: 'karte freigabe-karte' }, [el('h2', { text: 'Freigabe' })]);
     if (f.z) {
-      karte.appendChild(el('p', { class: 'flaut', text: 'Das Netz hat freigegeben. Was noch fehlt, sind deine Prüfungen.' }));
+      /* Nach der Freigabe ist der Tresor offen. Zu bleibt nur ein Fragment,
+       * dessen Raetsel-Loesung im Schluessel steckt (Tresor von vor dem Pfand). */
+      karte.appendChild(el('p', { class: 'flaut', text: 'Das Netz hat freigegeben. Was noch zu ist, hängt an einer '
+        + 'Rätsel-Lösung, die im Schlüssel steckt - die kennst nur du. Dieser Tresor ist älter als das Pfand.' }));
       return karte;
     }
     var anzeige = el('div', { class: 'countdown', text: '–' });
@@ -2289,11 +2290,25 @@
 
     karte.appendChild(el('p', { class: 'flaut klein', text:
       'Das Netz hält ihn, nicht dieses Gerät. Der Bildschirm darf aus sein, die App geschlossen. '
-      + 'Jede gelöste Prüfung holt Zeit zurück, jeder Fehler schiebt die Freigabe weg.' }));
+      + 'Jede gelöste Prüfung holt Zeit zurück, jeder Fehler schiebt die Freigabe weg. '
+      + 'Ist die Zeit um, geht er auf - fertig oder nicht.' }));
 
-    function takt() {
+    function takt(ausUhr) {
       var ziel = T.tresorLogik.freigabeZiel(tresor);
       var rest = (ziel.zeit - Date.now()) / 1000;
+      /* Die Zeit ist um: Jetzt entscheidet sie - auch mitten in einer
+       * Pruefung. Das ist der eine Fall, in dem diese Karte neu zeichnet;
+       * starteAktuelles holt dann den Schluessel. Nur aus der laufenden Uhr,
+       * nie beim Aufbau (sonst zeichnete sich die Ansicht in sich selbst neu),
+       * und nicht, waehrend schon abgeholt wird. Ist nichts zu oeffnen
+       * (Raetsel ohne Pfand), bleibt die Pruefung stehen. */
+      if (ausUhr === true && rest <= 0 && !zustand.abholen
+          && tresor.fragmente.some(T.tresorLogik.freigabeOeffenbar)) {
+        clearInterval(zustand.freigabeUhr);
+        zustand.freigabeUhr = null;
+        zeichneTresor();
+        return;
+      }
       /* Unter Willkuer keine Uhr: Sie waere die eine Zahl, aus der sich alles
        * ablesen liesse. Was eine Buchung bewegt hat, steht im Kasten - wohin
        * es fuehrt, nicht. */
@@ -2308,7 +2323,7 @@
       wann.textContent = rest > 0 ? 'Offen ' + util.zeitpunkt(ziel.zeit) + '.' : 'Hol dir, was dir zusteht.';
     }
     takt();
-    zustand.freigabeUhr = setInterval(takt, 1000);
+    zustand.freigabeUhr = setInterval(function () { takt(true); }, 1000);
     return karte;
   }
 
@@ -2347,43 +2362,39 @@
     zustand.aufraeumen = function () { clearInterval(uhr); };
   }
 
-  /* Die Freigabe ist erreicht: Zeitschluessel beim Netz holen und jedes
-   * Fragment oeffnen, dessen Pruefungen erledigt sind. Ohne Netz darf man
-   * mit offenen Pruefungen weitermachen - die Zeit laeuft ja nicht weg. */
-  function netzAbholen(karte, lage) {
+  /* Die Freigabe ist erreicht: Zeitschluessel beim Netz holen und den Tresor
+   * oeffnen. Die Zeit entscheidet, nicht die Pruefungen - was noch offen
+   * ist, verfaellt. Einmal geholt, liegt Z im Speicher; dann geht es auch
+   * ohne Netz. */
+  function netzAbholen(karte) {
     var tresor = zustand.tresor;
+    zustand.abholen = true;
+    zustand.aufraeumen = function () { zustand.abholen = false; };
+    var offen = tresor.fragmente.reduce(function (n, f) {
+      return n + (f.offen ? 0 : f.aufgaben.filter(function (a) { return !a.erledigt; }).length);
+    }, 0);
     util.leeren(karte);
     var buehne = el('div', { class: 'aufgaben-buehne' });
     karte.appendChild(buehne);
     buehne.appendChild(el('p', { class: 'aufgabe-titel', text: 'Freigabe' }));
-    buehne.appendChild(el('p', { class: 'aufgabe-hinweis', text: tresor.freigabe.z
-      ? 'Das Netz hat längst freigegeben.' : 'Die Zeit ist um. ' + lage.bereit.length
-        + (lage.bereit.length === 1 ? ' Fragment wartet.' : ' Fragmente warten.') }));
-    var knopf = el('button', { class: 'knopf gross haupt', type: 'button', text: 'Beim Netz abholen' });
+    buehne.appendChild(el('p', { class: 'aufgabe-hinweis', text: 'Die Zeit ist um. Der Tresor geht auf.'
+      + (offen ? ' ' + (offen === 1 ? 'Eine offene Prüfung verfällt' : offen + ' offene Prüfungen verfallen')
+        + ' - sie hätten dir Zeit geholt. Jetzt gibt es keine mehr zu holen.' : '') }));
+    var knopf = el('button', { class: 'knopf gross haupt versteckt', type: 'button', text: 'Noch einmal beim Netz fragen' });
     var meldung = el('p', { class: 'aufgabe-meldung', role: 'status', text: '' });
-    buehne.appendChild(knopf);
     buehne.appendChild(meldung);
-    var weiter = null;
-    if (lage.aufgabe) {
-      weiter = el('button', { class: 'knopf versteckt', type: 'button', text: 'Erst weiter prüfen',
-        onclick: function () { zustand.netzSpaeter = true; zeichneTresor(); } });
-      buehne.appendChild(weiter);
-    }
+    buehne.appendChild(knopf);
     function holen() {
-      knopf.disabled = true;
-      meldung.textContent = tresor.freigabe.z ? '' : 'Frage das Netz ...';
+      knopf.classList.add('versteckt');
+      meldung.textContent = tresor.freigabe.z ? 'Öffne ...' : 'Frage das Netz ...';
       T.tresorLogik.freigabeHolen(tresor).then(async function (z) {
         sichern(true);
-        for (var i = 0; i < lage.bereit.length; i++) {
-          await T.tresorLogik.fragmentOeffnen(tresor, lage.bereit[i], z, zustand.passMaterial);
-        }
-        zustand.netzSpaeter = false;
+        await T.tresorLogik.freigabeAlleOeffnen(tresor, z, zustand.passMaterial);
         sichern(true);
         zeichneTresor();
       }).catch(function (fehler) {
-        knopf.disabled = false;
-        meldung.textContent = netzFehlerText(fehler);
-        if (weiter) weiter.classList.remove('versteckt');
+        knopf.classList.remove('versteckt');
+        meldung.textContent = fehler && fehler.art ? netzFehlerText(fehler) : 'Öffnen fehlgeschlagen: ' + (fehler && fehler.message);
       });
     }
     knopf.addEventListener('click', holen);

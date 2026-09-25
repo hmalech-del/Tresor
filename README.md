@@ -309,8 +309,17 @@ Gutschrift. Darunter stehen alle Prüfungen sofort bereit.
 
 **Über alle Fragmente hinweg.** Die Zeit hängt am ganzen Tresor, nicht an
 einem Fragment. Die Prüfungen laufen deshalb in einer Reihe über alle
-Fragmente, und zur Freigabe gehen alle Fragmente auf, deren Prüfungen erledigt
-sind.
+Fragmente, und zur Freigabe gehen alle Fragmente auf.
+
+**Die Zeit entscheidet.** Die Prüfungen sind der Weg, die Zeit zu verkürzen –
+oder mit Fehlern zu verlängern –, aber kein Tor. Ist die Uhr abgelaufen, geht
+der Tresor auf, ob alle Prüfungen abgelegt sind oder nicht; was offen ist,
+verfällt (im Fahrplan „verfallen"). Rätsel gehen dabei über ihr Pfand auf.
+Wer nichts tut, wartet bis zum oberen Wert – mehr nicht. Durch den Takt passen
+die Prüfungen immer in die Zeit: Die letzte kommt vor der unteren Grenze, und
+früher geht der Tresor nie auf. Eine Ausnahme: Tresore von vor dem Pfand – dort
+steckt eine Rätsel-Lösung wirklich im Schlüssel, und nur dieses Fragment
+bleibt zu, bis das Rätsel gelöst ist.
 
 **Die Leiter.** Beim Verriegeln entsteht ein Zeitschlüssel `Z` für den ganzen
 Tresor. Er wird auf eine Leiter künftiger Runden verschlossen, von der unteren

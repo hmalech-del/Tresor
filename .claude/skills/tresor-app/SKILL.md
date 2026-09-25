@@ -66,6 +66,16 @@ er). Kryptografisch fest sind nur Boden und Deckel der Leiter; alles
 dazwischen ist App-Logik. Alle Fragmente öffnen **gemeinsam** zur Freigabe –
 gewollt, sonst ließen sich die letzten Ziffern raten.
 
+**Die Zeit entscheidet, nicht die Prüfungen.** Prüfungen verkürzen oder (mit
+Fehlern) verlängern die Zeit; sie sind kein Tor. Ist die Uhr um, stößt die
+Freigabe-Karte das Neuzeichnen an (auch mitten in einer Prüfung),
+`netzAbholen` holt Z, `freigabeAlleOeffnen` öffnet alles – offene Prüfungen
+bekommen `verfallen`, Rätsel gehen über ihr Pfand auf. Nur ein Rätsel ohne
+Pfand (Tresor von vor dem Pfand) hält sein Fragment zu
+(`freigabeOeffenbar`). Der Nutzer nannte das alte Verhalten ("Das Netz hat
+freigegeben, was noch fehlt, sind deine Prüfungen") zu Recht
+Etikettenschwindel – nicht wieder einführen.
+
 - **Gutschrift** bei gelöster Prüfung, **Strafe** bei Fehlversuch – beide
   gezogen (`AUSSCHLAG`, Tabelle normal/willkür), gedeckelt je Buchung.
 - **Wurf**: ab und zu wird angeboten, eine Buchung zu verwürfeln

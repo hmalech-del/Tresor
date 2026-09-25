@@ -779,7 +779,10 @@
       var z = aufgabe.zustand || {};
       if (!aufgabe.pruefung) continue;
       if (z.antwort && z.antwort !== true) antworten.push(z.antwort);
-      else if (z.kapituliert && aufgabe.pfand) {
+      /* Ohne Antwort das Pfand: nach einer Kapitulation, und am Netz, wenn
+       * die Zeit um ist. Es liegt unter demselben Zeitteil wie das Fragment -
+       * wer es oeffnen kann, konnte ohnehin schon warten. */
+      else if (aufgabe.pfand) {
         antworten.push(await T.krypto.entschluesseln('pfand:' + fragment.index + ':' + a,
           fragment.schluessel || bHex, aufgabe.pfand, null, passMat));
       }
@@ -859,6 +862,40 @@
     var ziel = freigabeZiel(tresor);
     f.z = await T.drand.oeffnen(ziel.runde, ziel.paket);
     return f.z;
+  }
+
+  /* Am Netz entscheidet die Zeit, nicht die Pruefungen. Die Pruefungen sind
+   * waehrend der Zeit der Weg, sie zu verkuerzen oder - mit Fehlern - zu
+   * verlaengern. Ist sie um, geht der Tresor auf; was offen ist, verfaellt.
+   *
+   * Frueher gab die Freigabe nur Fragmente frei, deren Pruefungen erledigt
+   * waren, und meldete dann "Was noch fehlt, sind deine Pruefungen". Das
+   * war ein Etikettenschwindel: Die Uhr lief ab, und der Tresor blieb zu.
+   *
+   * Eine Ausnahme bleibt: ein Raetsel ohne Pfand (Tresore von vor dem Pfand).
+   * Dessen Loesung steckt im Schluessel, und niemand ausser dem Spieler kennt
+   * sie. Nur so ein Fragment bleibt nach der Freigabe zu. */
+  function freigabeOeffenbar(fragment) {
+    return !fragment.offen && fragment.aufgaben.every(function (a) {
+      return a.erledigt || !a.pruefung || !!a.pfand;
+    });
+  }
+
+  async function freigabeAlleOeffnen(tresor, z, passMat) {
+    var verfallen = 0, geoeffnet = 0;
+    for (var i = 0; i < tresor.fragmente.length; i++) {
+      var fragment = tresor.fragmente[i];
+      if (!freigabeOeffenbar(fragment)) continue;
+      fragment.aufgaben.forEach(function (a) {
+        if (a.erledigt) return;
+        a.erledigt = true;
+        a.verfallen = true;
+        verfallen++;
+      });
+      await fragmentOeffnen(tresor, fragment, z, passMat);
+      geoeffnet++;
+    }
+    return { geoeffnet: geoeffnet, verfallen: verfallen };
   }
 
   /* Am Netz gibt es keine Reihenfolge der Fragmente: Die Zeit haengt am
@@ -1059,7 +1096,7 @@
   function steinArt(tresor) {
     if (!tresor || alleOffen(tresor)) return null;
     var f = tresor.freigabe;
-    if (f) return (!f.z && f.leiter[f.leiter.length - 1] > f.leiter[0] && f.rahmen[1] > f.rahmen[0]) ? 'netz' : null;
+    if (f) return (!f.z && Date.now() < freigabeZiel(tresor).zeit && f.leiter[f.leiter.length - 1] > f.leiter[0] && f.rahmen[1] > f.rahmen[0]) ? 'netz' : null;
     return 'vorrat';
   }
 
@@ -1228,6 +1265,8 @@
     freigabeHolen: freigabeHolen,
     strafeBuchen: strafeBuchen,
     netzLage: netzLage,
+    freigabeOeffenbar: freigabeOeffenbar,
+    freigabeAlleOeffnen: freigabeAlleOeffnen,
     gutschriftWert: gutschriftWert,
     gutschriftBuchen: gutschriftBuchen,
     TAKT: TAKT,
