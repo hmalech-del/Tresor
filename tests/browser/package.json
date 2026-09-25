@@ -1,0 +1,9 @@
+{
+  "name": "tresor-browsertests",
+  "private": true,
+  "description": "Browser-Tests der Tresor-App. Nur fuer die gefaelschte drand-Kette (scheinkette.js) gebraucht.",
+  "dependencies": {
+    "@noble/curves": "1.9.7",
+    "@noble/hashes": "1.8.0"
+  }
+}

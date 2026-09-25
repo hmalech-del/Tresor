@@ -1154,6 +1154,10 @@ unverändert.
 | `js/ersatzweg.js` | Aufwand statt Fähigkeit, wenn Sensor oder NFC fehlen |
 | `js/woerter.js` | Wortvorrat ohne Umlaute |
 | `js/tresor.js` | Aufgabenplan, Verriegeln, Freigabe |
+| `js/zeitkonto.js` | Zeitkonto: exakte Wunschzeit auf einer Leiter vorab erzeugter Ziellinien |
+| `js/drand.js` | Zeitschloss über das drand-Netz: Kette, Beacons, Hülle um den Worker |
+| `js/worker-drand.js` | Ver- und Entschlüsseln mit tlock im Worker |
+| `js/vendor/tlock.min.js` | tlock-js, gebündelt (neu bauen: Kopfkommentar in `js/drand.js`) |
 | `js/foto.js` | Ziffernerkennung im Bild, Zerlegung in Schärfestufen |
 | `js/speicher.js` | `localStorage`, Verlauf, benutzte Aufgabentypen |
 | `js/sicherung.js` | Export und Import als Datei, optional verschlüsselt |
@@ -1161,3 +1165,5 @@ unverändert.
 | `js/probe.js` | Probelauf: jede Prüfung einzeln, ohne Folgen |
 | `hardware/` | Tresorbox: druckbare Kiste mit Servoverschluss (noch ohne Firmware) |
 | `js/app.js` | Oberfläche und Ablauf |
+| `tests/` | `test-zeitkonto.js` (Node), `browser/` (Playwright, gefälschte drand-Kette): `tests/browser/alle.sh` |
+| `.claude/skills/` | Kontext für Claude-Sitzungen: `tresor-app`, `tresorbox` |

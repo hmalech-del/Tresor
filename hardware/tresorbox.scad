@@ -1,7 +1,8 @@
 /* Tresorbox - eine druckbare Kiste, die ein Servo verriegelt.
  *
  * Alle Masse in Millimetern. Gedruckt werden drei Teile: Koerper, Deckel,
- * Riegel. Dazu gekauft: ein ESP32-C3, ein SG90-Servo, ein Kondensator.
+ * Riegel. Dazu gekauft: ein ESP32-DevKit (Sockel umschaltbar auf den kleinen
+ * C3-Supermini, siehe platine), ein MG90S-Servo, ein Kondensator.
  *
  * So haelt der Verschluss:
  *   Am Deckel haengt eine Zunge nach unten - ein flaches Blatt, quer zur
@@ -23,9 +24,10 @@
  *   openscad -D 'teil="koerper"' -o koerper.stl tresorbox.scad
  *   openscad -D 'teil="deckel"'  -o deckel.stl  tresorbox.scad
  *   openscad -D 'teil="riegel"'  -o riegel.stl  tresorbox.scad
+ *   openscad -D 'teil="pruefstueck"' -o pruefstueck.stl tresorbox.scad
  */
 
-teil = "alles";              // koerper | deckel | riegel | alles
+teil = "alles";              // koerper | deckel | riegel | pruefstueck | alles
 zustand = "zu";              // fuer die Ansicht: zu | offen
 $fn = 48;
 
