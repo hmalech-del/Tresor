@@ -48,6 +48,13 @@
       'Gesperrt. Das ist keine Verhandlung.',
       'Zu oft danebengegriffen. Sitz es ab.'
     ],
+    /* Am Netz: Eine Strafe sperrt nichts, sie schiebt die Freigabe weg. */
+    verschoben: [
+      'Daneben. Die Tür rückt weiter weg.',
+      'Der Tribut steigt. Du zahlst in Zeit.',
+      'Jeder Fehler kostet. Die Freigabe wandert.',
+      'Falsch. Das Netz wartet. Du jetzt länger.'
+    ],
     /* Zeitschloss rechnet */
     bann: [
       'Der Tribut ist Zeit. Zahl ihn.',

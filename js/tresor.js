@@ -717,6 +717,17 @@
     return ergebnis;
   }
 
+  /* Das Zeitkonto direkt verschieben - fuer den Wurf ueber eine Strafe. Nach
+   * vorn geht es nur bis zur gezogenen Tresorzeit, nach hinten bis zum Deckel. */
+  function zeitkontoVerschieben(tresor, sekunden) {
+    var f = tresor.freigabe;
+    if (!f || f.z) return null;
+    var konto = freigabeKonto(tresor);
+    var ergebnis = konto.verschieben(sekunden);
+    f.konto = konto.stand();
+    return ergebnis;
+  }
+
   /* Notausgang ueber das Netz: erst den Zeitschluessel holen, dann wie immer. */
   async function notausgangUeberNetz(tresor, passMat) {
     var exit = tresor.notausgang;
@@ -819,6 +830,7 @@
     freigabeErreicht: freigabeErreicht,
     freigabeHolen: freigabeHolen,
     strafeBuchen: strafeBuchen,
+    zeitkontoVerschieben: zeitkontoVerschieben,
     notausgangUeberNetz: notausgangUeberNetz,
     strafzeit: strafzeit,
     neueFrist: neueFrist,

@@ -66,6 +66,7 @@
   function aufraeumen() {
     if (zustand.fristUhr) { clearInterval(zustand.fristUhr); zustand.fristUhr = null; }
     if (zustand.exitUhr) { clearInterval(zustand.exitUhr); zustand.exitUhr = null; }
+    if (zustand.freigabeUhr) { clearInterval(zustand.freigabeUhr); zustand.freigabeUhr = null; }
     // Der Notausgang rechnet weiter - nur seine Anzeige verschwindet
     zustand.exitAnzeige = null;
     bildschirmWachHalten(false);
@@ -1245,7 +1246,8 @@
     return el('ol', { class: 'fragmentliste' }, tresor.fragmente.map(function (fragment) {
       var offeneAufgaben = fragment.aufgaben.filter(function (a) { return !a.erledigt; }).length;
       var status = fragment.offen ? 'frei'
-        : fragment === aktuell ? (offeneAufgaben ? offeneAufgaben + ' Aufgaben offen' : 'Bann läuft')
+        : fragment === aktuell ? (offeneAufgaben ? offeneAufgaben + ' Aufgaben offen'
+            : fragment.drand ? 'wartet auf das Netz' : 'Bann läuft')
           : 'verriegelt';
       return el('li', {
         class: 'fragment' + (fragment.offen ? ' ist-offen' : fragment === aktuell ? ' ist-aktuell' : '')
@@ -1304,6 +1306,8 @@
       el('p', { class: 'flaut mittig-text', text:
         (tresor.fragmente.filter(function (f) { return f.offen; }).length) + ' von ' + tresor.laenge + ' Fragmenten frei' })
     ]));
+
+    if (!fertig && tresor.freigabe) wurzel.appendChild(freigabeKarte(tresor));
 
     if (fertig) {
       // Ergebnis in den Verlauf legen, bevor irgendetwas es überschreiben kann
@@ -1387,7 +1391,9 @@
     lade.appendChild(el('summary', { text: 'Verwaltung' }));
 
     lade.appendChild(el('section', { class: 'karte flaut klein' }, [
-      el('p', { text: tresor.fragmente[0].schloss
+      el('p', { text: tresor.freigabe
+        ? 'Fern. Das Netz hält ihn. Vor der Zeit öffnet ihn niemand - du nicht, eine verstellte Uhr nicht.'
+        : tresor.fragmente[0].schloss
         ? 'Eisern. Jedes Fragment liegt unter einem Bann, den nur Zeit bricht.'
         : 'Nachsichtig. Es hält dich nichts als dein eigener Vorsatz.' }),
       el('p', { text: gebunden
@@ -1397,7 +1403,11 @@
         ? el('p', { text: 'Dazu die Passphrase. Ohne sie: nichts. Auch nicht der Notausgang.' })
         : null,
       technikZeile(
-        (tresor.fragmente[0].schloss
+        (tresor.freigabe
+          ? 'Zeitschloss: drand quicknet, tlock (identitätsbasierte Verschlüsselung auf BLS12-381). '
+            + tresor.freigabe.leiter.length + ' Sprossen von ' + util.dauer(tresor.freigabe.leiter[0]) + ' bis '
+            + util.dauer(tresor.freigabe.deckel) + ' nach dem Verriegeln; der Zeitschlüssel wird erst beim Netz abgeholt. '
+          : tresor.fragmente[0].schloss
           ? 'Zeitschlösser: ' + tresor.fragmente[0].schloss.t.toLocaleString('de-DE')
             + ' sequentielle Quadrierungen modulo einer 1024-Bit-Zahl, gemessen mit '
             + (tresor.rate || 0).toLocaleString('de-DE') + ' Quadrierungen/s auf diesem Gerät. '
@@ -1423,20 +1433,20 @@
    * absichtlich eine Spanne und keine Zahl. */
   function notausgangSpanne(exit) {
     var rahmen = exit.rahmen || [0, 0];
-    var einheit = exit.art === 'wartezeit' ? 'Wartezeit' : 'Rechenzeit';
+    var einheit = exit.art === 'wartezeit' ? ' Wartezeit' : exit.art === 'drand' ? '' : ' Rechenzeit';
     var modus = exit.modus || (exit.blind ? 'geheim' : 'fest');
 
     if (modus === 'fest') {
-      return 'Genau ' + util.dauer(exit.sekunden) + ' ' + einheit + '.';
+      return 'Genau ' + util.dauer(exit.sekunden) + einheit + '.';
     }
     if (modus === 'zufall') {
-      return util.dauer(exit.sekunden) + ' ' + einheit + ' – gezogen aus '
+      return util.dauer(exit.sekunden) + einheit + ' – gezogen aus '
         + util.dauer(rahmen[0]) + ' bis ' + util.dauer(rahmen[1]) + '.';
     }
     /* Geheim: Die Spanne hat der Spieler selbst gesetzt, die darf er wissen.
-     * Den gezogenen Wert nicht - er steht nirgends. */
-    return 'Irgendwo zwischen ' + util.dauer(rahmen[0]) + ' und ' + util.dauer(rahmen[1]) + ' '
-      + einheit + '. Wo genau, weiss niemand. Auch ich nicht.';
+     * Den gezogenen Wert nicht. */
+    return 'Irgendwo zwischen ' + util.dauer(rahmen[0]) + ' und ' + util.dauer(rahmen[1])
+      + einheit + '. Wo genau, sage ich nicht.';
   }
 
   function dimensionName(id) {
@@ -1461,7 +1471,7 @@
   function notausgangStarten() {
     var tresor = zustand.tresor;
     var exit = tresor && tresor.notausgang;
-    if (!exit || exit.benutzt || exit.art === 'wartezeit' || zustand.exitLoeser) return;
+    if (!exit || exit.benutzt || exit.art === 'wartezeit' || exit.art === 'drand' || zustand.exitLoeser) return;
     exit.mitlaufen = true;
     zustand.exitStart = { zeit: Date.now(), schritte: exit.stand.erledigt };
     zustand.exitLoeser = new T.zeitschloss.Loeser(exit.schloss, exit.stand, function (stand) {
@@ -1550,6 +1560,8 @@
         ? 'Der Weg für die, die es nicht schaffen. ' + notausgangSpanne(exit)
         : 'Der zweite Weg zum ganzen Geheimnis. ' + notausgangSpanne(exit) })
     ]);
+
+    if (exit.art === 'drand') return notausgangNetzKarte(tresor, karte);
 
     if (exit.art === 'wartezeit') {
       var bereit = T.tresorLogik.notausgangBereit(tresor);
@@ -1829,7 +1841,8 @@
           el('div', { class: 'verlaufinfo' }, [
             el('strong', { text: eintrag.art === 'foto' ? 'Bild, ' + eintrag.stufen + ' Stufen' : eintrag.ergebnis.length + '-stellige Zahl' }),
             el('span', { class: 'flaut klein', text: 'geöffnet ' + util.zeitpunkt(eintrag.geoeffnet)
-              + ' · ' + (eintrag.sicherheit === 'rechenzeit' ? 'mit Zeitschloss' : 'ohne Rechenzeit')
+              + ' · ' + (eintrag.sicherheit === 'rechenzeit' ? 'mit Zeitschloss'
+                 : eintrag.sicherheit === 'drand' ? 'am Netz' : 'ohne Rechenzeit')
               + (eintrag.notausgangBenutzt ? ' · über den Notausgang' : '') })
           ]),
           el('button', { class: 'knopf', type: 'button', text: 'ansehen',
@@ -1964,6 +1977,25 @@
            * das ist die Strafe; ohne das waere die Frist folgenlos. */
           delete aufgabe.zustand.stand;
           aufgabe.zustand.fehlversuche = (aufgabe.zustand.fehlversuche || 0) + 1;
+          /* Am Netz sperrt eine Strafe nicht die Aufgabe, sie schiebt die
+           * Freigabe nach hinten. Das ist echte Zeit: Die frueheren Sprossen
+           * bleiben zwar im Speicher, aber die App bietet sie nicht mehr an.
+           * Ist die Freigabe schon abgeholt, gibt es keine Zeit mehr zu
+           * verschieben - dann gilt die gewoehnliche Strafzeit. */
+          if (tresor.freigabe && !tresor.freigabe.z) {
+            var buchung = T.tresorLogik.strafeBuchen(tresor, aufgabe.zustand.fehlversuche);
+            if (!buchung) { sichern(false); return false; }
+            beendet = true;
+            buchung.grund = grund || '';
+            buchung.fehlversuch = aufgabe.zustand.fehlversuche;
+            buchung.zeit = Date.now();
+            buchung.gewuerfelt = false;
+            tresor.freigabe.letzteStrafe = buchung;
+            if (aufgabe.frist) aufgabe.zustand.fristStart = 0;
+            sichern(true);
+            zeichneTresor();
+            return true;
+          }
           var sekunden = T.tresorLogik.strafzeit(tresor.konfig, aufgabe.zustand.fehlversuche);
           if (!sekunden) { sichern(false); return false; }
           beendet = true;
@@ -2004,6 +2036,8 @@
         aufgabe.zustand.fristAbgelaufen = false;
         buehne.appendChild(el('p', { class: 'warnung', text: 'Die geheime Frist war abgelaufen. Neuer Anlauf, neue Frist.' }));
       }
+    } else if (fragment.drand) {
+      freigabeUeberNetz(buehne, fragment);
     } else if (!fragment.schloss) {
       freigabeOhneZeitschloss(buehne, fragment);
     } else {
@@ -2028,6 +2062,173 @@
         buehne.appendChild(el('p', { class: 'warnung', text: 'Entschlüsseln fehlgeschlagen: ' + fehler.message }));
       });
     });
+  }
+
+  /* Restzeit fuer Uhren, die ueber Tage laufen koennen. */
+  function restUhr(sekunden) {
+    sekunden = Math.max(0, Math.ceil(sekunden));
+    if (sekunden < 86400) return util.uhrwerk(sekunden);
+    var tage = Math.floor(sekunden / 86400);
+    return (tage === 1 ? '1 Tag' : tage + ' Tage') + ' · ' + util.uhrwerk(sekunden % 86400);
+  }
+
+  function netzFehlerText(fehler) {
+    if (fehler.art === 'netz') return 'Das Netz antwortet nicht. Ohne Internet bleibt er zu - versuch es gleich noch einmal.';
+    if (fehler.art === 'zufrueh') return 'Noch nicht. Stimmt die Uhr dieses Geräts?';
+    return 'Die Antwort des Netzes passt nicht zum Schloss: ' + fehler.message;
+  }
+
+  /* Die Uhr ueber allem, solange die Freigabe aussteht. Sie zeichnet den
+   * Tresor nie neu - sonst risse sie einem mitten in einer Aufgabe die
+   * Buehne weg. Aufgehen tut er in der Fragmentstufe. */
+  function freigabeKarte(tresor) {
+    var f = tresor.freigabe;
+    var karte = el('section', { class: 'karte freigabe-karte' }, [el('h2', { text: 'Freigabe' })]);
+    if (f.z) {
+      karte.appendChild(el('p', { class: 'flaut', text: 'Das Netz hat freigegeben. Was noch fehlt, sind deine Prüfungen.' }));
+      return karte;
+    }
+    var anzeige = el('div', { class: 'countdown', text: '–' });
+    var wann = el('p', { class: 'flaut klein', text: '' });
+    karte.appendChild(anzeige);
+    karte.appendChild(wann);
+
+    var strafe = f.letzteStrafe;
+    if (strafe && !strafe.erledigt) {
+      var kasten = el('div', { class: 'strafkasten' }, [
+        el('p', { class: 'aufgabe-titel', text: T.stimme.WORT.strafe }),
+        el('p', { class: 'wachterwort', text: T.stimme.sag('verschoben') }),
+        el('p', { class: 'aufgabe-hinweis', text: (strafe.grund ? strafe.grund + ' ' : '')
+          + 'Fehlversuch ' + strafe.fehlversuch + '. '
+          + (strafe.wirksam > 0 ? '+' + util.dauer(strafe.wirksam) + '.'
+             : strafe.amDeckel ? 'Weiter nach hinten geht es nicht.' : '') })
+      ]);
+      karte.appendChild(kasten);
+      if ((tresor.konfig || {}).gluecksspiel && !strafe.gewuerfelt && strafe.wirksam > 0) {
+        /* Auch eine Verschiebung darf verwuerfelt werden - einmal. Gewinnt
+         * der Wurf, faellt sie weg; verliert er, wird sie gestreckt. */
+        T.herausforderungen.werkzeug.wuerfel(kasten, function (gewonnen, streckung) {
+          strafe.gewuerfelt = true;
+          var zug = T.tresorLogik.zeitkontoVerschieben(tresor,
+            gewonnen ? -strafe.wirksam : Math.round(strafe.wirksam * (streckung - 1)));
+          strafe.nachWurf = zug ? zug.wirksam : 0;
+          sichern(true);
+          takt();
+        }, {
+          regel: '5 oder 6: diese Strafe fällt weg. 1 bis 4: sie wird um die Hälfte länger. Ein Wurf, keine Wiederholung.',
+          gewonnen: 'Gewonnen. Die Strafe ist weg.',
+          verloren: 'Verloren. Die Strafe wird um die Hälfte länger.'
+        });
+      }
+      kasten.appendChild(el('button', { class: 'knopf', type: 'button', text: 'Verstanden',
+        onclick: function () { strafe.erledigt = true; sichern(true); kasten.remove(); } }));
+    }
+
+    karte.appendChild(el('p', { class: 'flaut klein', text:
+      'Das Netz hält ihn, nicht dieses Gerät. Der Bildschirm darf aus sein, die App geschlossen. '
+      + 'Jede Strafe schiebt die Freigabe nach hinten' + (tresor.notausgang ? ' - bis zum Notausgang.' : '.') }));
+
+    function takt() {
+      var ziel = T.tresorLogik.freigabeZiel(tresor);
+      var rest = (ziel.zeit - Date.now()) / 1000;
+      anzeige.textContent = rest > 0 ? restUhr(rest) : 'Die Zeit ist um.';
+      wann.textContent = rest > 0 ? 'Frühestens offen ' + util.zeitpunkt(ziel.zeit) + '.' : 'Hol dir, was dir zusteht.';
+    }
+    takt();
+    zustand.freigabeUhr = setInterval(takt, 1000);
+    return karte;
+  }
+
+  /* Alle Pruefungen eines Fragments abgelegt: Jetzt entscheidet das Netz. */
+  function freigabeUeberNetz(buehne, fragment) {
+    var tresor = zustand.tresor;
+    util.leeren(buehne);
+    buehne.appendChild(el('p', { class: 'aufgabe-titel', text: 'Fragment freigeben' }));
+    var hinweis = el('p', { class: 'aufgabe-hinweis', text: '' });
+    buehne.appendChild(hinweis);
+
+    if (!T.tresorLogik.freigabeErreicht(tresor)) {
+      hinweis.textContent = 'Die Prüfungen dieses Fragments sind abgelegt. Jetzt hält ihn nur noch die Zeit.';
+      var anzeige = el('div', { class: 'countdown', text: '–' });
+      buehne.appendChild(anzeige);
+      buehne.appendChild(el('p', { class: 'flaut klein', text:
+        'Du kannst die App schließen. Ist die Zeit um, geht er hier auf - mit Internet.' }));
+      var tick = function () {
+        var rest = (T.tresorLogik.freigabeZiel(tresor).zeit - Date.now()) / 1000;
+        if (rest <= 0) { clearInterval(uhr); zeichneTresor(); return; }
+        anzeige.textContent = restUhr(rest);
+      };
+      var uhr = setInterval(tick, 1000);
+      tick();
+      zustand.aufraeumen = function () { clearInterval(uhr); };
+      return;
+    }
+
+    hinweis.textContent = tresor.freigabe.z
+      ? 'Die Prüfungen sind abgelegt. Das Netz hat längst freigegeben.'
+      : 'Die Prüfungen sind abgelegt, und die Zeit ist um.';
+    var knopf = el('button', { class: 'knopf gross haupt', type: 'button', text: 'Beim Netz abholen' });
+    var meldung = el('p', { class: 'aufgabe-meldung', role: 'status', text: '' });
+    buehne.appendChild(knopf);
+    buehne.appendChild(meldung);
+    function holen() {
+      knopf.disabled = true;
+      meldung.textContent = tresor.freigabe.z ? '' : 'Frage das Netz ...';
+      T.tresorLogik.freigabeHolen(tresor).then(function (z) {
+        sichern(true);
+        return T.tresorLogik.fragmentOeffnen(tresor, fragment, z, zustand.passMaterial);
+      }).then(function () {
+        sichern(true);
+        zeichneTresor();
+      }).catch(function (fehler) {
+        knopf.disabled = false;
+        meldung.textContent = netzFehlerText(fehler);
+      });
+    }
+    knopf.addEventListener('click', holen);
+    holen();
+  }
+
+  /* Notausgang ueber das Netz: kein Rechnen, nur Zeit. */
+  function notausgangNetzKarte(tresor, karte) {
+    var exit = tresor.notausgang;
+    var geheim = exit.modus === 'geheim';
+    var bereit = Date.now() >= exit.frei;
+    var uhrtext = el('strong', { class: 'fristzeit', text: '' });
+    if (!imDunkeln()) {
+      karte.appendChild(el('p', {}, [geheim ? 'verstrichen: ' : 'noch: ', uhrtext]));
+      if (!geheim && !bereit) {
+        karte.appendChild(el('p', { class: 'flaut klein', text: 'Offen ab ' + util.zeitpunkt(exit.frei) + '.' }));
+      }
+    }
+    var oeffnen = el('button', { class: 'knopf gross haupt', type: 'button', text: 'Geheimnis freigeben' });
+    var meldung = el('p', { class: 'flaut klein', text: bereit ? 'Offen. Das Netz muss es noch bestätigen.'
+      : imDunkeln() ? 'Zu. Frag nicht, wie lange noch.'
+      : 'Noch zu. Die Zeit läuft auch bei geschlossener App.' });
+    oeffnen.disabled = !bereit;
+    oeffnen.addEventListener('click', function () {
+      if (oeffnen.disabled) return;
+      oeffnen.disabled = true;
+      meldung.textContent = 'Frage das Netz ...';
+      T.tresorLogik.notausgangUeberNetz(tresor, zustand.passMaterial).then(function () {
+        sichern(true);
+        zeichneTresor();
+      }).catch(function (fehler) {
+        oeffnen.disabled = false;
+        meldung.textContent = netzFehlerText(fehler);
+      });
+    });
+    karte.appendChild(oeffnen);
+    karte.appendChild(meldung);
+    function tick() {
+      uhrtext.textContent = geheim
+        ? util.dauer((Date.now() - tresor.erstellt) / 1000)
+        : restUhr((exit.frei - Date.now()) / 1000);
+      if (!bereit && Date.now() >= exit.frei) { zeichneTresor(); }
+    }
+    tick();
+    if (!bereit) zustand.exitUhr = setInterval(tick, 1000);
+    return karte;
   }
 
   /* Gesperrte Aufgabe: Strafzeit absitzen. */

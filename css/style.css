@@ -768,3 +768,13 @@ select, input[type=file] {
 .probe-gruppe > summary strong::before { content: '▸ '; color: var(--flaut); }
 .probe-gruppe[open] > summary strong::before { content: '▾ '; }
 .probe-gruppe > summary:hover strong { color: var(--neon-hell); }
+
+/* drand: Freigabe-Uhr und die Strafe, die sie verschiebt */
+.freigabe-karte .countdown { margin: 4px 0 0; }
+.freigabe-karte > .flaut.klein { text-align: center; }
+.strafkasten {
+  border: 1px solid var(--rot); border-radius: 10px; padding: 10px 12px; margin: 10px 0;
+  background: rgba(255, 111, 107, .07); display: flex; flex-direction: column; gap: 6px;
+}
+.strafkasten .aufgabe-titel { color: var(--rot); margin: 0; }
+.strafkasten .knopf { align-self: flex-start; }

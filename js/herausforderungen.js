@@ -171,11 +171,14 @@
     return (werte[0] % 6) + 1;
   }
 
-  function wuerfel(koerper, beiErgebnis) {
+  /* texte: optional { regel, gewonnen, verloren } - wo nicht eine Wartezeit
+   * auf dem Spiel steht, sondern etwas anderes, muss der Wurf das auch sagen. */
+  function wuerfel(koerper, beiErgebnis, texte) {
+    texte = texte || {};
     var box = el('div', { class: 'wuerfelbox' });
     var auge = el('div', { class: 'wuerfel', text: '?' });
     var knopf = el('button', { class: 'knopf', type: 'button', text: 'Würfeln' });
-    var text = el('p', { class: 'flaut klein', text:
+    var text = el('p', { class: 'flaut klein', text: texte.regel ||
       '5 oder 6: die Wartezeit fällt weg. 1 bis 4: der Rest wird um die Hälfte länger. Ein Wurf, keine Wiederholung.' });
     box.appendChild(auge);
     box.appendChild(knopf);
@@ -197,8 +200,8 @@
         var gewonnen = augen >= WURF_GEWINN;
         auge.classList.add(gewonnen ? 'ist-gewonnen' : 'ist-verloren');
         text.textContent = gewonnen
-          ? 'Gewonnen. Die Zeit ist weg.'
-          : 'Verloren. Der Rest wird um die Hälfte länger.';
+          ? (texte.gewonnen || 'Gewonnen. Die Zeit ist weg.')
+          : (texte.verloren || 'Verloren. Der Rest wird um die Hälfte länger.');
         beiErgebnis(gewonnen, WURF_STRECKUNG);
       }, 70);
     });
