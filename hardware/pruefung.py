@@ -189,6 +189,22 @@ handy_x, handy_y = 160, 75
 passt = innen_x >= handy_x and frei_y >= handy_y
 print(f"  [info] Handy (160 x 75) liegt flach {'ja' if passt else 'nein - innen_y muesste >= ' + str(int(block_y + handy_y)) + ' sein'}")
 
+print("\nDateien")
+# Die STL sind mitversioniert, damit man ohne OpenSCAD drucken kann. Damit
+# koennen sie aber veralten: Genau das war der Fall, als koerper.stl noch
+# ohne Platinensockel im Repo lag. Also nachsehen, ob sie juenger sind.
+scad = pathlib.Path(__file__).with_name("tresorbox.scad")
+for name in ("koerper", "deckel", "riegel", "pruefstueck"):
+    datei = scad.with_name(name + ".stl")
+    if not datei.exists():
+        pruefe(f"{name}.stl vorhanden", False, "fehlt - openscad laufen lassen")
+        continue
+    alt_um = scad.stat().st_mtime - datei.stat().st_mtime
+    pruefe(f"{name}.stl ist aktuell", alt_um <= 0,
+           "aus dem Modell erzeugt" if alt_um <= 0 else
+           f"AELTER als tresorbox.scad - neu erzeugen mit "
+           f"openscad -D 'teil=\"{name}\"' -o {name}.stl tresorbox.scad")
+
 print()
 if fehler:
     print("FEHLGESCHLAGEN: " + ", ".join(fehler))

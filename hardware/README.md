@@ -244,6 +244,13 @@ Ampere. Am Handy-Ladegerät mit 500 mA startet der ESP32 neu.
 
 ## Drucken
 
+**Die fertigen STL liegen neben dieser Datei** – `koerper.stl`, `deckel.stl`,
+`riegel.stl` und `pruefstueck.stl`. Du brauchst OpenSCAD nur, wenn du am Modell
+etwas änderst. `pruefung.py` schlägt Alarm, sobald eine STL älter ist als
+`tresorbox.scad` – genau das war sie einmal, als der Platinensockel dazukam.
+
+Selbst erzeugen:
+
 ```
 openscad -D 'teil="koerper"' -o koerper.stl tresorbox.scad
 openscad -D 'teil="deckel"'  -o deckel.stl  tresorbox.scad
