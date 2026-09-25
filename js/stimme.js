@@ -55,6 +55,13 @@
       'Jeder Fehler kostet. Die Freigabe wandert.',
       'Falsch. Das Netz wartet. Du jetzt länger.'
     ],
+    /* Am Netz: Eine geloeste Pruefung holt Zeit zurueck. Kein Lob - Zeit. */
+    gutschrift: [
+      'Bezahlt. Die Tür kommt näher.',
+      'Das zählt. Nicht viel, aber es zählt.',
+      'Zeit zurück. Verdient, nicht geschenkt.',
+      'Weniger Warten. Mehr gibt es nicht.'
+    ],
     /* Zeitschloss rechnet */
     bann: [
       'Der Tribut ist Zeit. Zahl ihn.',

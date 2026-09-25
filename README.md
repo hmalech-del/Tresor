@@ -217,18 +217,30 @@ verschlüsseln. Solange sie nicht existiert, öffnet es niemand – nicht die Ap
 nicht du, keine verstellte Geräteuhr. Das Gerät rechnet nicht, der Bildschirm
 darf aus sein, die App geschlossen.
 
-**Tresorzeit.** Du gibst eine Spanne an (10 Minuten bis 4 Wochen), beim
-Verriegeln wird daraus gezogen, wann der Tresor frühestens aufgeht.
+**Der Zeitrahmen.** Du gibst zwei Werte an: wann der Tresor *bestenfalls*
+aufgeht und wann *ohne eine einzige Prüfung*. Die Uhr startet oben. Jede
+gelöste Prüfung holt ein gleiches Stück zurück – wer alle löst, landet genau
+unten. Jede verhauene schiebt die Freigabe nach hinten, um einen Anteil des
+oberen Werts (mild 6 %, hart 15 %, jede Wiederholung das Anderthalbfache),
+höchstens bis zum Notausgang. Mit Glücksspiel darf jede Strafe einmal
+verwürfelt werden: 5–6 nimmt sie zurück, 1–4 streckt sie um die Hälfte.
 
-**Strafen verschieben die Freigabe.** Eine verhauene Aufgabe sperrt nichts,
-sie schiebt die Freigabe nach hinten – um einen Anteil der Tresorzeit (mild
-6 %, hart 15 %, jede Wiederholung das Anderthalbfache). Mit Glücksspiel darf
-jede Strafe einmal verwürfelt werden: 5–6 nimmt sie zurück, 1–4 streckt sie
-um die Hälfte.
+**Der Takt.** Ab sechs Stunden unterer Grenze kommen die Prüfungen verteilt
+statt alle auf einmal – sonst wäre ein Wochentresor ein Nachmittag Arbeit und
+danach nur Warten. Verteilt wird über die untere Grenze: Wer jede löst, sobald
+sie kommt, ist mit der letzten genau dort. Pünktlich heißt binnen eines Taktes,
+mindestens aber binnen zwölf Stunden – eine Prüfung, die um drei Uhr nachts
+kommt, verfällt nicht im Schlaf. Wer später löst, bekommt die halbe
+Gutschrift. Darunter stehen alle Prüfungen sofort bereit.
+
+**Über alle Fragmente hinweg.** Die Zeit hängt am ganzen Tresor, nicht an
+einem Fragment. Die Prüfungen laufen deshalb in einer Reihe über alle
+Fragmente, und zur Freigabe gehen alle Fragmente auf, deren Prüfungen erledigt
+sind.
 
 **Die Leiter.** Beim Verriegeln entsteht ein Zeitschlüssel `Z` für den ganzen
-Tresor. Er wird auf eine Leiter künftiger Runden verschlossen, von der
-Tresorzeit bis zum Notausgang (ohne Notausgang bis zum Zehnfachen). Die
+Tresor. Er wird auf eine Leiter künftiger Runden verschlossen, von der unteren
+Grenze bis zum Notausgang (ohne Notausgang bis zum Zehnfachen des oberen Werts). Die
 Sprossen liegen rund 5 % auseinander – bei einer Stunde drei Minuten, bei drei
 Tagen dreieinhalb Stunden – und es sind höchstens 90, denn jede kostet beim
 Verriegeln gut 50 ms (auf dem Handy mehr). Jedes Fragment braucht `Z` *und*
@@ -239,9 +251,9 @@ Was davon Kryptografie ist und was App-Logik:
 
 | | durchgesetzt durch |
 |---|---|
-| **frühestens** zur gezogenen Tresorzeit | das Netz – darunter gibt es keine Sprosse |
+| **bestenfalls** zur unteren Grenze | das Netz – darunter gibt es keine Sprosse |
 | **spätestens** zum Notausgang | das Netz – darüber gibt es keine Sprosse |
-| die einzelne Strafe dazwischen | die App: Sie bietet frühere Sprossen nicht mehr an, gelöscht sind sie nicht |
+| jede Gutschrift und Strafe dazwischen | die App: Sie bietet nur die Sprosse an, auf die das Konto zeigt. Die anderen sind nicht gelöscht |
 
 Was man dafür eintauscht:
 

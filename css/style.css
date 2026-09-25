@@ -168,7 +168,10 @@ select, input[type=file] {
 /* ---- Aufgaben ---- */
 
 .aufgabenkarte { border-color: var(--neon); box-shadow: 0 0 0 1px rgba(47,227,232,.18), 0 14px 40px rgba(0,0,0,.35); }
-.aufgaben-kopf { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 10px; }
+.aufgaben-kopf { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; font-size: 13px; margin-bottom: 10px; }
+/* Links steht, wo man ist - das darf nie umbrechen. Rechts, was es bringt;
+ * wird das zu lang, rutscht es unter die Zaehlung statt sie zu quetschen. */
+.aufgaben-kopf > span:first-child { white-space: nowrap; }
 .aufgaben-buehne { min-height: 240px; display: flex; flex-direction: column; }
 .aufgabe-titel { margin: 0 0 4px; font-size: 19px; font-weight: 600; }
 .aufgabe-hinweis { margin: 0 0 14px; color: var(--flaut); font-size: 14px; }
@@ -778,3 +781,14 @@ select, input[type=file] {
 }
 .strafkasten .aufgabe-titel { color: var(--rot); margin: 0; }
 .strafkasten .knopf { align-self: flex-start; }
+.gutkasten {
+  border: 1px solid var(--gruen); border-radius: 10px; padding: 10px 12px; margin: 10px 0;
+  background: rgba(63, 214, 160, .07); display: flex; flex-direction: column; gap: 6px;
+}
+.gutkasten .aufgabe-titel { color: var(--gruen); margin: 0; }
+.gutkasten .knopf { align-self: flex-start; }
+/* Ueber einen Tag: "4 Tage · 6:17:20" passt in 40 px nicht auf eine Handyzeile. */
+.countdown.ist-lang { font-size: 28px; }
+/* Ab wann eine Pruefung kommt: eine eigene Zeile unter dem Aufgabentext. */
+.aufgabentext { flex: 1; min-width: 0; }
+.freischaltung { display: block; color: var(--flaut); font-size: .9em; opacity: .85; }

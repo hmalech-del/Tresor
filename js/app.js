@@ -123,6 +123,12 @@
     });
   }
 
+  /* "nach 7 Tage" ist falsch - nach verlangt den Dativ. Stunden und Minuten
+   * sind abgekuerzt und aendern sich nicht. */
+  function nachDauer(sekunden) {
+    return util.dauer(sekunden).replace(/(\d+) Tage\b/, '$1 Tagen');
+  }
+
   function tresorzeitOptionen(vorgabe) {
     return T.tresorLogik.TRESORZEIT_WERTE.map(function (sekunden) {
       return el('option', { value: String(sekunden), selected: sekunden === vorgabe ? 'selected' : null },
@@ -414,7 +420,7 @@
     $('#notausgang-spanne').textContent =
       modus === 'aus' ? ''
       : modus === 'fest'
-        ? 'Der Notausgang springt nach genau ' + util.dauer(fest) + (art ? ' ' + art : '')
+        ? 'Der Notausgang springt nach genau ' + nachDauer(fest) + (art ? ' ' + art : '')
           + ' auf. Du weißt also von Anfang an, woran du bist.'
       : modus === 'zufall'
         ? 'Die Dauer wird beim Verriegeln zufällig zwischen ' + util.dauer(min) + ' und ' + util.dauer(max)
@@ -451,17 +457,49 @@
     var schaetzung = T.tresorLogik.geschaetzteDauer(konfig, zustand.laenge);
     var rechen = ohneRechenzeit ? 0 : T.tresorLogik.RECHENZEIT_STUFEN[util.grenze(konfig.rechenzeit, 1, 5) - 1];
     var tz = konfig.tresorzeit;
-    var tzText = tz.minSekunden === tz.maxSekunden ? util.dauer(tz.minSekunden)
-      : util.dauer(tz.minSekunden) + ' bis ' + util.dauer(tz.maxSekunden);
+    /* "nach 2 bis 5 Tagen" statt "nach 2 Tage bis 5 Tagen" */
+    var beideTage = /^\d+ Tage$/.test(util.dauer(tz.minSekunden)) && /^\d+ Tage$/.test(util.dauer(tz.maxSekunden));
+    var tzText = tz.minSekunden === tz.maxSekunden ? nachDauer(tz.minSekunden)
+      : (beideTage ? util.dauer(tz.minSekunden).replace(' Tage', '') : util.dauer(tz.minSekunden))
+        + ' bis ' + nachDauer(tz.maxSekunden);
     anzeige.textContent = drand
-      ? 'frühestens nach ' + tzText
+      ? 'offen nach ' + tzText
       : 'ungefähr ' + util.dauer(schaetzung.sekunden);
     $('#rechenzeit-feld').classList.toggle('versteckt', ohneRechenzeit);
     $('#tresorzeit-felder').classList.toggle('versteckt', !drand);
-    $('#reihenfolge-feld').classList.toggle('versteckt', zustand.art === 'foto');
-    $('#tresorzeit-hinweis').textContent = tz.minSekunden === tz.maxSekunden
-      ? 'Genau dann - wenn du ohne Strafe durchkommst. Jede Strafe schiebt es nach hinten.'
-      : 'Wann genau, wird beim Verriegeln gezogen. Jede Strafe schiebt es nach hinten.';
+    /* Am Netz gehen alle Fragmente zur selben Zeit auf - die Reihenfolge
+     * der Freigabe hat dort keine Bedeutung. */
+    $('#reihenfolge-feld').classList.toggle('versteckt', zustand.art === 'foto' || drand);
+
+    /* Zeitrahmen am Netz: was eine Pruefung wert ist und ob sie im Takt kommen. */
+    var pruefungen = zustand.laenge * Math.max(1, konfig.aufgabenProFragment);
+    var takt = (tz.minSekunden >= T.tresorLogik.TAKT.ab && pruefungen > 1) ? tz.minSekunden / pruefungen : 0;
+    var fenster = takt ? Math.max(takt, T.tresorLogik.TAKT.fensterMin) : 0;
+    var wert = (tz.maxSekunden - tz.minSekunden) / pruefungen;
+    $('#tresorzeit-hinweis').textContent = (tz.minSekunden === tz.maxSekunden
+      ? 'Kein Spielraum: Prüfungen holen keine Zeit zurück, Fehler schieben trotzdem.'
+      : 'Du startest bei ' + nachDauer(tz.maxSekunden) + '. Jede gelöste Prüfung holt rund ' + util.dauer(wert)
+        + ' zurück, bis ' + util.dauer(tz.minSekunden) + '. Jeder Fehler schiebt dich weg - bis zum Notausgang.')
+      + (takt
+        ? ' Die ' + pruefungen + ' Prüfungen kommen verteilt, etwa alle ' + util.dauer(takt)
+          + '. Binnen ' + util.dauer(fenster) + ' gelöst zählt voll, später die Hälfte.'
+        : ' Alle Prüfungen stehen sofort bereit.');
+
+    /* Strafe und Wurf erklaeren sich je nach Modus anders. */
+    var strafOptionen = $('#strafzeit').options;
+    strafOptionen[1].textContent = drand ? 'mild – 6 % des Rahmens, steigend' : 'mild – ab 20 s, steigend';
+    strafOptionen[2].textContent = drand ? 'hart – 15 % des Rahmens, steigend' : 'hart – ab 60 s, steigend';
+    $('#strafzeit-hinweis').textContent = drand
+      ? 'Eine Strafe schiebt die Freigabe nach hinten - bei ' + nachDauer(tz.maxSekunden) + ' mild um '
+        + util.dauer(tz.maxSekunden * 0.06) + '. Jeder weitere Fehlversuch das Anderthalbfache, eine Strafe höchstens den ganzen Rahmen.'
+      : 'Jeder weitere Fehlversuch kostet das 1,7-Fache. Höchstens 30 Minuten.';
+    $('#gluecksspiel-titel').textContent = drand ? 'Strafen und Wartezeiten dürfen verwürfelt werden'
+      : 'Wartezeiten dürfen verwürfelt werden';
+    $('#gluecksspiel-hinweis').textContent = drand
+      ? 'Einmal je Strafe oder Wartezeit. 5 oder 6: sie fällt weg. 1 bis 4: sie wird um die Hälfte länger. '
+        + 'Im Mittel kostet dich das nichts. Im Einzelfall alles.'
+      : 'Einmal je Wartezeit. 5 oder 6: die Zeit fällt weg. 1 bis 4: der Rest wird um die Hälfte länger. '
+        + 'Im Mittel kostet dich das nichts. Im Einzelfall alles.';
     $('#sicherheit-hinweis').textContent = drand
       ? 'Fern: Der Tresor hängt an drand, einem öffentlichen Netz unabhängiger Betreiber. Vor der Zeit öffnet ihn niemand - '
         + 'du nicht, eine verstellte Uhr nicht, jemand mit Entwicklerwerkzeug nicht. Das Gerät muss dafür nicht rechnen, '
@@ -471,17 +509,18 @@
       : 'Eisern: Jedes Fragment kostet echte Zeit, die niemand abkürzen kann - du nicht, und jemand mit Entwicklerwerkzeug auch nicht.';
     var exitModusW = konfig.notausgang.modus;
     var exitDauerText = exitModusW === 'fest'
-      ? util.dauer(konfig.notausgang.sekunden)
+      ? nachDauer(konfig.notausgang.sekunden)
       : util.dauer(Math.min(konfig.notausgang.minSekunden, konfig.notausgang.maxSekunden))
-        + ' bis ' + util.dauer(Math.max(konfig.notausgang.minSekunden, konfig.notausgang.maxSekunden));
+        + ' bis ' + nachDauer(Math.max(konfig.notausgang.minSekunden, konfig.notausgang.maxSekunden));
     aufwandAktualisieren();
     var exitMaxW = exitModusW === 'aus' ? 0 : exitModusW === 'fest' ? konfig.notausgang.sekunden
       : Math.max(konfig.notausgang.minSekunden, konfig.notausgang.maxSekunden);
     $('#abschluss-warnung').textContent = drand
-      ? 'Ab hier öffnet ihn nur noch das Netz - frühestens nach ' + tzText + ', mit jeder Strafe später'
+      ? 'Ab hier öffnet ihn nur noch das Netz - bestenfalls nach ' + nachDauer(tz.minSekunden)
+        + ', ohne eine Prüfung nach ' + nachDauer(tz.maxSekunden) + ', mit jeder Strafe später'
         + (exitModusW !== 'aus'
             ? ', spätestens über den Notausgang nach ' + exitDauerText + '.'
-              + (exitMaxW < tz.minSekunden ? ' Der Notausgang kommt vor der Tresorzeit - er ist damit der einzige Weg.' : '')
+              + (exitMaxW < tz.minSekunden ? ' Der Notausgang kommt vor dem Rahmen - er ist damit der einzige Weg.' : '')
             : '. Ohne Notausgang bis zum Zehnfachen.')
         + ' Zum Öffnen braucht es Internet. Löschen des Tresors löscht das Geheimnis.'
       : ohneRechenzeit
@@ -602,6 +641,28 @@
 
     var zeitTeil = el('section', { class: 'karte' }, [
       el('h2', { text: '3 · Zeitregeln' }),
+      el('div', { id: 'zeitschloss-wahl' }, [
+        el('div', { class: 'feld' }, [
+          el('label', { for: 'sicherheit', text: 'Was hält ihn verschlossen?' }),
+          el('select', { id: 'sicherheit' }, [
+            el('option', { value: 'rechenzeit' }, 'eisern – jedes Fragment muss freigerechnet werden'),
+            el('option', { value: 'drand' }, 'fern – das Netz hält ihn, auch wochenlang'),
+            el('option', { value: 'ohne-rechenzeit' }, 'nachsichtig – kein Bann, nur Uhr und Aufgaben')
+          ])
+        ]),
+        el('p', { class: 'flaut klein', id: 'sicherheit-hinweis', text: '' }),
+        el('div', { id: 'tresorzeit-felder', class: 'versteckt' }, [
+          el('div', { class: 'feld' }, [
+            el('label', { for: 'tresorzeit-min', text: 'Bestenfalls offen nach' }),
+            el('select', { id: 'tresorzeit-min' }, tresorzeitOptionen(3600))
+          ]),
+          el('div', { class: 'feld' }, [
+            el('label', { for: 'tresorzeit-max', text: 'Ohne eine Prüfung offen nach' }),
+            el('select', { id: 'tresorzeit-max' }, tresorzeitOptionen(10800))
+          ]),
+          el('p', { class: 'flaut klein', id: 'tresorzeit-hinweis', text: '' })
+        ])
+      ]),
       el('div', { class: 'feld' }, [
         el('label', { for: 'strafzeit', text: 'Strafe bei Fehlversuch' }),
         el('select', { id: 'strafzeit' }, [
@@ -610,12 +671,12 @@
           el('option', { value: '2' }, 'hart – ab 60 s, steigend')
         ])
       ]),
-      el('p', { class: 'flaut klein', text: 'Jeder weitere Fehlversuch kostet das 1,7-Fache. Höchstens 30 Minuten.' }),
+      el('p', { class: 'flaut klein', id: 'strafzeit-hinweis', text: 'Jeder weitere Fehlversuch kostet das 1,7-Fache. Höchstens 30 Minuten.' }),
       el('label', { class: 'schalterzeile' }, [
         el('input', { type: 'checkbox', id: 'gluecksspiel' }),
-        el('span', { text: 'Wartezeiten dürfen verwürfelt werden' })
+        el('span', { id: 'gluecksspiel-titel', text: 'Wartezeiten dürfen verwürfelt werden' })
       ]),
-      el('p', { class: 'flaut klein', text:
+      el('p', { class: 'flaut klein', id: 'gluecksspiel-hinweis', text:
         'Einmal je Wartezeit. 5 oder 6: die Zeit fällt weg. 1 bis 4: der Rest wird um die Hälfte länger. '
         + 'Im Mittel kostet dich das nichts. Im Einzelfall alles.' }),
       el('label', { class: 'schalterzeile' }, [
@@ -702,26 +763,6 @@
         el('label', { for: 'aufgaben-pro-fragment', text: 'Aufgaben pro Fragment' }),
         el('input', { type: 'range', min: '1', max: '4', value: '2', id: 'aufgaben-pro-fragment' }),
         el('output', { id: 'aufgaben-anzeige', text: '2' })
-      ]),
-      el('div', { class: 'feld' }, [
-        el('label', { for: 'sicherheit', text: 'Wie unerbittlich?' }),
-        el('select', { id: 'sicherheit' }, [
-          el('option', { value: 'rechenzeit' }, 'eisern – jedes Fragment muss freigerechnet werden'),
-          el('option', { value: 'drand' }, 'fern – das Netz hält ihn, auch wochenlang'),
-          el('option', { value: 'ohne-rechenzeit' }, 'nachsichtig – kein Bann, nur Uhr und Aufgaben')
-        ])
-      ]),
-      el('p', { class: 'flaut klein', id: 'sicherheit-hinweis', text: '' }),
-      el('div', { id: 'tresorzeit-felder', class: 'versteckt' }, [
-        el('div', { class: 'feld' }, [
-          el('label', { for: 'tresorzeit-min', text: 'Frühestens offen nach' }),
-          el('select', { id: 'tresorzeit-min' }, tresorzeitOptionen(3600))
-        ]),
-        el('div', { class: 'feld' }, [
-          el('label', { for: 'tresorzeit-max', text: '… oder nach bis zu' }),
-          el('select', { id: 'tresorzeit-max' }, tresorzeitOptionen(7200))
-        ]),
-        el('p', { class: 'flaut klein', id: 'tresorzeit-hinweis', text: '' })
       ]),
       el('label', { class: 'schalterzeile' }, [
         el('input', { type: 'checkbox', id: 'sensoren-aktiv', disabled: 'disabled' }),
@@ -1245,12 +1286,15 @@
     var aktuell = T.tresorLogik.aktuellesFragment(tresor);
     return el('ol', { class: 'fragmentliste' }, tresor.fragmente.map(function (fragment) {
       var offeneAufgaben = fragment.aufgaben.filter(function (a) { return !a.erledigt; }).length;
+      /* Am Netz gibt es kein "aktuelles" Fragment: Alle laufen parallel. */
       var status = fragment.offen ? 'frei'
-        : fragment === aktuell ? (offeneAufgaben ? offeneAufgaben + ' Aufgaben offen'
-            : fragment.drand ? 'wartet auf das Netz' : 'Bann läuft')
+        : fragment.drand ? (offeneAufgaben ? offeneAufgaben + (offeneAufgaben === 1 ? ' Prüfung offen' : ' Prüfungen offen')
+            : 'abgelegt, wartet auf die Zeit')
+        : fragment === aktuell ? (offeneAufgaben ? offeneAufgaben + ' Aufgaben offen' : 'Bann läuft')
           : 'verriegelt';
       return el('li', {
-        class: 'fragment' + (fragment.offen ? ' ist-offen' : fragment === aktuell ? ' ist-aktuell' : '')
+        class: 'fragment' + (fragment.offen ? ' ist-offen'
+          : (fragment === aktuell && !fragment.drand) ? ' ist-aktuell' : '')
       }, [
         el('div', { class: 'fragment-kopf' }, [
           el('strong', { text: 'Fragment ' + (fragment.index + 1) }),
@@ -1260,7 +1304,13 @@
           var modul = T.herausforderungen.hole(aufgabe.id);
           return el('li', { class: aufgabe.erledigt ? 'ist-erledigt' : '' }, [
             el('span', { class: 'marke marke-' + aufgabe.dimension, text: dimensionName(aufgabe.dimension) }),
-            modul.name + ': ' + modul.beschreibe(aufgabe.params),
+            /* Text und Freischaltzeit in einem Block: Die Zeit steht darunter,
+             * statt als schmale Spalte neben dem Text zu klemmen. */
+            el('span', { class: 'aufgabentext' }, [
+              modul.name + ': ' + modul.beschreibe(aufgabe.params),
+              !aufgabe.erledigt && aufgabe.frei && aufgabe.frei > Date.now()
+                ? el('span', { class: 'freischaltung', text: 'kommt ' + util.zeitpunkt(aufgabe.frei) }) : null
+            ]),
             modul.antwortGebunden ? el('span', { class: 'schluesselmarke', title: 'Antwort geht in den Schlüssel ein', text: ' 🔑' }) : null,
             aufgabe.frist ? el('span', { class: 'schluesselmarke', title: 'Geheime Frist', text: ' ⏳' }) : null
           ]);
@@ -1575,7 +1625,7 @@
           karte.appendChild(el('p', { class: 'flaut klein', text: 'Offen ab ' + util.zeitpunkt(exit.frei) + '.' }));
         }
       }
-      var oeffnen = el('button', { class: 'knopf gross haupt', type: 'button', text: 'Geheimnis freigeben' });
+      var oeffnen = el('button', { class: 'knopf gross' + (bereit ? ' haupt' : ''), type: 'button', text: 'Geheimnis freigeben' });
       oeffnen.disabled = !bereit;
       oeffnen.addEventListener('click', function () {
         if (oeffnen.disabled) return;
@@ -1904,11 +1954,32 @@
   /* Nächster Schritt: entweder eine offene Aufgabe oder das Zeitschloss. */
   function starteAktuelles(karte) {
     var tresor = zustand.tresor;
-    var fragment = T.tresorLogik.aktuellesFragment(tresor);
-    if (!fragment) return;
-    var aufgabe = T.tresorLogik.offeneAufgabe(fragment);
+    var fragment, aufgabe, lage = null;
+    if (tresor.freigabe) {
+      lage = T.tresorLogik.netzLage(tresor);
+      /* Erst abholen, was abzuholen ist: Ist die Freigabe erreicht, gehen
+       * alle Fragmente auf, deren Pruefungen erledigt sind - auch wenn
+       * anderswo noch Pruefungen offen sind. */
+      /* "Erst weiter pruefen" gilt nur, solange es etwas zu pruefen gibt -
+       * sonst zeichnete die Warteansicht sich endlos selbst neu. */
+      if (lage.bereit.length && T.tresorLogik.freigabeErreicht(tresor)
+          && !(zustand.netzSpaeter && lage.aufgabe)) {
+        netzAbholen(karte, lage);
+        return;
+      }
+      if (!lage.aufgabe) { netzWarten(karte, lage); return; }
+      fragment = lage.fragment;
+      aufgabe = lage.aufgabe;
+    } else {
+      fragment = T.tresorLogik.aktuellesFragment(tresor);
+      if (!fragment) return;
+      aufgabe = T.tresorLogik.offeneAufgabe(fragment);
+    }
 
-    var kopf = el('div', { class: 'aufgaben-kopf' }, [
+    var kopf = el('div', { class: 'aufgaben-kopf' }, lage ? [
+      el('span', { class: 'flaut', text: 'Prüfung ' + lage.nr + ' von ' + lage.gesamt }),
+      el('span', { class: 'flaut', text: gutschriftText(tresor, aufgabe) })
+    ] : [
       el('span', { class: 'flaut', text: 'Fragment ' + (fragment.index + 1) + ' von ' + tresor.laenge }),
       el('span', { class: 'flaut', text: (tresor.konfig || {}).blind
         ? (aufgabe ? 'Aufgabe' : T.stimme.WORT.bann)
@@ -1952,6 +2023,7 @@
           if (beendet) return;
           beendet = true;
           aufgabe.erledigt = true;
+          if (tresor.freigabe) T.tresorLogik.gutschriftBuchen(tresor, fragment, aufgabe);
           zustand.wachterwort = T.stimme.sag('lob');
           sichern(true);
           zeichneTresor();
@@ -1990,7 +2062,7 @@
             buchung.fehlversuch = aufgabe.zustand.fehlversuche;
             buchung.zeit = Date.now();
             buchung.gewuerfelt = false;
-            tresor.freigabe.letzteStrafe = buchung;
+            tresor.freigabe.letzteBuchung = buchung;
             if (aufgabe.frist) aufgabe.zustand.fristStart = 0;
             sichern(true);
             zeichneTresor();
@@ -2036,8 +2108,6 @@
         aufgabe.zustand.fristAbgelaufen = false;
         buehne.appendChild(el('p', { class: 'warnung', text: 'Die geheime Frist war abgelaufen. Neuer Anlauf, neue Frist.' }));
       }
-    } else if (fragment.drand) {
-      freigabeUeberNetz(buehne, fragment);
     } else if (!fragment.schloss) {
       freigabeOhneZeitschloss(buehne, fragment);
     } else {
@@ -2078,9 +2148,19 @@
     return 'Die Antwort des Netzes passt nicht zum Schloss: ' + fehler.message;
   }
 
+  /* Was die laufende Pruefung einbringt - steht im Kopf, damit man weiss,
+   * worum es geht, bevor man anfaengt. */
+  function gutschriftText(tresor, aufgabe) {
+    var wert = T.tresorLogik.gutschriftWert(tresor, aufgabe);
+    if (!wert.sekunden) return '';
+    return 'holt ' + util.dauer(wert.sekunden)
+      + (!wert.puenktlich ? ' (verspätet)'
+        : tresor.freigabe.takt ? ' · pünktlich bis ' + util.zeitpunkt(aufgabe.puenktlichBis).replace(' Uhr', '') : '');
+  }
+
   /* Die Uhr ueber allem, solange die Freigabe aussteht. Sie zeichnet den
    * Tresor nie neu - sonst risse sie einem mitten in einer Aufgabe die
-   * Buehne weg. Aufgehen tut er in der Fragmentstufe. */
+   * Buehne weg. */
   function freigabeKarte(tresor) {
     var f = tresor.freigabe;
     var karte = el('section', { class: 'karte freigabe-karte' }, [el('h2', { text: 'Freigabe' })]);
@@ -2089,29 +2169,40 @@
       return karte;
     }
     var anzeige = el('div', { class: 'countdown', text: '–' });
-    var wann = el('p', { class: 'flaut klein', text: '' });
+    var wann = el('p', { class: 'flaut klein mittig-text', text: '' });
     karte.appendChild(anzeige);
     karte.appendChild(wann);
+    var unten = T.drand.zeitVon(f.runden[0]);
+    var oben = T.drand.zeitVon(f.runden[f.runden.length - 1]);
+    karte.appendChild(el('p', { class: 'flaut klein mittig-text', text:
+      'Bestenfalls ' + util.zeitpunkt(unten) + ' · spätestens ' + util.zeitpunkt(oben)
+      + (tresor.notausgang ? ' (Notausgang)' : '') }));
 
-    var strafe = f.letzteStrafe;
-    if (strafe && !strafe.erledigt) {
-      var kasten = el('div', { class: 'strafkasten' }, [
-        el('p', { class: 'aufgabe-titel', text: T.stimme.WORT.strafe }),
-        el('p', { class: 'wachterwort', text: T.stimme.sag('verschoben') }),
-        el('p', { class: 'aufgabe-hinweis', text: (strafe.grund ? strafe.grund + ' ' : '')
-          + 'Fehlversuch ' + strafe.fehlversuch + '. '
-          + (strafe.wirksam > 0 ? '+' + util.dauer(strafe.wirksam) + '.'
-             : strafe.amDeckel ? 'Weiter nach hinten geht es nicht.' : '') })
+    var b = f.letzteBuchung || f.letzteStrafe;
+    if (b && !b.erledigt && (b.gewuenscht || b.art === 'strafe')) {
+      var strafe = b.art !== 'gutschrift';
+      var kasten = el('div', { class: strafe ? 'strafkasten' : 'gutkasten' }, [
+        el('p', { class: 'aufgabe-titel', text: strafe ? T.stimme.WORT.strafe : 'Gutschrift' }),
+        el('p', { class: 'wachterwort', text: T.stimme.sag(strafe ? 'verschoben' : 'gutschrift') }),
+        el('p', { class: 'aufgabe-hinweis', text: strafe
+          /* Angezeigt wird, was gebucht ist, nicht der Sprung auf der Leiter:
+           * Das Konto rechnet exakt, die Leiter in Stufen. Mehrere kleine
+           * Buchungen summieren sich richtig, auch wenn die Uhr erst beim
+           * naechsten Sprossenwechsel springt. */
+          ? (b.grund ? b.grund + ' ' : '') + 'Fehlversuch ' + b.fehlversuch + '. '
+            + (b.amDeckel && !b.wirksam ? 'Weiter nach hinten geht es nicht.' : '+' + util.dauer(b.gewuenscht) + '.')
+          : '−' + util.dauer(-b.gewuenscht) + (b.puenktlich ? '.' : ' - verspätet, nur die Hälfte.')
+            + (b.amBoden ? ' Weiter nach vorn geht es nicht.' : '') })
       ]);
       karte.appendChild(kasten);
-      if ((tresor.konfig || {}).gluecksspiel && !strafe.gewuerfelt && strafe.wirksam > 0) {
+      if (strafe && (tresor.konfig || {}).gluecksspiel && !b.gewuerfelt && b.gewuenscht > 0 && !(b.amDeckel && !b.wirksam)) {
         /* Auch eine Verschiebung darf verwuerfelt werden - einmal. Gewinnt
          * der Wurf, faellt sie weg; verliert er, wird sie gestreckt. */
         T.herausforderungen.werkzeug.wuerfel(kasten, function (gewonnen, streckung) {
-          strafe.gewuerfelt = true;
+          b.gewuerfelt = true;
           var zug = T.tresorLogik.zeitkontoVerschieben(tresor,
-            gewonnen ? -strafe.wirksam : Math.round(strafe.wirksam * (streckung - 1)));
-          strafe.nachWurf = zug ? zug.wirksam : 0;
+            gewonnen ? -b.gewuenscht : Math.round(b.gewuenscht * (streckung - 1)));
+          b.nachWurf = zug ? zug.wirksam : 0;
           sichern(true);
           takt();
         }, {
@@ -2121,68 +2212,94 @@
         });
       }
       kasten.appendChild(el('button', { class: 'knopf', type: 'button', text: 'Verstanden',
-        onclick: function () { strafe.erledigt = true; sichern(true); kasten.remove(); } }));
+        onclick: function () { b.erledigt = true; sichern(true); kasten.remove(); } }));
     }
 
     karte.appendChild(el('p', { class: 'flaut klein', text:
       'Das Netz hält ihn, nicht dieses Gerät. Der Bildschirm darf aus sein, die App geschlossen. '
-      + 'Jede Strafe schiebt die Freigabe nach hinten' + (tresor.notausgang ? ' - bis zum Notausgang.' : '.') }));
+      + 'Jede gelöste Prüfung holt Zeit zurück, jeder Fehler schiebt die Freigabe weg.' }));
 
     function takt() {
       var ziel = T.tresorLogik.freigabeZiel(tresor);
       var rest = (ziel.zeit - Date.now()) / 1000;
       anzeige.textContent = rest > 0 ? restUhr(rest) : 'Die Zeit ist um.';
-      wann.textContent = rest > 0 ? 'Frühestens offen ' + util.zeitpunkt(ziel.zeit) + '.' : 'Hol dir, was dir zusteht.';
+      anzeige.classList.toggle('ist-lang', rest >= 86400);
+      wann.textContent = rest > 0 ? 'Offen ' + util.zeitpunkt(ziel.zeit) + '.' : 'Hol dir, was dir zusteht.';
     }
     takt();
     zustand.freigabeUhr = setInterval(takt, 1000);
     return karte;
   }
 
-  /* Alle Pruefungen eines Fragments abgelegt: Jetzt entscheidet das Netz. */
-  function freigabeUeberNetz(buehne, fragment) {
+  /* Keine Pruefung dran: Entweder kommt die naechste erst noch (Takt), oder
+   * alle sind abgelegt und es wartet nur noch die Zeit. */
+  function netzWarten(karte, lage) {
     var tresor = zustand.tresor;
-    util.leeren(buehne);
-    buehne.appendChild(el('p', { class: 'aufgabe-titel', text: 'Fragment freigeben' }));
-    var hinweis = el('p', { class: 'aufgabe-hinweis', text: '' });
-    buehne.appendChild(hinweis);
+    var alleAbgelegt = !lage.offen;
+    var ziel = alleAbgelegt ? T.tresorLogik.freigabeZiel(tresor).zeit : lage.naechsteAb;
+    if (alleAbgelegt && tresor.freigabe.z) return;                     // nichts mehr zu tun
+    util.leeren(karte);
+    karte.appendChild(el('div', { class: 'aufgaben-kopf' }, [
+      el('span', { class: 'flaut', text: alleAbgelegt ? 'Alle Prüfungen abgelegt' : 'Prüfung ' + (lage.gesamt - lage.offen + 1) + ' von ' + lage.gesamt }),
+      el('span', { class: 'flaut', text: '' })
+    ]));
+    var buehne = el('div', { class: 'aufgaben-buehne' });
+    karte.appendChild(buehne);
+    buehne.appendChild(el('p', { class: 'aufgabe-titel', text: alleAbgelegt ? 'Jetzt hält ihn nur noch die Zeit' : 'Die nächste Prüfung kommt' }));
+    var anzeige = el('div', { class: 'countdown', text: '–' });
+    buehne.appendChild(anzeige);
+    buehne.appendChild(el('p', { class: 'aufgabe-hinweis', text: alleAbgelegt
+      ? 'Ist die Zeit um, geht er hier auf - mit Internet. Du kannst die App schließen.'
+      : 'Ab ' + util.zeitpunkt(ziel) + '. Wer sie gleich löst, bekommt die volle Gutschrift. Du kannst die App schließen.' }));
+    var tick = function () {
+      var z = alleAbgelegt ? T.tresorLogik.freigabeZiel(tresor).zeit : ziel;
+      var rest = (z - Date.now()) / 1000;
+      if (rest <= 0) { clearInterval(uhr); zeichneTresor(); return; }
+      anzeige.textContent = restUhr(rest);
+      anzeige.classList.toggle('ist-lang', rest >= 86400);
+    };
+    var uhr = setInterval(tick, 1000);
+    tick();
+    zustand.aufraeumen = function () { clearInterval(uhr); };
+  }
 
-    if (!T.tresorLogik.freigabeErreicht(tresor)) {
-      hinweis.textContent = 'Die Prüfungen dieses Fragments sind abgelegt. Jetzt hält ihn nur noch die Zeit.';
-      var anzeige = el('div', { class: 'countdown', text: '–' });
-      buehne.appendChild(anzeige);
-      buehne.appendChild(el('p', { class: 'flaut klein', text:
-        'Du kannst die App schließen. Ist die Zeit um, geht er hier auf - mit Internet.' }));
-      var tick = function () {
-        var rest = (T.tresorLogik.freigabeZiel(tresor).zeit - Date.now()) / 1000;
-        if (rest <= 0) { clearInterval(uhr); zeichneTresor(); return; }
-        anzeige.textContent = restUhr(rest);
-      };
-      var uhr = setInterval(tick, 1000);
-      tick();
-      zustand.aufraeumen = function () { clearInterval(uhr); };
-      return;
-    }
-
-    hinweis.textContent = tresor.freigabe.z
-      ? 'Die Prüfungen sind abgelegt. Das Netz hat längst freigegeben.'
-      : 'Die Prüfungen sind abgelegt, und die Zeit ist um.';
+  /* Die Freigabe ist erreicht: Zeitschluessel beim Netz holen und jedes
+   * Fragment oeffnen, dessen Pruefungen erledigt sind. Ohne Netz darf man
+   * mit offenen Pruefungen weitermachen - die Zeit laeuft ja nicht weg. */
+  function netzAbholen(karte, lage) {
+    var tresor = zustand.tresor;
+    util.leeren(karte);
+    var buehne = el('div', { class: 'aufgaben-buehne' });
+    karte.appendChild(buehne);
+    buehne.appendChild(el('p', { class: 'aufgabe-titel', text: 'Freigabe' }));
+    buehne.appendChild(el('p', { class: 'aufgabe-hinweis', text: tresor.freigabe.z
+      ? 'Das Netz hat längst freigegeben.' : 'Die Zeit ist um. ' + lage.bereit.length
+        + (lage.bereit.length === 1 ? ' Fragment wartet.' : ' Fragmente warten.') }));
     var knopf = el('button', { class: 'knopf gross haupt', type: 'button', text: 'Beim Netz abholen' });
     var meldung = el('p', { class: 'aufgabe-meldung', role: 'status', text: '' });
     buehne.appendChild(knopf);
     buehne.appendChild(meldung);
+    var weiter = null;
+    if (lage.aufgabe) {
+      weiter = el('button', { class: 'knopf versteckt', type: 'button', text: 'Erst weiter prüfen',
+        onclick: function () { zustand.netzSpaeter = true; zeichneTresor(); } });
+      buehne.appendChild(weiter);
+    }
     function holen() {
       knopf.disabled = true;
       meldung.textContent = tresor.freigabe.z ? '' : 'Frage das Netz ...';
-      T.tresorLogik.freigabeHolen(tresor).then(function (z) {
+      T.tresorLogik.freigabeHolen(tresor).then(async function (z) {
         sichern(true);
-        return T.tresorLogik.fragmentOeffnen(tresor, fragment, z, zustand.passMaterial);
-      }).then(function () {
+        for (var i = 0; i < lage.bereit.length; i++) {
+          await T.tresorLogik.fragmentOeffnen(tresor, lage.bereit[i], z, zustand.passMaterial);
+        }
+        zustand.netzSpaeter = false;
         sichern(true);
         zeichneTresor();
       }).catch(function (fehler) {
         knopf.disabled = false;
         meldung.textContent = netzFehlerText(fehler);
+        if (weiter) weiter.classList.remove('versteckt');
       });
     }
     knopf.addEventListener('click', holen);
@@ -2201,7 +2318,7 @@
         karte.appendChild(el('p', { class: 'flaut klein', text: 'Offen ab ' + util.zeitpunkt(exit.frei) + '.' }));
       }
     }
-    var oeffnen = el('button', { class: 'knopf gross haupt', type: 'button', text: 'Geheimnis freigeben' });
+    var oeffnen = el('button', { class: 'knopf gross' + (bereit ? ' haupt' : ''), type: 'button', text: 'Geheimnis freigeben' });
     var meldung = el('p', { class: 'flaut klein', text: bereit ? 'Offen. Das Netz muss es noch bestätigen.'
       : imDunkeln() ? 'Zu. Frag nicht, wie lange noch.'
       : 'Noch zu. Die Zeit läuft auch bei geschlossener App.' });

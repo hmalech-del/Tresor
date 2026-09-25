@@ -26,8 +26,9 @@
       rechenzeit: 2,
       reihenfolge: 'links',
       sicherheit: 'rechenzeit',      // 'rechenzeit' | 'drand' (Netz) | 'ohne-rechenzeit'
-      /* Nur fuer drand: Wann der Tresor fruehestens aufgeht, gezogen aus
-       * dieser Spanne. Strafen schieben die Freigabe von dort nach hinten. */
+      /* Nur fuer drand: der Zeitrahmen. Die Uhr startet oben (ohne eine
+       * einzige Pruefung), jede geloeste Pruefung holt sie Richtung unten,
+       * jeder Fehler schiebt sie weg - bis zum Notausgang. */
       tresorzeit: { minSekunden: 3600, maxSekunden: 7200 },
       sensoren: false,               // Lagesensoren nur, wenn das Gerät sie wirklich hat
       gluecksspiel: false,           // Wartezeiten dürfen verwürfelt werden
@@ -69,6 +70,20 @@
    * anderthalbmal so schwer, eine einzelne Strafe hoechstens die ganze
    * Tresorzeit. */
   var DRAND_STRAFE_ANTEIL = [0, 0.06, 0.15];                 // aus, mild, hart
+
+  /* Takt: Bei langen Tresoren kommen die Pruefungen verteilt, nicht alle auf
+   * einmal - sonst waere ein Wochentresor ein Nachmittag Arbeit und danach
+   * nur Warten. Verteilt wird ueber die untere Grenze des Zeitrahmens: Wer
+   * jede Pruefung loest, sobald sie kommt, ist mit der letzten genau dort.
+   *
+   * Puenktlich heisst: binnen eines Taktes, aber mindestens zwoelf Stunden.
+   * Sonst verfiele eine Pruefung, die um drei Uhr nachts kommt, im Schlaf.
+   * Wer spaeter loest, bekommt die halbe Gutschrift.
+   *
+   * Unter sechs Stunden gibt es keinen Takt: Bei einem Stundentresor stehen
+   * alle Pruefungen sofort bereit. Als Objekt, damit Tests es stauchen
+   * koennen. */
+  var TAKT = { ab: 6 * 3600, fensterMin: 12 * 3600, spaetAnteil: 0.5 };
 
   function drandStrafe(konfig, fehlversuche, tresorzeitSek) {
     var anteil = DRAND_STRAFE_ANTEIL[util.grenze(konfig.strafe || 0, 0, 2)];
@@ -311,6 +326,25 @@
     };
   }
 
+  /* drand: Jede Pruefung bekommt einen Freischaltzeitpunkt und eine
+   * Puenktlichkeitsgrenze, und alle zusammen teilen sich die Spanne des
+   * Rahmens als Gutschrift - wer alle loest, landet an der unteren Grenze. */
+  function taktVerteilen(freigabe, fragmente) {
+    var alle = [];
+    fragmente.forEach(function (fr) { fr.aufgaben.forEach(function (a) { alle.push(a); }); });
+    var n = alle.length;
+    var unten = freigabe.rahmen[0], oben = freigabe.rahmen[1];
+    var takt = (unten >= TAKT.ab && n > 1) ? unten / n : 0;
+    var fenster = takt ? Math.max(takt, TAKT.fensterMin) : oben;
+    alle.forEach(function (aufgabe, k) {
+      aufgabe.frei = freigabe.start + Math.round(k * takt * 1000);
+      aufgabe.puenktlichBis = aufgabe.frei + Math.round(fenster * 1000);
+    });
+    freigabe.gutschrift = n ? (oben - unten) / n : 0;
+    freigabe.takt = takt;
+    freigabe.fenster = fenster;
+  }
+
   /* Notausgang-Dauer ziehen. Vorab, weil drand sie als Obergrenze seiner
    * Leiter braucht, bevor das erste Fragment verschluesselt wird. */
   function notausgangZiehen(konfig) {
@@ -356,10 +390,13 @@
       var tz = konfig.tresorzeit || {};
       var tzMin = Math.max(10, Math.min(tz.minSekunden || 3600, tz.maxSekunden || 3600));
       var tzMax = Math.max(tzMin, Math.max(tz.minSekunden || 3600, tz.maxSekunden || 3600));
-      var tresorzeit = Math.round(tzMin + zufallsAnteil() * (tzMax - tzMin));
+      /* Kommt der Notausgang vor dem Rahmen, ist er der Deckel - und der
+       * Rahmen rueckt darunter, damit die Leiter nicht verkehrt herum steht. */
       var deckel = exitZug ? exitZug.gezogen : tzMax * DRAND_DECKEL_FAKTOR;
-      deckel = Math.max(tresorzeit, deckel);
-      var leiter = T.zeitkonto.relativeLeiter(tresorzeit, deckel, 90);
+      tzMax = Math.min(tzMax, deckel);
+      tzMin = Math.min(tzMin, tzMax);
+      var tresorzeit = tzMax;                                // Start: ohne eine einzige Pruefung
+      var leiter = T.zeitkonto.relativeLeiter(tzMin, deckel, 90);
       var runden = leiter.map(function (sek) { return T.drand.rundeZu(start + sek * 1000); });
       zeitschluessel = zufallsHex(32);
       melde({ phase: 'schmieden', text: 'Freigabe an das Netz binden ...', anteil: 0 });
@@ -372,6 +409,8 @@
         rahmen: [tzMin, tzMax], tresorzeit: tresorzeit, deckel: deckel,
         leiter: leiter, runden: runden, pakete: pakete,
         konto: { zielSek: tresorzeit },
+        gutschrift: 0, takt: 0, fenster: 0, gutgeschrieben: [],
+        letzteBuchung: null,
         z: null
       };
       tresorzeit = null;
@@ -449,6 +488,8 @@
       });
       if (puzzle) puzzle.b = null;
     }
+
+    if (freigabe) taktVerteilen(freigabe, fragmente);
 
     /* Notausgang: ein zweites, unabhängiges Zeitschloss über das ganze
      * Geheimnis. Es kennt keine Aufgaben - es kostet nur Rechenzeit.
@@ -701,6 +742,70 @@
     return f.z;
   }
 
+  /* Am Netz gibt es keine Reihenfolge der Fragmente: Die Zeit haengt am
+   * ganzen Tresor, nicht an einem Fragment. Die Pruefungen laufen deshalb
+   * ueber alle Fragmente hinweg in einer Reihe - begrenzt nur vom Takt.
+   * Bisher lief es Fragment fuer Fragment, und das zweite kam erst nach der
+   * Freigabe dran; dann haetten seine Pruefungen keine Zeit mehr holen
+   * koennen. */
+  function netzLage(tresor, jetzt) {
+    jetzt = jetzt || Date.now();
+    var offen = [], nr = 0, gesamt = 0, bereit = [];
+    tresor.fragmente.forEach(function (fragment) {
+      var alleErledigt = true;
+      fragment.aufgaben.forEach(function (aufgabe) {
+        gesamt++;
+        if (!aufgabe.erledigt) {
+          alleErledigt = false;
+          if (!fragment.offen) offen.push({ fragment: fragment, aufgabe: aufgabe, nr: gesamt });
+        }
+      });
+      if (alleErledigt && !fragment.offen) bereit.push(fragment);
+    });
+    var jetztDran = offen.filter(function (e) { return (e.aufgabe.frei || 0) <= jetzt; })[0] || null;
+    var naechste = jetztDran ? null : offen[0] || null;
+    return {
+      fragment: jetztDran && jetztDran.fragment,
+      aufgabe: jetztDran && jetztDran.aufgabe,
+      nr: jetztDran ? jetztDran.nr : 0,
+      gesamt: gesamt,
+      naechsteAb: naechste ? naechste.aufgabe.frei : 0,
+      offen: offen.length,
+      bereit: bereit
+    };
+  }
+
+  /* Was eine Pruefung jetzt einbringt - fuer die Anzeige vor dem Loesen. */
+  function gutschriftWert(tresor, aufgabe, jetzt) {
+    var f = tresor.freigabe;
+    if (!f || f.z || !f.gutschrift) return { sekunden: 0, puenktlich: true };
+    var puenktlich = (jetzt || Date.now()) <= (aufgabe.puenktlichBis || Infinity);
+    return { sekunden: Math.round(f.gutschrift * (puenktlich ? 1 : TAKT.spaetAnteil)), puenktlich: puenktlich };
+  }
+
+  /* Pruefung geloest: Zeit gutschreiben. Jede nur einmal - faellt der Tresor
+   * durch eine abgelaufene Hoechstzeit auf Anfang zurueck, gibt das zweite
+   * Loesen keine zweite Gutschrift. */
+  function gutschriftBuchen(tresor, fragment, aufgabe, jetzt) {
+    var f = tresor.freigabe;
+    if (!f || f.z) return null;
+    var schluessel = fragment.index + ':' + fragment.aufgaben.indexOf(aufgabe);
+    f.gutgeschrieben = f.gutgeschrieben || [];
+    if (f.gutgeschrieben.indexOf(schluessel) !== -1) return null;
+    var wert = gutschriftWert(tresor, aufgabe, jetzt);
+    if (!wert.sekunden) return null;
+    var konto = freigabeKonto(tresor);
+    var ergebnis = konto.verschieben(-wert.sekunden);
+    f.konto = konto.stand();
+    f.gutgeschrieben.push(schluessel);
+    ergebnis.art = 'gutschrift';
+    ergebnis.puenktlich = wert.puenktlich;
+    ergebnis.neueZeit = freigabeZiel(tresor).zeit;
+    ergebnis.zeit = jetzt || Date.now();
+    f.letzteBuchung = ergebnis;
+    return ergebnis;
+  }
+
   /* Strafe im drand-Modus: das Zeitkonto nach hinten schieben. Gibt zurueck,
    * was wirklich angekommen ist - am Deckel nichts mehr, und der Spieler soll
    * das sehen. Ist Z schon geholt, ist die Freigabe vorbei; dann wirkt keine
@@ -713,6 +818,7 @@
     var konto = freigabeKonto(tresor);
     var ergebnis = konto.verschieben(sekunden);
     f.konto = konto.stand();
+    ergebnis.art = 'strafe';
     ergebnis.neueZeit = freigabeZiel(tresor).zeit;
     return ergebnis;
   }
@@ -830,6 +936,10 @@
     freigabeErreicht: freigabeErreicht,
     freigabeHolen: freigabeHolen,
     strafeBuchen: strafeBuchen,
+    netzLage: netzLage,
+    gutschriftWert: gutschriftWert,
+    gutschriftBuchen: gutschriftBuchen,
+    TAKT: TAKT,
     zeitkontoVerschieben: zeitkontoVerschieben,
     notausgangUeberNetz: notausgangUeberNetz,
     strafzeit: strafzeit,
