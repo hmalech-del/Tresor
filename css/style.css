@@ -795,3 +795,12 @@ select, input[type=file] {
 /* Kapitulieren: zurueckhaltend unter der Pruefung, nicht als Einladung. */
 .kapitulation { margin-top: 14px; padding-top: 10px; border-top: 1px dashed var(--rand); display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
 .knopf.flach { background: transparent; border-color: var(--rand); color: var(--flaut); font-size: 13px; padding: 6px 12px; }
+
+/* Der Stein */
+.steinbox { margin-top: 12px; }
+.steinhang { display: block; width: 100%; max-width: 360px; margin: 0 auto; }
+.steinhang path { fill: none; stroke: var(--rand); stroke-width: 3; stroke-linecap: round; }
+.steinhang circle { fill: var(--flaut); transition: cx .12s linear, cy .12s linear; }
+.stein-zaehler { text-align: center; color: var(--flaut); font-variant-numeric: tabular-nums; margin: 6px 0; }
+.stein-haende { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.stein-haende .knopf { min-height: 64px; touch-action: manipulation; user-select: none; }

@@ -2326,10 +2326,30 @@
     buehne.appendChild(el('p', { class: 'aufgabe-hinweis', text: alleAbgelegt
       ? 'Ist die Zeit um, geht er hier auf - mit Internet. Du kannst die App schließen.'
       : 'Ab ' + util.zeitpunkt(ziel) + '. Wer sie gleich löst, bekommt die volle Gutschrift. Du kannst die App schließen.' }));
+    /* Wer nicht warten will, darf schieben. */
+    var steinHalt = null;
+    if (T.tresorLogik.steinBissenNetz(tresor) && !T.tresorLogik.steinAmBoden(tresor)) {
+      var zumStein = el('button', { class: 'knopf', type: 'button', text: 'Den Stein rollen' });
+      var regel = el('p', { class: 'flaut klein', text: steinRegel(null) });
+      buehne.appendChild(zumStein);
+      buehne.appendChild(regel);
+      zumStein.addEventListener('click', function () {
+        zumStein.remove();
+        steinHalt = steinBuehne(buehne, null);
+        buehne.appendChild(el('button', { class: 'knopf flach', type: 'button', text: 'Aufhören', onclick: zeichneTresor }));
+      });
+    }
     var tick = function () {
       var z = alleAbgelegt ? T.tresorLogik.freigabeZiel(tresor).zeit : ziel;
       var rest = (z - Date.now()) / 1000;
-      if (rest <= 0) { clearInterval(uhr); zeichneTresor(); return; }
+      if (rest <= 0) {
+        clearInterval(uhr);
+        /* Mitten im Aufstieg nicht die Buehne wegreissen - Bescheid sagen. */
+        if (!steinHalt) { zeichneTresor(); return; }
+        anzeige.textContent = alleAbgelegt ? 'Die Zeit ist um.' : 'Die Prüfung ist da.';
+        anzeige.classList.remove('ist-lang');
+        return;
+      }
       /* Wann die naechste Pruefung kommt, muss man wissen - sonst kann man
        * nicht puenktlich sein. Wann der Tresor aufgeht, unter Willkuer nicht. */
       anzeige.textContent = alleAbgelegt && imDunkeln() ? '· · ·' : restUhr(rest);
@@ -2337,7 +2357,7 @@
     };
     var uhr = setInterval(tick, 1000);
     tick();
-    zustand.aufraeumen = function () { clearInterval(uhr); };
+    zustand.aufraeumen = function () { clearInterval(uhr); if (steinHalt) steinHalt(); };
   }
 
   /* Die Freigabe ist erreicht: Zeitschluessel beim Netz holen und jedes
@@ -2478,6 +2498,100 @@
     });
   }
 
+  /* Der Stein: im Wechsel links und rechts stemmen. Wer innehaelt, verliert
+   * Boden; oben rollt er wieder hinunter, und dafuer gibt es ein Stueck Zeit.
+   * Ein halber Aufstieg wird nicht gespeichert - wer geht, faengt unten an.
+   * aufgabe: die gesperrte Pruefung, deren Wartezeit schrumpft; ohne sie
+   * die Freigabe am Netz. Gibt eine Funktion zum Anhalten zurueck. */
+  var STEIN_TAKT = { mindestens: 110, haelt: 1500, rollt: 300 };
+  function steinBuehne(wurzel, aufgabe) {
+    var tresor = zustand.tresor;
+    var dunkel = imDunkeln();
+    var noetig = T.tresorLogik.steinStoesse(tresor);
+    var hoehe = 0, letzteHand = null, letzterStoss = 0, gefragt = false, oben = 0;
+    var box = el('div', { class: 'steinbox' });
+    box.innerHTML = '<svg class="steinhang" viewBox="0 0 200 90" aria-hidden="true">'
+      + '<path d="M0 86 L176 14 L200 14" /><circle r="8" cx="12" cy="74" /></svg>';
+    var stein = box.querySelector('circle');
+    var zaehler = el('p', { class: 'stein-zaehler', text: '' });
+    var meldung = el('p', { class: 'aufgabe-meldung', role: 'status', text: '' });
+    var links = el('button', { class: 'knopf gross', type: 'button', text: 'Links' });
+    var rechts = el('button', { class: 'knopf gross', type: 'button', text: 'Rechts' });
+    box.appendChild(zaehler);
+    box.appendChild(el('div', { class: 'stein-haende' }, [links, rechts]));
+    box.appendChild(meldung);
+    wurzel.appendChild(box);
+
+    function zeichne() {
+      var t = Math.min(1, hoehe / noetig);
+      // Als Stil, nicht als Attribut - nur so gleitet er
+      stein.style.cx = String(12 + t * 160);
+      stein.style.cy = String(74 - t * 66);
+      zaehler.textContent = dunkel ? (oben ? 'Oben gewesen: ' + oben : '')
+        : 'Noch ' + (noetig - hoehe) + ' Stöße' + (oben ? ' · oben gewesen: ' + oben : '');
+    }
+
+    function gipfel() {
+      var erg = T.tresorLogik.steinGipfel(tresor, aufgabe);
+      oben++;
+      sichern(true);
+      hoehe = 0; letzteHand = null; gefragt = false;
+      noetig = erg ? erg.naechste : T.tresorLogik.steinStoesse(tresor);
+      if (!erg || (erg.art === 'freigabe' && !erg.sekunden)) {
+        meldung.textContent = 'Oben. Weiter nach vorn geht es nicht.';
+      } else if (dunkel) {
+        meldung.textContent = T.stimme.sag('stein');
+      } else {
+        meldung.textContent = T.stimme.sag('stein') + ' −' + util.dauer(erg.sekunden)
+          + (erg.art === 'warten' ? ' Wartezeit.' : '.') + (erg.amBoden ? ' Weiter nach vorn geht es nicht.' : '');
+      }
+    }
+
+    function stoss(hand) {
+      var jetzt = Date.now();
+      if (hand === letzteHand) { meldung.textContent = 'Im Wechsel.'; return; }
+      if (jetzt - letzterStoss < STEIN_TAKT.mindestens) return;
+      letzteHand = hand;
+      letzterStoss = jetzt;
+      hoehe++;
+      if (meldung.textContent === 'Im Wechsel.' || meldung.textContent === 'Er rollt zurück.') meldung.textContent = '';
+      /* Unter Willkuer rutscht er manchmal kurz vor dem Gipfel ab - einmal je
+       * Aufstieg gefragt, damit es nicht zur Regel wird. */
+      if (!gefragt && hoehe >= noetig * 0.85) {
+        gefragt = true;
+        if (T.tresorLogik.steinRutscht(tresor.konfig)) {
+          hoehe = Math.round(noetig * 0.4);
+          meldung.textContent = 'Abgerutscht.';
+        }
+      }
+      if (hoehe >= noetig) gipfel();
+      zeichne();
+    }
+    links.addEventListener('click', function () { stoss('l'); });
+    rechts.addEventListener('click', function () { stoss('r'); });
+
+    var uhr = setInterval(function () {
+      if (hoehe > 0 && Date.now() - letzterStoss > STEIN_TAKT.haelt) {
+        hoehe--;
+        if (!hoehe) letzteHand = null;          // ganz unten: frisch anfangen, mit jeder Hand
+        meldung.textContent = 'Er rollt zurück.';
+        zeichne();
+      }
+    }, STEIN_TAKT.rollt);
+    zeichne();
+    return function () { clearInterval(uhr); };
+  }
+
+  /* Was ein Gipfel bringt - fuer den Knopf, der zum Stein fuehrt. */
+  function steinRegel(aufgabe) {
+    var S = T.tresorLogik.STEIN;
+    if (imDunkeln()) return 'Was er bringt, sage ich nicht.';
+    var teil = aufgabe
+      ? 'Jeder Gipfel nimmt ' + Math.round(S.wartenAnteil * 100) + ' % der Wartezeit, die noch übrig ist.'
+      : 'Jeder Gipfel holt ' + util.dauer(T.tresorLogik.steinBissenNetz(zustand.tresor)) + '.';
+    return teil + ' Im Wechsel links und rechts. Wer innehält, rollt zurück. Jeder Gipfel macht ihn schwerer - einen Tag lang.';
+  }
+
   /* Gesperrte Aufgabe: Strafzeit absitzen. */
   function strafBuehne(buehne, aufgabe) {
     var modul = T.herausforderungen.hole(aufgabe.id);
@@ -2505,6 +2619,18 @@
       });
     }
 
+    /* Absitzen oder abarbeiten: Der Stein schrumpft die Wartezeit. */
+    var steinHalt = null;
+    var zumStein = el('button', { class: 'knopf', type: 'button', text: 'Den Stein rollen' });
+    var regel = el('p', { class: 'flaut klein', text: steinRegel(aufgabe) });
+    buehne.appendChild(zumStein);
+    buehne.appendChild(regel);
+    zumStein.addEventListener('click', function () {
+      zumStein.remove();
+      regel.remove();
+      steinHalt = steinBuehne(buehne, aufgabe);
+    });
+
     var uhr = setInterval(function () {
       var rest = (aufgabe.zustand.strafeBis - Date.now()) / 1000;
       anzeige.textContent = imDunkeln() ? '· · ·' : util.uhrwerk(rest);
@@ -2514,7 +2640,7 @@
       sichern(true);
       zeichneTresor();
     }, 250);
-    zustand.aufraeumen = function () { clearInterval(uhr); };
+    zustand.aufraeumen = function () { clearInterval(uhr); if (steinHalt) steinHalt(); };
   }
 
   function zeitschlossBuehne(buehne, fragment) {

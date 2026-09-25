@@ -1032,6 +1032,92 @@
     return !!z.kapituliert && !aufgabe.erledigt && !(z.strafeBis && Date.now() < z.strafeBis);
   }
 
+  /* Der Stein: Zeit in Haeppchen, fuer stumpfes Schieben. Man rollt ihn
+   * Stoss fuer Stoss den Hang hinauf; oben rollt er wieder hinunter, und
+   * dafuer gibt es ein Stueck Zeit. Mehr nicht - eine Pruefung zaehlt
+   * zwanzigmal so viel.
+   *
+   * Jeder Gipfel der letzten 24 Stunden macht den naechsten schwerer. So
+   * bleibt er ein Zubrot fuer die Wartezeit und wird nie der Weg, einen
+   * Tresor abzukuerzen: Bei vier Stoessen je Sekunde dauern die ersten
+   * zwanzig Gipfel eine halbe Stunde, die naechsten zwanzig mehr als doppelt
+   * so lang.
+   *
+   *   am Netz: Die Freigabe rueckt nach vorn, um ein Zwanzigstel der
+   *     Normalgutschrift - bei 2 bis 5 Tagen und zehn Pruefungen 22 min.
+   *   in einer Wartezeit: Sie schrumpft um 15 % dessen, was noch uebrig ist.
+   *     Ganz auf null schiebt man sie so nie.
+   *
+   * Unter Willkuer ist jeder Bissen gezogen, und manchmal rutscht der Stein
+   * kurz vor dem Gipfel ab. Als Objekt, damit Tests es stauchen koennen. */
+  var STEIN = {
+    stoesse: 150,
+    schwerer: 0.15,
+    fenster: 24 * 3600,
+    netzAnteil: 0.05,
+    wartenAnteil: 0.15,
+    wartenMin: 5,
+    abrutschen: 0.15
+  };
+
+  function steinGipfel24(tresor, jetzt) {
+    jetzt = jetzt || Date.now();
+    tresor.stein = (tresor.stein || []).filter(function (t) { return jetzt - t < STEIN.fenster * 1000; });
+    return tresor.stein.length;
+  }
+
+  /* Wie viele Stoesse der naechste Gipfel kostet. */
+  function steinStoesse(tresor, jetzt) {
+    return Math.round(STEIN.stoesse * (1 + STEIN.schwerer * steinGipfel24(tresor, jetzt)));
+  }
+
+  /* Der Normalwert eines Bissens am Netz; 0, wenn es dort nichts zu holen gibt. */
+  function steinBissenNetz(tresor) {
+    var f = tresor.freigabe;
+    if (!f || f.z || !f.gutschrift) return 0;
+    return Math.max(1, Math.round(f.gutschrift * STEIN.netzAnteil));
+  }
+
+  function steinAmBoden(tresor) {
+    var f = tresor.freigabe;
+    return !!f && f.konto.zielSek <= f.leiter[0];
+  }
+
+  /* Oben angekommen. aufgabe: die gesperrte Pruefung, deren Wartezeit
+   * schrumpfen soll; ohne sie geht es um die Freigabe am Netz. */
+  function steinGipfel(tresor, aufgabe, jetzt) {
+    jetzt = jetzt || Date.now();
+    var willkuer = !!(tresor.konfig || {}).blind;
+    var ausschlag = willkuer ? ausschlagZiehen(tresor.konfig) : 1;
+    var ergebnis;
+    if (aufgabe) {
+      var z = aufgabe.zustand || {};
+      var rest = Math.max(0, ((z.strafeBis || 0) - jetzt) / 1000);
+      if (!rest) return null;
+      var weg = Math.min(rest, Math.max(STEIN.wartenMin, Math.round(rest * STEIN.wartenAnteil * ausschlag)));
+      z.strafeBis -= weg * 1000;
+      ergebnis = { art: 'warten', sekunden: weg };
+    } else {
+      var bissen = steinBissenNetz(tresor);
+      if (!bissen) return null;
+      /* Gezaehlt wird, was ankommt: Am Boden des Rahmens ist nichts mehr zu holen. */
+      var vorher = tresor.freigabe.konto.zielSek;
+      var zug = zeitkontoVerschieben(tresor, -Math.round(bissen * ausschlag));
+      ergebnis = { art: 'freigabe', sekunden: Math.round(vorher - tresor.freigabe.konto.zielSek),
+                   amBoden: !!(zug && zug.amBoden) };
+    }
+    steinGipfel24(tresor, jetzt);
+    tresor.stein.push(jetzt);
+    ergebnis.ausschlag = ausschlag;
+    ergebnis.naechste = steinStoesse(tresor, jetzt);
+    return ergebnis;
+  }
+
+  /* Unter Willkuer: Rutscht er diesmal ab? Einmal je Aufstieg gefragt. */
+  function steinRutscht(konfig) {
+    return !!(konfig && konfig.blind) && zufallsAnteil() < STEIN.abrutschen;
+  }
+
   /* Notausgang ueber das Netz: erst den Zeitschluessel holen, dann wie immer. */
   async function notausgangUeberNetz(tresor, passMat) {
     var exit = tresor.notausgang;
@@ -1148,6 +1234,12 @@
     kapitulieren: kapitulieren,
     kapitulationAbgesessen: kapitulationAbgesessen,
     notausgangUeberNetz: notausgangUeberNetz,
+    STEIN: STEIN,
+    steinStoesse: steinStoesse,
+    steinBissenNetz: steinBissenNetz,
+    steinAmBoden: steinAmBoden,
+    steinGipfel: steinGipfel,
+    steinRutscht: steinRutscht,
     strafzeit: strafzeit,
     neueFrist: neueFrist,
     RECHENZEIT_STUFEN: RECHENZEIT_STUFEN,

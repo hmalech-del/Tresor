@@ -69,7 +69,15 @@
       'Kapitulation angenommen. Der Preis steht.',
       'Zu schwer? Dann zahl.'
     ],
-    /* Zeitschloss rechnet */
+    /* Der Stein ist oben - und rollt wieder hinunter */
+    stein: [
+      'Oben. Und wieder runter.',
+      'Einer. Es gibt keinen letzten.',
+      'Er wartet unten auf dich.',
+      'Das zählt. Kaum.',
+      'Noch einmal. Und noch einmal.'
+    ],
+        /* Zeitschloss rechnet */
     bann: [
       'Der Tribut ist Zeit. Zahl ihn.',
       'Hier hilft dir nichts. Ungeduld am wenigsten.',
