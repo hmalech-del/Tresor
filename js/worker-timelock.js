@@ -153,15 +153,35 @@ function messen(bits) {
 }
 
 function erzeugen(bits, schritte) {
+  var leiter = erzeugenLeiter(bits, [schritte]);
+  return { n: leiter.n, a: leiter.a, t: schritte, b: leiter.sprossen[0].b };
+}
+
+/* Eine Kette, viele Ziellinien.
+ *
+ * Das Quadrieren laeuft x -> x^2 -> x^2 ... und kommt dabei an JEDER
+ * Schrittzahl vorbei. Wer phi(N) kennt, kann jeden dieser Punkte sofort
+ * ausrechnen; wer nur quadriert, muss hinlaufen. Damit laesst sich die
+ * Ziellinie spaeter verschieben, ohne dass geleistete Arbeit verfaellt -
+ * eine kuerzere Frist liegt einfach frueher auf derselben Kette.
+ *
+ * Der Haken, der alles bestimmt: phi(N) stirbt mit dieser Funktion. Danach
+ * kann niemand mehr eine Sprosse nachrechnen, die App eingeschlossen. Alle
+ * erreichbaren Ziellinien muessen deshalb hier entstehen. Was hier nicht
+ * gebaut wird, ist spaeter unerreichbar - genau daher kommt die Zusage, dass
+ * eine Hoechstzeit nie ueberschritten wird: jenseits der obersten Sprosse
+ * existiert kein Schluessel. */
+function erzeugenLeiter(bits, schritteListe) {
   var p = primzahl(bits / 2), q = primzahl(bits / 2);
   while (p === q) q = primzahl(bits / 2);
   var n = p * q;
   var phi = (p - 1n) * (q - 1n);
   var a = 3n;
-  // Abkürzung nur für den Erzeuger: 2^T mod phi(N)
-  var e = modPow(2n, BigInt(schritte), phi);
-  var b = modPow(a, e, n);
-  return { n: hex(n), a: hex(a), t: schritte, b: hex(b) };
+  var sprossen = schritteListe.map(function (schritte) {
+    // Abkürzung nur für den Erzeuger: 2^T mod phi(N)
+    return { t: schritte, b: hex(modPow(a, modPow(2n, BigInt(schritte), phi), n)) };
+  });
+  return { n: hex(n), a: hex(a), sprossen: sprossen };
 }
 
 /* Durchgehende Schleife ohne Timer.
@@ -234,6 +254,8 @@ self.onmessage = function (ereignis) {
       self.postMessage({ typ: 'messung', rate: messen(m.bits || 1024) });
     } else if (m.cmd === 'erzeugen') {
       self.postMessage({ typ: 'erzeugt', puzzle: erzeugen(m.bits || 1024, m.schritte) });
+    } else if (m.cmd === 'erzeugenLeiter') {
+      self.postMessage({ typ: 'leiter', leiter: erzeugenLeiter(m.bits || 1024, m.schritte) });
     } else if (m.cmd === 'loesen') {
       loesen(m.n, m.x, m.erledigt || 0, m.ziel);
     } else if (m.cmd === 'loesenBlind') {

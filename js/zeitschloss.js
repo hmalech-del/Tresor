@@ -31,6 +31,14 @@
     return antwort.puzzle;
   }
 
+  /* Eine Kette mit vielen Ziellinien - das Zeitkonto braucht sie, weil sich
+   * die Restzeit spaeter verschieben koennen soll. Nach diesem Aufruf ist
+   * phi(N) fort; was hier nicht gebaut wird, ist nie wieder erreichbar. */
+  async function erzeugenLeiter(schritteListe) {
+    var antwort = await einmal({ cmd: 'erzeugenLeiter', bits: BITS, schritte: schritteListe }, 'leiter');
+    return antwort.leiter;
+  }
+
   /* Laufender Löser. Kann pausiert werden und gibt seinen Zwischenstand heraus,
    * damit verbrauchte Rechenzeit einen Reload überlebt. */
   function Loeser(puzzle, stand, beiFortschritt) {
@@ -100,5 +108,6 @@
     return { erledigt: this.erledigt, x: this.x, ziel: this.puzzle.t || this.puzzle.obergrenze };
   };
 
-  T.zeitschloss = { messen: messen, erzeugen: erzeugen, Loeser: Loeser, BITS: BITS };
+  T.zeitschloss = { messen: messen, erzeugen: erzeugen, erzeugenLeiter: erzeugenLeiter,
+                    Loeser: Loeser, BITS: BITS };
 })(typeof window !== 'undefined' ? window : globalThis);
