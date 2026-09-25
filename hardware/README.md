@@ -273,7 +273,7 @@ nach oben offen.
 openscad -D 'teil="pruefstueck"' -o pruefstueck.stl tresorbox.scad
 ```
 
-60 × 57 × 21 mm, rund 25 Minuten. Darin steckt der Ausschnitt des Blocks mit
+60 × 67 × 21 mm, rund 25 Minuten. Darin steckt der Ausschnitt des Blocks mit
 Riegelbohrung, Zungenschlitz **und der vollständigen Servotasche**, dazu ein
 kurzer Riegel und eine kurze Zunge – erzeugt aus **denselben Modulen** wie die
 Kiste. Baute man es nach, prüfte es seine eigene Kopie.

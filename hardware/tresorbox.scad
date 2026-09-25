@@ -386,14 +386,20 @@ module pruefstueck() {
       }
       translate([-60, -10, 0]) cube([200, 200, schnitt_z]);
     }
+  /* Riegel und Zunge liegen daneben, mit Abstand zur Hinterkante des
+   * Ausschnitts - nicht zu scheibe gerechnet. Der Ausschnitt beginnt bei
+   * wand + zunge_y - scheibe/2, nicht bei null; so lag die Zunge frueher
+   * 4 mm tief im Block und wurde mit ihm zu einem Teil verschmolzen. */
+  hinten = wand + zunge_y + scheibe/2;
+  abstand = 6;
   // kurzer Riegel daneben
-  translate([0, scheibe + 14, riegel_h/2])
+  translate([0, hinten + abstand + riegel_b/2, riegel_h/2])
     intersection() {
       translate([riegel_l/2 - 16, 0, 0]) riegel();
       cube([32, riegel_b + 2, riegel_h + 2], center = true);
     }
   // kurze Zunge daneben
-  translate([-34, scheibe + 14, 0])
+  translate([-34, hinten + abstand + (zunge_b + 2)/2, 0])
     rotate([0, 0, 0])
       intersection() {
         translate([0, -(wand + zunge_y), zunge_l]) zunge();

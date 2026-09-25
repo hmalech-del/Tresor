@@ -205,6 +205,32 @@ for name in ("koerper", "deckel", "riegel", "pruefstueck"):
            f"AELTER als tresorbox.scad - neu erzeugen mit "
            f"openscad -D 'teil=\"{name}\"' -o {name}.stl tresorbox.scad")
 
+# Ein Druckteil, das aus mehreren Stuecken bestehen soll, darf nicht zu einem
+# verschmelzen. Beim Pruefstueck war genau das passiert: Die kurze Zunge lag
+# 4 mm tief im Blockausschnitt, und keine Masspruefung hat es gemerkt.
+def teile_in(datei):
+    ecken = re.findall(r"outer loop\s+vertex\s+(\S+ \S+ \S+)\s+vertex\s+(\S+ \S+ \S+)"
+                       r"\s+vertex\s+(\S+ \S+ \S+)", datei.read_text())
+    eltern = {}
+    def wurzel(x):
+        eltern.setdefault(x, x)
+        while eltern[x] != x:
+            eltern[x] = eltern[eltern[x]]
+            x = eltern[x]
+        return x
+    for a, b, c in ecken:
+        eltern[wurzel(b)] = wurzel(a)
+        eltern[wurzel(c)] = wurzel(a)
+    return len({wurzel(a) for a, _, _ in ecken})
+
+for name, soll, was in (("pruefstueck", 3, "Blockausschnitt, Riegel, Zunge"),
+                        ("riegel", 1, "ein Stueck"), ("deckel", 1, "ein Stueck")):
+    datei = scad.with_name(name + ".stl")
+    if datei.exists():
+        n = teile_in(datei)
+        pruefe(f"{name}.stl: {soll} getrennte Teile", n == soll,
+               f"{n} gefunden ({was})" if n == soll else f"{n} gefunden, erwartet {soll}: {was}")
+
 print()
 if fehler:
     print("FEHLGESCHLAGEN: " + ", ".join(fehler))

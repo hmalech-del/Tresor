@@ -18,7 +18,7 @@ Antworten nicht verschweigen.
 | Datei | Wofür |
 |---|---|
 | `tresorbox.scad` | das parametrische Modell; alle Maße oben als Variablen, `teil = koerper \| deckel \| riegel \| pruefstueck \| alles` |
-| `pruefung.py` | rechnet die kritischen Beziehungen nach (Riegel durch Zunge und wieder frei, Stift/Schlitz in beiden Endlagen, Servo in der Wand, Platinensockel, Kabelloch, Nutzraum, STL-Aktualität) |
+| `pruefung.py` | rechnet die kritischen Beziehungen nach (Riegel durch Zunge und wieder frei, Stift/Schlitz in beiden Endlagen, Servo in der Wand, Platinensockel, Kabelloch, Nutzraum, STL-Aktualität, Zahl getrennter Teile je STL – das Prüfstück muss drei haben; einmal war die Zunge mit dem Block verschmolzen) |
 | `kurbelschleife.py` → `.svg` | Zeichnung des Getriebes aus denselben Parametern |
 | `*.stl`, `*.png` | fertige Druckdateien und Vorschaubilder |
 | `README.md` | Nutzer-Doku: Funktionsweise, Einkaufszettel, Drucken, Zusammenbau, Verdrahtung, Toleranzen |
@@ -41,7 +41,7 @@ hinter der Zunge, offen 3,2 mm davor. Nur zwei Endlagen, kein Gelenk.
 Brücke und sackt), `spiel_zunge 0.5` (**führendes** Merkmal), `spiel_loch_y 1.0`
 (quer stapeln sich Riegel- und Zungenspiel), `spiel_loch_z 0.5`,
 `spiel_rand 0.8` (Deckelrand bewusst lose), `spiel_servo 0.5`. Grundsatz: nur
-ein Merkmal führt, alle anderen sind lose. Das **Prüfstück** (60 × 57 × 21 mm,
+ein Merkmal führt, alle anderen sind lose. Das **Prüfstück** (60 × 67 × 21 mm, drei getrennte Teile,
 ~25 min) testet genau diese Passungen, gebaut aus denselben Modulen; die
 Tabelle "Befund → Stellschraube" steht in der README.
 
@@ -73,7 +73,7 @@ die App kann den Handschlag erst rechnen, wenn der Tresor offen ist. App-Seite
 cd hardware
 python3 pruefung.py                       # nach JEDER Parameteränderung
 openscad -D 'teil="koerper"' -o koerper.stl tresorbox.scad   # ebenso deckel, riegel, pruefstueck
-xvfb-run -a openscad -D 'teil="koerper"' --render --imgsize=1200,900 -o koerper.png tresorbox.scad
+xvfb-run -a openscad -D 'teil="pruefstueck"' --render --camera=0,0,0,50,0,210,0 --viewall --autocenter --imgsize=760,560 -o pruefstueck.png tresorbox.scad
 python3 kurbelschleife.py                 # wenn Kurbel-Parameter sich ändern
 ```
 
