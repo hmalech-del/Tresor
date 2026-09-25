@@ -792,3 +792,6 @@ select, input[type=file] {
 /* Ab wann eine Pruefung kommt: eine eigene Zeile unter dem Aufgabentext. */
 .aufgabentext { flex: 1; min-width: 0; }
 .freischaltung { display: block; color: var(--flaut); font-size: .9em; opacity: .85; }
+/* Kapitulieren: zurueckhaltend unter der Pruefung, nicht als Einladung. */
+.kapitulation { margin-top: 14px; padding-top: 10px; border-top: 1px dashed var(--rand); display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.knopf.flach { background: transparent; border-color: var(--rand); color: var(--flaut); font-size: 13px; padding: 6px 12px; }

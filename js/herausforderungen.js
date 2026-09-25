@@ -199,10 +199,12 @@
         auge.textContent = String(augen);
         var gewonnen = augen >= WURF_GEWINN;
         auge.classList.add(gewonnen ? 'ist-gewonnen' : 'ist-verloren');
-        text.textContent = gewonnen
+        text.textContent = texte.ergebnis ? texte.ergebnis(augen)
+          : gewonnen
           ? (texte.gewonnen || 'Gewonnen. Die Zeit ist weg.')
           : (texte.verloren || 'Verloren. Der Rest wird um die Hälfte länger.');
-        beiErgebnis(gewonnen, WURF_STRECKUNG);
+        // Die Augen gibt es dazu - fuer Wuerfe, die mehr als Sieg oder Niederlage kennen.
+        beiErgebnis(gewonnen, WURF_STRECKUNG, augen);
       }, 70);
     });
     return box;

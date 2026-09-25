@@ -246,6 +246,33 @@ halbiert. Beide Würfe sind im Mittel genau ausgeglichen. Ausschlagen geht
 immer. Ob ein Wurf angeboten wird, wird beim Buchen gezogen – Neuladen würfelt
 nicht neu.
 
+**Kapitulieren.** Unter jeder Prüfung steht ein zurückhaltender Knopf. Ein
+Klick erklärt, was es kostet; erst der Wurf macht es endgültig, bis dahin
+lässt es sich zurücknehmen. Die Augen bestimmen das Vielfache eines
+Normalwerts – 1: ½, 2: ¾, 3: 1, 4: 1½, 5: 2, 6: 3 (unter Willkür ¼ bis 5).
+Am Netz schiebt das die Freigabe nach hinten (Normalwert 6 % des oberen Werts,
+bei fünf Tagen also 3,6 h bis 21,6 h), und die Prüfung bringt keine
+Gutschrift. Bei Rechenzeit oder ohne Zeitschloss ist es eine Wartezeit
+(Normalwert: das Dreifache der geschätzten Dauer, mindestens zwei Minuten,
+höchstens ein Viertel des Notausgangs); danach gilt die Prüfung als abgelegt.
+
+Rätsel sind der schwierige Fall: Ihre Lösung steckt im Schlüssel, und die App
+kennt sie nicht. Beim Verriegeln wird deshalb jede Lösung zusätzlich als
+**Pfand** hinterlegt – verschlüsselt mit dem Zeitteil ihres Fragments, am Netz
+also dem Zeitschlüssel, bei Rechenzeit dem Ergebnis des Rechenschlosses. Wer
+kapituliert, bekommt die Lösung zurück, wenn die Zeit gebrochen ist. Der
+Preis: Wer den Speicher ausliest und die Zeit abwartet, kann Rätsel
+überspringen. Aus einer Wissenshürde wird eine Zeithürde; die Zeitgrenze
+selbst bleibt unangetastet. **Ohne Zeitschloss gibt es kein Pfand** – dort ist
+die Lösung der einzige echte Schutz. Rätsel lassen sich dann nicht aufgeben,
+alle anderen Prüfungen schon.
+
+**Das Band.** Am Netz gehen die Fragmente nicht einzeln auf, sondern alle zur
+Freigabe – jede Ziffer braucht den gemeinsamen Zeitschlüssel. Das Band sagt
+deshalb, wie viele Fragmente abgelegt sind, statt „0 von 5 frei" zu zeigen.
+Dass vorher keine Ziffer erscheint, ist gewollt: Bei zwei übrigen ließe sich
+sonst raten.
+
 **Der Takt.** Ab sechs Stunden unterer Grenze kommen die Prüfungen verteilt
 statt alle auf einmal – sonst wäre ein Wochentresor ein Nachmittag Arbeit und
 danach nur Warten. Verteilt wird über die untere Grenze: Wer jede löst, sobald
@@ -275,6 +302,7 @@ Was davon Kryptografie ist und was App-Logik:
 | **bestenfalls** zur unteren Grenze | das Netz – darunter gibt es keine Sprosse |
 | **spätestens** zum Notausgang | das Netz – darüber gibt es keine Sprosse |
 | jede Gutschrift und Strafe dazwischen | die App: Sie bietet nur die Sprosse an, auf die das Konto zeigt. Die anderen sind nicht gelöscht |
+| Rätsel-Lösungen | der Schlüssel – bis zur Freigabe. Danach ließe sich das Pfand einlösen |
 
 Was man dafür eintauscht:
 

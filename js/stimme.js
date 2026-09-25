@@ -62,6 +62,13 @@
       'Zeit zurück. Verdient, nicht geschenkt.',
       'Weniger Warten. Mehr gibt es nicht.'
     ],
+    /* Kapitulation: aufgegeben, gegen gewuerfelte Zeit. Kein Trost. */
+    kapitulation: [
+      'Aufgegeben. Das kostet.',
+      'Du weichst aus. Ich schreibe es an.',
+      'Kapitulation angenommen. Der Preis steht.',
+      'Zu schwer? Dann zahl.'
+    ],
     /* Zeitschloss rechnet */
     bann: [
       'Der Tribut ist Zeit. Zahl ihn.',

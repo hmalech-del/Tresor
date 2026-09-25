@@ -1325,7 +1325,8 @@
             /* Text und Freischaltzeit in einem Block: Die Zeit steht darunter,
              * statt als schmale Spalte neben dem Text zu klemmen. */
             el('span', { class: 'aufgabentext' }, [
-              modul.name + ': ' + modul.beschreibe(aufgabe.params),
+              modul.name + ': ' + modul.beschreibe(aufgabe.params)
+                + (aufgabe.zustand && aufgabe.zustand.kapituliert ? ' - aufgegeben' : ''),
               !aufgabe.erledigt && aufgabe.frei && aufgabe.frei > Date.now()
                 ? el('span', { class: 'freischaltung', text: 'kommt ' + util.zeitpunkt(aufgabe.frei) }) : null
             ]),
@@ -1371,8 +1372,7 @@
 
     wurzel.appendChild(el('section', { class: 'karte band-karte' }, [
       tresor.art === 'foto' ? zeichneBildbuehne(tresor) : zeichneZiffernband(),
-      el('p', { class: 'flaut mittig-text', text:
-        (tresor.fragmente.filter(function (f) { return f.offen; }).length) + ' von ' + tresor.laenge + ' Fragmenten frei' })
+      el('p', { class: 'flaut mittig-text', text: bandText(tresor) })
     ]));
 
     if (!fertig && tresor.freigabe) wurzel.appendChild(freigabeKarte(tresor));
@@ -1495,6 +1495,20 @@
     var verlauf = verlaufKarte();
     if (verlauf) lade.appendChild(verlauf);
     wurzel.appendChild(lade);
+  }
+
+  /* Am Netz gehen die Fragmente nicht einzeln auf, sondern alle zur Freigabe.
+   * "0 von 5 frei" sah dort nach Stillstand aus - also sagt das Band, was
+   * schon geschafft ist und worauf es wartet. */
+  function bandText(tresor) {
+    var offen = tresor.fragmente.filter(function (f) { return f.offen; }).length;
+    var text = offen + ' von ' + tresor.laenge + ' Fragmenten frei';
+    if (!tresor.freigabe || tresor.freigabe.z || offen === tresor.laenge) return text;
+    var abgelegt = tresor.fragmente.filter(function (f) {
+      return !f.offen && f.aufgaben.every(function (a) { return a.erledigt; });
+    }).length;
+    return (abgelegt ? abgelegt + ' von ' + tresor.laenge + ' abgelegt' : text)
+      + ' · die Ziffern kommen alle zur Freigabe';
   }
 
   /* Wie lange der Notausgang dauert - bei blinden Schlössern ist das
@@ -2019,6 +2033,12 @@
         strafBuehne(buehne, aufgabe);
         return;
       }
+      if (T.tresorLogik.kapitulationAbgesessen(aufgabe)) {
+        aufgabe.erledigt = true;
+        sichern(true);
+        zeichneTresor();
+        return;
+      }
       if (!aufgabe.zustand.__begonnen) {
         if (modul.aktiviere) modul.aktiviere(aufgabe.params, aufgabe.zustand);
         aufgabe.zustand.__begonnen = Date.now();
@@ -2102,6 +2122,7 @@
       // mitten in einer Geduldsübung aus.
       wachhalter.an('aufgabe');
       var aufraeumenAufgabe = modul.starte(kontext);
+      kapitulationsLeiste(karte, fragment, aufgabe, modul, function () { beendet = true; });
       var fristUhr = null;
       if (aufgabe.frist) {
         fristUhr = setInterval(function () {
@@ -2213,10 +2234,13 @@
     var b = f.letzteBuchung || f.letzteStrafe;
     if (b && !b.erledigt && (b.gewuenscht || b.art === 'strafe')) {
       var strafe = b.art !== 'gutschrift';
+      var aufgegeben = b.art === 'kapitulation';
       var kasten = el('div', { class: strafe ? 'strafkasten' : 'gutkasten' }, [
-        el('p', { class: 'aufgabe-titel', text: strafe ? T.stimme.WORT.strafe : 'Gutschrift' }),
-        el('p', { class: 'wachterwort', text: T.stimme.sag(strafe ? 'verschoben' : 'gutschrift') }),
-        el('p', { class: 'aufgabe-hinweis', text: strafe
+        el('p', { class: 'aufgabe-titel', text: aufgegeben ? 'Kapituliert' : strafe ? T.stimme.WORT.strafe : 'Gutschrift' }),
+        el('p', { class: 'wachterwort', text: T.stimme.sag(aufgegeben ? 'kapitulation' : strafe ? 'verschoben' : 'gutschrift') }),
+        el('p', { class: 'aufgabe-hinweis', text: aufgegeben
+          ? 'Gewürfelt: ' + b.augen + '. ' + (b.amDeckel && !b.wirksam ? 'Weiter nach hinten geht es nicht.' : '+' + util.dauer(b.gewuenscht) + '.')
+          : strafe
           /* Angezeigt wird, was gebucht ist, nicht der Sprung auf der Leiter:
            * Das Konto rechnet exakt, die Leiter in Stufen. Mehrere kleine
            * Buchungen summieren sich richtig, auch wenn die Uhr erst beim
@@ -2231,7 +2255,7 @@
        * Beide Wuerfe sind im Mittel ausgeglichen: 1/3 x 0 + 2/3 x 1,5 bei
        * der Strafe, 1/3 x 2 + 2/3 x 0,5 bei der Gutschrift - jeweils genau 1. */
       var betrag = Math.abs(b.gewuenscht || 0);
-      if (b.angebot && !b.gewuerfelt && betrag > 0 && !(strafe && b.amDeckel && !b.wirksam)) {
+      if (!aufgegeben && b.angebot && !b.gewuerfelt && betrag > 0 && !(strafe && b.amDeckel && !b.wirksam)) {
         kasten.appendChild(el('p', { class: 'wachterwort', text: strafe ? 'Willst du es drauf ankommen lassen?' : 'Mehr? Oder weniger?' }));
         T.herausforderungen.werkzeug.wuerfel(kasten, function (gewonnen) {
           b.gewuerfelt = true;
@@ -2401,20 +2425,76 @@
     return karte;
   }
 
+  /* Kapitulieren: unter jeder Pruefung, zurueckhaltend. Erst ein Klick, dann
+   * die Erklaerung und der Wurf - wer wuerfelt, gibt auf. Bis dahin laesst
+   * sich alles zuruecknehmen. */
+  function kapitulationsLeiste(karte, fragment, aufgabe, modul, beenden) {
+    var tresor = zustand.tresor;
+    var moeglich = T.tresorLogik.kapitulationMoeglich(fragment, aufgabe);
+    var leiste = el('div', { class: 'kapitulation' });
+    karte.appendChild(leiste);
+    if (!moeglich.ok) {
+      leiste.appendChild(el('p', { class: 'flaut klein', text:
+        'Aufgeben geht hier nicht: Die Lösung dieser Prüfung ist ein Stück des Schlüssels, '
+        + 'und ohne Zeitschloss gibt es kein Pfand dafür. Bleibt der Notausgang.' }));
+      return;
+    }
+    var knopf = el('button', { class: 'knopf flach', type: 'button', text: 'Kapitulieren' });
+    leiste.appendChild(knopf);
+    knopf.addEventListener('click', function () {
+      util.leeren(leiste);
+      var netz = tresor.freigabe && !tresor.freigabe.z;
+      var K = T.tresorLogik.KAPITULATION;
+      var tabelle = (tresor.konfig || {}).blind ? K.augenWillkuer : K.augen;
+      var normal = netz ? tresor.freigabe.tresorzeit * K.netzAnteil
+        : Math.max(K.wartenMin, K.wartenFaktor * modul.schaetzung(aufgabe.params));
+      leiste.appendChild(el('p', { class: 'wachterwort', text: 'Zu schwer? Dann würfle, was es kostet.' }));
+      leiste.appendChild(el('p', { class: 'flaut klein', text: 'Wer würfelt, gibt auf. '
+        + (imDunkeln() ? 'Was es kostet, entscheidet der Wurf.'
+          : (netz ? 'Die Freigabe rückt nach hinten' : 'Du wartest') + ', um ' + util.dauer(normal)
+            + ' mal ' + tabelle.map(function (x) { return String(x).replace('.', ','); }).join(' · ') + ' - je nach Augen, von 1 bis 6.')
+        + (moeglich.pfand ? ' Die Lösung bekommst du erst mit dem Zeitschloss zurück.' : '') }));
+      var zurueck = el('button', { class: 'knopf flach', type: 'button', text: 'Doch weiter versuchen' });
+      T.herausforderungen.werkzeug.wuerfel(leiste, function (gewonnen, streckung, augen) {
+        beenden();
+        var erg = T.tresorLogik.kapitulieren(tresor, fragment, aufgabe, augen, modul.schaetzung(aufgabe.params));
+        sichern(true);
+        leiste.appendChild(el('p', { class: 'aufgabe-meldung', text: erg.art === 'freigabe'
+          ? '+' + util.dauer(erg.sekunden) + ' auf die Freigabe.' : util.dauer(erg.sekunden) + ' Wartezeit.' }));
+        setTimeout(zeichneTresor, 1800);
+      }, {
+        regel: 'Ein Wurf, keine Wiederholung.',
+        ergebnis: function (augen) { return 'Eine ' + augen + '. ' + T.stimme.sag('kapitulation'); }
+      });
+      leiste.appendChild(zurueck);
+      // Rollt der Wuerfel, gibt es kein Zurueck mehr
+      leiste.addEventListener('click', function (e) {
+        if (e.target.closest && e.target.closest('.wuerfelbox button')) zurueck.remove();
+      });
+      zurueck.addEventListener('click', function () {
+        util.leeren(leiste);
+        leiste.appendChild(knopf);
+      });
+    });
+  }
+
   /* Gesperrte Aufgabe: Strafzeit absitzen. */
   function strafBuehne(buehne, aufgabe) {
     var modul = T.herausforderungen.hole(aufgabe.id);
+    var aufgegeben = !!aufgabe.zustand.kapituliert;
     util.leeren(buehne);
-    buehne.appendChild(el('p', { class: 'aufgabe-titel', text: T.stimme.WORT.strafe }));
-    buehne.appendChild(el('p', { class: 'wachterwort', text: T.stimme.sag('strafe') }));
-    buehne.appendChild(el('p', { class: 'aufgabe-hinweis', text:
-      (aufgabe.zustand.strafGrund ? aufgabe.zustand.strafGrund + ' ' : '')
-      + 'Fehlversuch ' + aufgabe.zustand.fehlversuche + '.' }));
+    buehne.appendChild(el('p', { class: 'aufgabe-titel', text: aufgegeben ? 'Kapituliert' : T.stimme.WORT.strafe }));
+    buehne.appendChild(el('p', { class: 'wachterwort', text: T.stimme.sag(aufgegeben ? 'kapitulation' : 'strafe') }));
+    buehne.appendChild(el('p', { class: 'aufgabe-hinweis', text: aufgegeben
+      ? 'Gewürfelt: ' + aufgabe.zustand.kapitulationAugen + '. Danach gilt die Prüfung als abgelegt - ohne dass du sie lösen musst.'
+      : (aufgabe.zustand.strafGrund ? aufgabe.zustand.strafGrund + ' ' : '')
+        + 'Fehlversuch ' + aufgabe.zustand.fehlversuche + '.' }));
     var anzeige = el('div', { class: 'countdown', text: '--:--' });
     buehne.appendChild(anzeige);
 
-    /* Auch eine Strafe darf verwürfelt werden - einmal. */
-    if ((zustand.tresor.konfig || {}).gluecksspiel && !aufgabe.zustand.gewuerfelt
+    /* Auch eine Strafe darf verwürfelt werden - einmal. Eine Kapitulation
+     * nicht: Die war schon ein Wurf. */
+    if ((zustand.tresor.konfig || {}).gluecksspiel && !aufgegeben && !aufgabe.zustand.gewuerfelt
         && aufgabe.zustand.strafeBis - Date.now() > 5000) {
       T.herausforderungen.werkzeug.wuerfel(buehne, function (gewonnen, streckung) {
         aufgabe.zustand.gewuerfelt = true;

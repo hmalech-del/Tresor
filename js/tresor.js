@@ -564,6 +564,25 @@
       var zeitteil = mitRechenzeit ? puzzle.b : (mitDrand ? zeitschluessel : schluessel);
       var paket = await T.krypto.verschluesseln(i, zeitteil, geheimteil, material, passMat);
 
+      /* Pfand: Jede Loesung, die in den Schluessel eingeht, wird zusaetzlich
+       * unter dem Zeitteil dieses Fragments hinterlegt. Wer an der Pruefung
+       * kapituliert, bekommt sie so zurueck - aber erst, wenn die Zeit
+       * gebrochen ist: am Netz mit dem Zeitschluessel, bei Rechenzeit mit
+       * dem Ergebnis des Schlosses. Aus einer Wissenshuerde wird damit eine
+       * Zeithuerde; die Zeitgrenze selbst bleibt, wie sie ist.
+       *
+       * Ohne Zeitschloss ("nachsichtig") gibt es kein Pfand. Dort ist die
+       * Loesung der einzige echte Schutz, und ein Pfand laege offen daneben. */
+      if (mitRechenzeit || mitDrand) {
+        var pfandNr = 0;
+        for (var ap = 0; ap < eintrag.aufgaben.length; ap++) {
+          if (!eintrag.aufgaben[ap].pruefung) continue;
+          eintrag.aufgaben[ap].pfand = await T.krypto.verschluesseln(
+            'pfand:' + i + ':' + ap, zeitteil, eintrag.loesungen[pfandNr], null, passMat);
+          pfandNr++;
+        }
+      }
+
       fragmente.push({
         index: i,
         position: positionen[i],
@@ -754,9 +773,17 @@
    * der gebundenen Aufgaben gehen in den Schlüssel ein und werden danach
    * gelöscht - im Speicher bleibt nur die Ziffer. */
   async function fragmentOeffnen(tresor, fragment, bHex, passMat) {
-    var antworten = fragment.aufgaben.filter(function (aufgabe) {
-      return aufgabe.pruefung && aufgabe.zustand && aufgabe.zustand.antwort;
-    }).map(function (aufgabe) { return aufgabe.zustand.antwort; });
+    var antworten = [];
+    for (var a = 0; a < fragment.aufgaben.length; a++) {
+      var aufgabe = fragment.aufgaben[a];
+      var z = aufgabe.zustand || {};
+      if (!aufgabe.pruefung) continue;
+      if (z.antwort && z.antwort !== true) antworten.push(z.antwort);
+      else if (z.kapituliert && aufgabe.pfand) {
+        antworten.push(await T.krypto.entschluesseln('pfand:' + fragment.index + ':' + a,
+          fragment.schluessel || bHex, aufgabe.pfand, null, passMat));
+      }
+    }
     var material = await T.krypto.antwortMaterial(
       antworten, fragment.antwortSalz, fragment.iterationen || T.krypto.ITERATIONEN);
     fragment.inhalt = await T.krypto.entschluesseln(
@@ -933,6 +960,78 @@
     return ergebnis;
   }
 
+  /* Kapitulieren: eine Pruefung aufgeben, gegen gewuerfelte Zeit.
+   *
+   * Der Wurf bestimmt das Vielfache des Normalwerts, eine Seite je Stufe.
+   * Unter Willkuer ist die Spreizung groesser. Im Mittel kostet Aufgeben
+   * rund anderthalbmal so viel wie der Normalwert - es soll ein Ausweg sein,
+   * kein Schleichweg. */
+  var KAPITULATION = {
+    augen: [0.5, 0.75, 1, 1.5, 2, 3],
+    augenWillkuer: [0.25, 0.5, 1, 2, 3, 5],
+    netzAnteil: 0.06,            // Normalwert am Netz: Anteil des oberen Werts (bei 5 Tagen 7,2 h)
+    wartenFaktor: 3,             // sonst: das Dreifache der geschaetzten Dauer
+    wartenMin: 120
+  };
+
+  /* Geht Aufgeben hier? Eine Pruefung, deren Loesung im Schluessel steckt,
+   * nur mit Pfand - ohne Pfand gaebe es die Loesung nirgends. */
+  function kapitulationMoeglich(fragment, aufgabe) {
+    if (!aufgabe.pruefung) return { ok: true };
+    if (aufgabe.pfand) return { ok: true, pfand: true };
+    return { ok: false, grund: 'schluessel' };
+  }
+
+  function kapitulationsVielfaches(konfig, augen) {
+    var tabelle = (konfig && konfig.blind) ? KAPITULATION.augenWillkuer : KAPITULATION.augen;
+    return tabelle[util.grenze(augen, 1, 6) - 1];
+  }
+
+  /* Normalwert der Kapitulation und was sie bewirkt:
+   *   am Netz (vor der Freigabe): Die Freigabe rueckt nach hinten, die Pruefung
+   *     gilt als abgelegt - ohne Gutschrift.
+   *   sonst: eine Wartezeit; danach gilt sie als abgelegt. */
+  function kapitulieren(tresor, fragment, aufgabe, augen, schaetzungSek) {
+    var vielfach = kapitulationsVielfaches(tresor.konfig, augen);
+    var f = tresor.freigabe;
+    var z = aufgabe.zustand || (aufgabe.zustand = {});
+    z.kapituliert = true;
+    z.kapitulationAugen = augen;
+    delete z.stand;
+    if (f && !f.z) {
+      var roh = f.tresorzeit * KAPITULATION.netzAnteil * vielfach;
+      var sekunden = Math.round(Math.min(f.tresorzeit * ausschlagArt(tresor.konfig).deckel, roh));
+      var konto = freigabeKonto(tresor);
+      var ergebnis = konto.verschieben(sekunden);
+      f.konto = konto.stand();
+      f.gutgeschrieben = f.gutgeschrieben || [];
+      f.gutgeschrieben.push(fragment.index + ':' + fragment.aufgaben.indexOf(aufgabe));
+      aufgabe.erledigt = true;
+      ergebnis.art = 'kapitulation';
+      ergebnis.augen = augen;
+      ergebnis.ausschlag = vielfach;
+      ergebnis.zeit = Date.now();
+      ergebnis.neueZeit = freigabeZiel(tresor).zeit;
+      f.letzteBuchung = ergebnis;
+      return { art: 'freigabe', sekunden: sekunden, augen: augen, buchung: ergebnis };
+    }
+    var budget = zeitBudget(tresor.konfig);
+    var normal = Math.max(KAPITULATION.wartenMin, KAPITULATION.wartenFaktor * (schaetzungSek || 60));
+    var warten = Math.round(normal * vielfach);
+    /* Die Wartezeit darf den Notausgang nicht aushebeln: hoechstens ein
+     * Viertel seines Budgets. */
+    if (budget) warten = Math.min(warten, Math.max(60, Math.round(budget / 4)));
+    z.strafeBis = Date.now() + warten * 1000;
+    z.strafGrund = 'Aufgegeben.';
+    return { art: 'warten', sekunden: warten, augen: augen };
+  }
+
+  /* Nach der Wartezeit einer Kapitulation gilt die Pruefung als abgelegt. */
+  function kapitulationAbgesessen(aufgabe) {
+    var z = aufgabe.zustand || {};
+    return !!z.kapituliert && !aufgabe.erledigt && !(z.strafeBis && Date.now() < z.strafeBis);
+  }
+
   /* Notausgang ueber das Netz: erst den Zeitschluessel holen, dann wie immer. */
   async function notausgangUeberNetz(tresor, passMat) {
     var exit = tresor.notausgang;
@@ -1043,6 +1142,11 @@
     ausschlagZiehen: ausschlagZiehen,
     ausschlagSpanne: ausschlagSpanne,
     zeitkontoVerschieben: zeitkontoVerschieben,
+    KAPITULATION: KAPITULATION,
+    kapitulationMoeglich: kapitulationMoeglich,
+    kapitulationsVielfaches: kapitulationsVielfaches,
+    kapitulieren: kapitulieren,
+    kapitulationAbgesessen: kapitulationAbgesessen,
     notausgangUeberNetz: notausgangUeberNetz,
     strafzeit: strafzeit,
     neueFrist: neueFrist,
