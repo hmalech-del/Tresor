@@ -102,15 +102,20 @@
 
   async function holeBeacon(runde) {
     if (beaconQuelle) return beaconQuelle(runde);
-    var letzter = null;
+    var letzter = null, zuFrueh = false;
     for (var i = 0; i < ZUGAENGE.length; i++) {
       try {
         var antwort = await global.fetch(ZUGAENGE[i] + '/' + info.hash + '/public/' + runde,
           { cache: 'no-store' });
         if (antwort.ok) return await antwort.json();
+        /* 425 heisst: die Runde gibt es noch nicht. Dann geht die Uhr dieses
+         * Geraets vor - das ist etwas anderes als kein Netz, und der Spieler
+         * soll wissen, woran es liegt. */
+        if (antwort.status === 425) zuFrueh = true;
         letzter = new Error('HTTP ' + antwort.status);
       } catch (f) { letzter = f; }
     }
+    if (zuFrueh) throw fehlerMit('zufrueh', 'Das Netz kennt diese Runde noch nicht.');
     throw fehlerMit('netz', 'drand nicht erreichbar' + (letzter ? ': ' + letzter.message : ''));
   }
 
