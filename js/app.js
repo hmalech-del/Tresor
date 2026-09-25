@@ -122,6 +122,22 @@
     });
   }
 
+  function tresorzeitOptionen(vorgabe) {
+    return T.tresorLogik.TRESORZEIT_WERTE.map(function (sekunden) {
+      return el('option', { value: String(sekunden), selected: sekunden === vorgabe ? 'selected' : null },
+        util.dauer(sekunden));
+    });
+  }
+
+  /* Welches Zeitschloss gilt gerade? Unter "meinen Regeln" gibt es nur
+   * Rechenzeit oder keine - dort waehlt der Game Master. */
+  function zeitschlossArt() {
+    if ($('#blindgang') && $('#blindgang').checked) {
+      return $('#blind-ohne-rechenzeit').checked ? 'ohne-rechenzeit' : 'rechenzeit';
+    }
+    return $('#sicherheit').value;
+  }
+
   function zeitOptionen(vorgabe) {
     return T.tresorLogik.FRIST_WERTE.map(function (sekunden) {
       return el('option', { value: String(sekunden), selected: sekunden === vorgabe ? 'selected' : null },
@@ -320,6 +336,10 @@
       rechenzeit: Number($('#rechenzeit').value),
       reihenfolge: $('#reihenfolge').value,
       sicherheit: $('#sicherheit').value,
+      tresorzeit: {
+        minSekunden: Math.min(Number($('#tresorzeit-min').value), Number($('#tresorzeit-max').value)),
+        maxSekunden: Math.max(Number($('#tresorzeit-min').value), Number($('#tresorzeit-max').value))
+      },
       sensoren: !!($('#sensoren-aktiv') && $('#sensoren-aktiv').checked),
       mitPassphrase: $('#passphrase-aktiv').checked,
       strafe: Number($('#strafzeit').value),
@@ -340,7 +360,7 @@
 
   function aufwandAktualisieren() {
     if (!$('#rechenzeit-aufwand')) return;
-    var ohneRechenzeit = $('#sicherheit').value !== 'rechenzeit';
+    var ohneRechenzeit = zeitschlossArt() !== 'rechenzeit';
 
     if (ohneRechenzeit) {
       $('#rechenzeit-aufwand').textContent = '';
@@ -366,27 +386,43 @@
    * seine feste Zeit auch einstellen koennen. */
   function notausgangFelderZeigen(ohneRechenzeit) {
     var modus = $('#notausgang-modus').value;
-    var art = ohneRechenzeit ? 'Wartezeit' : 'Rechenzeit';
+    var drand = zeitschlossArt() === 'drand';
+    var art = drand ? '' : ohneRechenzeit ? 'Wartezeit' : 'Rechenzeit';
+    var obergrenze = zeitschlossArt() === 'rechenzeit' ? T.tresorLogik.NOTAUSGANG_RECHENZEIT_MAX : Infinity;
+
+    /* Werte ueber einem Tag gibt es nur ohne Rechnen. Ist gerade einer davon
+     * gewaehlt und der Modus wechselt zu Rechenzeit, rutscht die Wahl auf den
+     * groessten erlaubten - sonst stuende eine Woche Rechenzeit im Formular. */
+    ['#notausgang-dauer', '#notausgang-min', '#notausgang-max'].forEach(function (auswahl) {
+      var feld = $(auswahl);
+      util.$$(auswahl + ' option').forEach(function (option) {
+        if (!option.dataset.sekunden) return;
+        var sek = Number(option.dataset.sekunden);
+        option.hidden = sek > obergrenze;
+        option.disabled = sek > obergrenze;
+        option.textContent = util.dauer(sek) + (art ? ' ' + art : '');
+      });
+      if (Number(feld.value) > obergrenze) feld.value = String(obergrenze);
+    });
     var fest = Number($('#notausgang-dauer').value);
     var min = Math.min(Number($('#notausgang-min').value), Number($('#notausgang-max').value));
     var max = Math.max(Number($('#notausgang-min').value), Number($('#notausgang-max').value));
 
     $('#notausgang-fest-feld').classList.toggle('versteckt', modus !== 'fest');
     $('#notausgang-spanne-felder').classList.toggle('versteckt', modus !== 'zufall' && modus !== 'geheim');
-    util.$$('#notausgang-dauer option, #notausgang-min option, #notausgang-max option').forEach(function (option) {
-      if (!option.dataset.sekunden) return;
-      option.textContent = util.dauer(Number(option.dataset.sekunden)) + ' ' + art;
-    });
     $('#notausgang-spanne').textContent =
       modus === 'aus' ? ''
       : modus === 'fest'
-        ? 'Der Notausgang springt nach genau ' + util.dauer(fest) + ' ' + art + ' auf. Du weißt also von Anfang an, woran du bist.'
+        ? 'Der Notausgang springt nach genau ' + util.dauer(fest) + (art ? ' ' + art : '')
+          + ' auf. Du weißt also von Anfang an, woran du bist.'
       : modus === 'zufall'
         ? 'Die Dauer wird beim Verriegeln zufällig zwischen ' + util.dauer(min) + ' und ' + util.dauer(max)
           + ' gezogen - und dir danach angezeigt. Du weißt sie erst nach dem Verriegeln, dann aber genau.'
       : 'Die Dauer wird beim Verriegeln zufällig zwischen ' + util.dauer(min) + ' und ' + util.dauer(max)
         + ' gezogen und bleibt geheim. '
-        + (ohneRechenzeit
+        + (drand
+            ? 'Angezeigt wird sie nicht. Im Speicher steht die Runde des Netzes allerdings - ohne sie ließe er sich nicht öffnen.'
+          : ohneRechenzeit
             ? 'Angezeigt wird sie nicht - im Browser-Speicher steht sie allerdings, wie alles in diesem Modus.'
             : 'Sie wird nirgends gespeichert: Der Rechner merkt am Prüfwert selbst, wann er angekommen ist. Du erfährst sie erst, wenn der Notausgang aufspringt.');
     return { modus: modus, art: art, fest: fest, min: min, max: max };
@@ -410,17 +446,26 @@
     if (!dimensionen.length) { anzeige.textContent = '-'; return; }
     var konfig = konfigurationLesen();
     var ohneRechenzeit = !T.tresorLogik.rechenzeitModus(konfig);
+    var drand = T.tresorLogik.drandModus(konfig);
     var schaetzung = T.tresorLogik.geschaetzteDauer(konfig, zustand.laenge);
     var rechen = ohneRechenzeit ? 0 : T.tresorLogik.RECHENZEIT_STUFEN[util.grenze(konfig.rechenzeit, 1, 5) - 1];
-    anzeige.textContent = 'ungefähr ' + util.dauer(schaetzung.sekunden);
+    var tz = konfig.tresorzeit;
+    var tzText = tz.minSekunden === tz.maxSekunden ? util.dauer(tz.minSekunden)
+      : util.dauer(tz.minSekunden) + ' bis ' + util.dauer(tz.maxSekunden);
+    anzeige.textContent = drand
+      ? 'frühestens nach ' + tzText
+      : 'ungefähr ' + util.dauer(schaetzung.sekunden);
     $('#rechenzeit-feld').classList.toggle('versteckt', ohneRechenzeit);
+    $('#tresorzeit-felder').classList.toggle('versteckt', !drand);
     $('#reihenfolge-feld').classList.toggle('versteckt', zustand.art === 'foto');
-    util.$$('#notausgang-min option, #notausgang-max option').forEach(function (option) {
-      if (!option.dataset.sekunden) return;
-      option.textContent = util.dauer(Number(option.dataset.sekunden))
-        + (ohneRechenzeit ? ' Wartezeit' : ' Rechenzeit');
-    });
-    $('#sicherheit-hinweis').textContent = ohneRechenzeit
+    $('#tresorzeit-hinweis').textContent = tz.minSekunden === tz.maxSekunden
+      ? 'Genau dann - wenn du ohne Strafe durchkommst. Jede Strafe schiebt es nach hinten.'
+      : 'Wann genau, wird beim Verriegeln gezogen. Jede Strafe schiebt es nach hinten.';
+    $('#sicherheit-hinweis').textContent = drand
+      ? 'Fern: Der Tresor hängt an drand, einem öffentlichen Netz unabhängiger Betreiber. Vor der Zeit öffnet ihn niemand - '
+        + 'du nicht, eine verstellte Uhr nicht, jemand mit Entwicklerwerkzeug nicht. Das Gerät muss dafür nicht rechnen, '
+        + 'der Bildschirm darf aus sein. Zum Öffnen braucht es Internet. Verschwindet das Netz vor dem Termin, ist das Geheimnis verloren.'
+      : ohneRechenzeit
       ? 'Nachsichtig: Es hält dich nichts als dein eigener Vorsatz. Wer den Speicher dieses Browsers liest, hat das Geheimnis sofort. Dafür kostet es keinen Strom, und der Notausgang zahlt in Wartezeit. Aufgaben, die eine Antwort verlangen, wirken trotzdem - ihre Lösung steckt im Schlüssel.'
       : 'Eisern: Jedes Fragment kostet echte Zeit, die niemand abkürzen kann - du nicht, und jemand mit Entwicklerwerkzeug auch nicht.';
     var exitModusW = konfig.notausgang.modus;
@@ -429,7 +474,16 @@
       : util.dauer(Math.min(konfig.notausgang.minSekunden, konfig.notausgang.maxSekunden))
         + ' bis ' + util.dauer(Math.max(konfig.notausgang.minSekunden, konfig.notausgang.maxSekunden));
     aufwandAktualisieren();
-    $('#abschluss-warnung').textContent = ohneRechenzeit
+    var exitMaxW = exitModusW === 'aus' ? 0 : exitModusW === 'fest' ? konfig.notausgang.sekunden
+      : Math.max(konfig.notausgang.minSekunden, konfig.notausgang.maxSekunden);
+    $('#abschluss-warnung').textContent = drand
+      ? 'Ab hier öffnet ihn nur noch das Netz - frühestens nach ' + tzText + ', mit jeder Strafe später'
+        + (exitModusW !== 'aus'
+            ? ', spätestens über den Notausgang nach ' + exitDauerText + '.'
+              + (exitMaxW < tz.minSekunden ? ' Der Notausgang kommt vor der Tresorzeit - er ist damit der einzige Weg.' : '')
+            : '. Ohne Notausgang bis zum Zehnfachen.')
+        + ' Zum Öffnen braucht es Internet. Löschen des Tresors löscht das Geheimnis.'
+      : ohneRechenzeit
       ? 'Der weniger sichere Modus hält niemanden auf, der den Browser-Speicher liest - er hält dich auf.'
         + (exitModusW !== 'aus' ? ' Der Notausgang öffnet nach ' + exitDauerText + ' Wartezeit.' : '')
         + ' Löschen des Tresors löscht das Geheimnis.'
@@ -440,10 +494,10 @@
     $('#schaetzung-detail').textContent =
       zustand.laenge + ' Fragmente · ' + konfig.aufgabenProFragment
       + (konfig.aufgabenProFragment === 1 ? ' Aufgabe' : ' Aufgaben') + ' je Fragment · '
-      + (rechen ? util.dauer(rechen) + ' Bann je Fragment' : 'ohne Bann')
+      + (drand ? 'am Netz' : rechen ? util.dauer(rechen) + ' Bann je Fragment' : 'ohne Bann')
       + (schaetzung.gebundeneAufgaben ? ' · ' + schaetzung.gebundeneAufgaben + ' Aufgaben gehen in die Schlüssel ein' : '')
       + (schaetzung.mitZeitfenster ? ' · enthält ein Zeitfenster, das an eine Tageszeit gebunden ist' : '')
-      + (konfig.strafe ? ' · Strafzeiten aktiv' : '')
+      + (konfig.strafe ? (drand ? ' · Strafen verschieben die Freigabe' : ' · Strafzeiten aktiv') : '')
       + (konfig.erinnerungen ? ' · mit Erinnerungen' : ' · ohne Erinnerungen')
       + (konfig.geheimeFrist.aktiv
           ? ' · geheime Höchstzeit ' + (konfig.geheimeFrist.bezug === 'tresor'
@@ -652,10 +706,22 @@
         el('label', { for: 'sicherheit', text: 'Wie unerbittlich?' }),
         el('select', { id: 'sicherheit' }, [
           el('option', { value: 'rechenzeit' }, 'eisern – jedes Fragment muss freigerechnet werden'),
+          el('option', { value: 'drand' }, 'fern – das Netz hält ihn, auch wochenlang'),
           el('option', { value: 'ohne-rechenzeit' }, 'nachsichtig – kein Bann, nur Uhr und Aufgaben')
         ])
       ]),
       el('p', { class: 'flaut klein', id: 'sicherheit-hinweis', text: '' }),
+      el('div', { id: 'tresorzeit-felder', class: 'versteckt' }, [
+        el('div', { class: 'feld' }, [
+          el('label', { for: 'tresorzeit-min', text: 'Frühestens offen nach' }),
+          el('select', { id: 'tresorzeit-min' }, tresorzeitOptionen(3600))
+        ]),
+        el('div', { class: 'feld' }, [
+          el('label', { for: 'tresorzeit-max', text: '… oder nach bis zu' }),
+          el('select', { id: 'tresorzeit-max' }, tresorzeitOptionen(7200))
+        ]),
+        el('p', { class: 'flaut klein', id: 'tresorzeit-hinweis', text: '' })
+      ]),
       el('label', { class: 'schalterzeile' }, [
         el('input', { type: 'checkbox', id: 'sensoren-aktiv', disabled: 'disabled' }),
         el('span', { text: 'Sensoraufgaben zulassen (Wasserwaage, Lagenfolge, Schritte)' })
@@ -865,6 +931,8 @@
     aufwandAktualisieren();
     $('#reihenfolge').addEventListener('change', schaetzungAktualisieren);
     $('#sicherheit').addEventListener('change', schaetzungAktualisieren);
+    $('#tresorzeit-min').addEventListener('change', schaetzungAktualisieren);
+    $('#tresorzeit-max').addEventListener('change', schaetzungAktualisieren);
     $('#sensoren-aktiv').addEventListener('change', function () {
       sensorWarnung();
       schaetzungAktualisieren();

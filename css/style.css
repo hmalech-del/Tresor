@@ -93,6 +93,9 @@ input[type=range] { width: 100%; accent-color: var(--neon); }
 select, input[type=file] {
   background: var(--grund-hoch); color: var(--text);
   border: 1px solid var(--rand); border-radius: 8px; padding: 8px 10px; font-size: 15px;
+  /* Ohne das richtet sich ein Auswahlfeld nach seiner laengsten Option und
+   * drueckt die Seite auf dem Handy seitlich aus dem Bild. */
+  max-width: 100%; min-width: 0;
 }
 .feld { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; margin-bottom: 14px; }
 .feld label { grid-column: 1 / -1; font-size: 14px; color: var(--flaut); }

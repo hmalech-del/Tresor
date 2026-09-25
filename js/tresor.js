@@ -6,7 +6,13 @@
   var util = T.util;
 
   var RECHENZEIT_STUFEN = [10, 45, 180, 600, 1800];        // Sekunden echter Rechenarbeit
-  var NOTAUSGANG_WERTE = [300, 900, 1800, 3600, 7200, 10800, 18000, 28800, 43200, 86400];
+  var NOTAUSGANG_WERTE = [300, 900, 1800, 3600, 7200, 10800, 18000, 28800, 43200, 86400,
+                          172800, 259200, 604800, 1209600, 2419200];
+  /* Ueber einen Tag hinaus nur, wo niemand dafuer rechnen muss: bei drand und
+   * im Wartezeit-Modus. Einen Tag Rechenzeit schafft schon kein Handy. */
+  var NOTAUSGANG_RECHENZEIT_MAX = 86400;
+  var TRESORZEIT_WERTE = [600, 1800, 3600, 7200, 10800, 21600, 43200, 86400,
+                          172800, 259200, 432000, 604800, 1209600, 2419200];
   var PRUEFSCHRITT = 250000;                               // Raster der Blindprüfung
   var STRAFZEIT_BASIS = [0, 20, 60];                       // aus, mild, hart
   var FRIST_WERTE = [300, 900, 1800, 3600, 7200, 10800, 18000, 28800,
@@ -818,6 +824,8 @@
     neueFrist: neueFrist,
     RECHENZEIT_STUFEN: RECHENZEIT_STUFEN,
     NOTAUSGANG_WERTE: NOTAUSGANG_WERTE,
+    NOTAUSGANG_RECHENZEIT_MAX: NOTAUSGANG_RECHENZEIT_MAX,
+    TRESORZEIT_WERTE: TRESORZEIT_WERTE,
     PRUEFSCHRITT: PRUEFSCHRITT,
     STRAFZEIT_BASIS: STRAFZEIT_BASIS
   };
