@@ -32,7 +32,7 @@
       tresorzeit: { minSekunden: 3600, maxSekunden: 7200 },
       sensoren: false,               // Lagesensoren nur, wenn das Gerät sie wirklich hat
       gluecksspiel: false,           // Wartezeiten dürfen verwürfelt werden
-      blind: false,                  // "Meine Regeln": der Game Master wuerfelt alles aus und sagt nichts
+      blind: false,                  // Willkür: der Game Master wuerfelt alles aus und sagt nichts
       strafe: 0,
       erinnerungen: false,           // gehört zum Tresor: selbst dran denken ist eine Option
       geheimeFrist: {
@@ -69,7 +69,65 @@
    * eine Stunde bei einem Stundentresor alles. Jede Wiederholung wiegt
    * anderthalbmal so schwer, eine einzelne Strafe hoechstens die ganze
    * Tresorzeit. */
-  var DRAND_STRAFE_ANTEIL = [0, 0.06, 0.15];                 // aus, mild, hart
+  var DRAND_STRAFE_ANTEIL = [0, 0.04, 0.08];                 // aus, mild, hart
+
+  /* Wie schwer eine einzelne Buchung wiegt - Gutschrift wie Strafe - als
+   * Vielfaches ihres Normalwerts. Gezogen, nicht fest: Meist liegt sie nahe
+   * am Normalwert, jede zehnte deutlich darueber, eine von fuenfzig ist ein
+   * Treffer. Bei einem Tresor ueber Tage heisst das: meist einige Stunden,
+   * selten ein halber Tag, sehr selten mehr als einer.
+   *
+   * Unter Willkuer ist die Streuung breiter - von einem Sechstel bis zum
+   * Sechsfachen. Der Deckel je Buchung ist ein Anteil des oberen Werts, damit
+   * auch ein Treffer nicht den ganzen Tresor auf einen Schlag entscheidet. */
+  var AUSSCHLAG = {
+    normal: { stufen: [[0.55, 0.6, 1.0], [0.33, 1.0, 1.5], [0.10, 1.5, 2.5], [0.02, 2.5, 4.0]],
+              deckel: 0.25, angebot: 0.3 },
+    willkuer: { stufen: [[0.30, 0.15, 0.6], [0.30, 0.6, 1.2], [0.22, 1.2, 2.2], [0.13, 2.2, 3.5], [0.05, 3.5, 6.0]],
+                deckel: 0.4, angebot: 0.5 }
+  };
+
+  function ausschlagArt(konfig) { return (konfig && konfig.blind) ? AUSSCHLAG.willkuer : AUSSCHLAG.normal; }
+
+  /* Ein gezogenes Vielfaches. zufall: Zahl in [0,1) fuer Tests, sonst System. */
+  function ausschlagZiehen(konfig, zufall) {
+    var stufen = ausschlagArt(konfig).stufen;
+    var r = typeof zufall === 'number' ? zufall : zufallsAnteil();
+    var summe = 0;
+    for (var i = 0; i < stufen.length; i++) {
+      summe += stufen[i][0];
+      if (r < summe || i === stufen.length - 1) {
+        var innen = (r - (summe - stufen[i][0])) / stufen[i][0];
+        return stufen[i][1] + Math.min(1, Math.max(0, innen)) * (stufen[i][2] - stufen[i][1]);
+      }
+    }
+    return 1;
+  }
+
+  /* Wofuer die Einrichtung wirbt: typischer Bereich und seltener Hoechstwert. */
+  function ausschlagSpanne(konfig, normalwert, oben) {
+    var art = ausschlagArt(konfig);
+    var deckel = art.deckel * oben;
+    var stufen = art.stufen;
+    /* "meist" reicht bis zur Stufe, die zusammen mit den unteren 85 % der
+     * Zuege abdeckt - bei jeder Tabellenlaenge, auch bei einer einzigen. */
+    var summe = 0, bis = stufen[stufen.length - 1][2];
+    for (var i = 0; i < stufen.length; i++) {
+      summe += stufen[i][0];
+      if (summe >= 0.85) { bis = stufen[i][2]; break; }
+    }
+    return {
+      meistVon: Math.min(deckel, normalwert * stufen[0][1]),
+      meistBis: Math.min(deckel, normalwert * bis),
+      seltenBis: Math.min(deckel, normalwert * stufen[stufen.length - 1][2])
+    };
+  }
+
+  /* Ab und zu - nicht immer - darf eine Buchung verwuerfelt werden. Gezogen
+   * wird beim Buchen, damit ein Neuladen das Angebot nicht neu wuerfelt. */
+  function angebotZiehen(konfig) {
+    return !!(konfig && konfig.gluecksspiel) && zufallsAnteil() < ausschlagArt(konfig).angebot;
+  }
 
   /* Takt: Bei langen Tresoren kommen die Pruefungen verteilt, nicht alle auf
    * einmal - sonst waere ein Wochentresor ein Nachmittag Arbeit und danach
@@ -85,11 +143,13 @@
    * koennen. */
   var TAKT = { ab: 6 * 3600, fensterMin: 12 * 3600, spaetAnteil: 0.5 };
 
-  function drandStrafe(konfig, fehlversuche, tresorzeitSek) {
+  /* ausschlag: das gezogene Vielfache; ohne Angabe 1 (der Normalwert). */
+  function drandStrafe(konfig, fehlversuche, tresorzeitSek, ausschlag) {
     var anteil = DRAND_STRAFE_ANTEIL[util.grenze(konfig.strafe || 0, 0, 2)];
     if (!anteil || !tresorzeitSek) return 0;
-    var roh = tresorzeitSek * anteil * Math.pow(1.5, Math.max(0, fehlversuche - 1));
-    return Math.round(Math.min(tresorzeitSek, roh));
+    var roh = tresorzeitSek * anteil * Math.pow(1.3, Math.max(0, fehlversuche - 1))
+      * (typeof ausschlag === 'number' ? ausschlag : 1);
+    return Math.round(Math.min(tresorzeitSek * ausschlagArt(konfig).deckel, roh));
   }
 
   function zufallsHex(bytes) {
@@ -114,11 +174,32 @@
     return min + Math.floor(zufallsAnteil() * (max - min + 1));
   }
 
+  /* Unter Willkuer zieht der Game Master auch den Zeitrahmen - aus dem
+   * Notausgang, der einzigen Zahl, die der Spieler gesetzt hat. Unten landet
+   * irgendwo zwischen einem Fuenftel und der Haelfte davon, oben zwischen
+   * sechzig und neunzig Prozent. Ohne Notausgang nimmt er zwei Tage als Mass. */
+  function willkuerRahmen(notausgang) {
+    var exit = notausgang || {};
+    var mass = exit.modus === 'fest' ? exit.sekunden
+      : exit.modus && exit.modus !== 'aus' ? Math.max(exit.minSekunden || 0, exit.maxSekunden || 0)
+      : 2 * 86400;
+    /* Keine Untergrenze ueber den Notausgang hinweg: Laege der Rahmen darueber,
+     * saesse die Uhr sofort am Deckel, und jede Strafe liefe ins Leere. */
+    mass = mass > 0 ? mass : 2 * 86400;
+    return {
+      minSekunden: Math.round(mass * (0.2 + zufallsAnteil() * 0.3)),
+      maxSekunden: Math.round(mass * (0.6 + zufallsAnteil() * 0.3))
+    };
+  }
+
   /* Blindgang: Der Nutzer setzt nur den Notausgang, alles andere zieht der
    * Game Master - und zeigt es nicht. Gezogen wird mit dem Systemzufall, nicht
    * mit dem gespeicherten Saat-Strom des Tresors: Aus der Saat liesse sich
    * der Plan sonst nachrechnen, und der soll im Dunkeln bleiben. */
-  function blindKonfiguration(notausgang, sensorenMoeglich, ohneRechenzeit) {
+  function blindKonfiguration(notausgang, sensorenMoeglich, zeitschloss) {
+    // frueher ein Schalter "ohne Rechenzeit" - true heisst das noch immer
+    if (zeitschloss === true) zeitschloss = 'ohne-rechenzeit';
+    if (!zeitschloss) zeitschloss = 'rechenzeit';
     /* Ohne beschriebene Marken gibt es keine Stationen - und die schreibt
      * man von Hand, das kann der Game Master nicht uebernehmen. */
     var alle = T.herausforderungen.dimensionen.map(function (d) { return d.id; })
@@ -140,7 +221,8 @@
       /* Haerte und Ungewissheit sind zwei verschiedene Dinge. Der Modus
        * nimmt dem Spieler jede Ansage - ob das Geraet dafuer stundenlang
        * rechnen soll, bleibt trotzdem seine Entscheidung. */
-      sicherheit: ohneRechenzeit ? 'ohne-rechenzeit' : 'rechenzeit',
+      sicherheit: zeitschloss,
+      tresorzeit: zeitschloss === 'drand' ? willkuerRahmen(notausgang) : undefined,
       sensoren: !!sensorenMoeglich && zufallsAnteil() < 0.5,
       strafe: zufallsGanz(1, 2),
       gluecksspiel: true,
@@ -329,16 +411,26 @@
   /* drand: Jede Pruefung bekommt einen Freischaltzeitpunkt und eine
    * Puenktlichkeitsgrenze, und alle zusammen teilen sich die Spanne des
    * Rahmens als Gutschrift - wer alle loest, landet an der unteren Grenze. */
-  function taktVerteilen(freigabe, fragmente) {
+  function taktVerteilen(freigabe, fragmente, willkuer) {
     var alle = [];
     fragmente.forEach(function (fr) { fr.aufgaben.forEach(function (a) { alle.push(a); }); });
     var n = alle.length;
     var unten = freigabe.rahmen[0], oben = freigabe.rahmen[1];
     var takt = (unten >= TAKT.ab && n > 1) ? unten / n : 0;
     var fenster = takt ? Math.max(takt, TAKT.fensterMin) : oben;
+    /* Unter Willkuer kommen die Pruefungen nicht im Gleichschritt: Die
+     * Abstaende werden gezogen und so gestreckt, dass die letzte trotzdem
+     * zur selben Zeit kommt. Das Puenktlichkeitsfenster richtet sich dann
+     * nach dem eigenen Abstand - nie unter dem Mindestfenster. */
+    var abstaende = [];
+    for (var k = 0; k < n; k++) abstaende.push(takt && willkuer ? 0.3 + zufallsAnteil() * 1.4 : 1);
+    var summe = abstaende.slice(0, n - 1).reduce(function (a, b) { return a + b; }, 0) || 1;
+    var lauf = 0;
     alle.forEach(function (aufgabe, k) {
-      aufgabe.frei = freigabe.start + Math.round(k * takt * 1000);
-      aufgabe.puenktlichBis = aufgabe.frei + Math.round(fenster * 1000);
+      aufgabe.frei = freigabe.start + Math.round(lauf * 1000);
+      var eigener = takt ? (k < n - 1 ? abstaende[k] / summe * takt * (n - 1) : unten - lauf) : 0;
+      aufgabe.puenktlichBis = aufgabe.frei + Math.round((takt ? Math.max(eigener, TAKT.fensterMin) : fenster) * 1000);
+      lauf += eigener;
     });
     freigabe.gutschrift = n ? (oben - unten) / n : 0;
     freigabe.takt = takt;
@@ -489,7 +581,7 @@
       if (puzzle) puzzle.b = null;
     }
 
-    if (freigabe) taktVerteilen(freigabe, fragmente);
+    if (freigabe) taktVerteilen(freigabe, fragmente, !!konfig.blind);
 
     /* Notausgang: ein zweites, unabhängiges Zeitschloss über das ganze
      * Geheimnis. Es kennt keine Aufgaben - es kostet nur Rechenzeit.
@@ -794,12 +886,16 @@
     if (f.gutgeschrieben.indexOf(schluessel) !== -1) return null;
     var wert = gutschriftWert(tresor, aufgabe, jetzt);
     if (!wert.sekunden) return null;
+    var ausschlag = ausschlagZiehen(tresor.konfig);
+    var sekunden = Math.round(Math.min(f.tresorzeit * ausschlagArt(tresor.konfig).deckel, wert.sekunden * ausschlag));
     var konto = freigabeKonto(tresor);
-    var ergebnis = konto.verschieben(-wert.sekunden);
+    var ergebnis = konto.verschieben(-sekunden);
     f.konto = konto.stand();
     f.gutgeschrieben.push(schluessel);
     ergebnis.art = 'gutschrift';
     ergebnis.puenktlich = wert.puenktlich;
+    ergebnis.ausschlag = ausschlag;
+    ergebnis.angebot = angebotZiehen(tresor.konfig);
     ergebnis.neueZeit = freigabeZiel(tresor).zeit;
     ergebnis.zeit = jetzt || Date.now();
     f.letzteBuchung = ergebnis;
@@ -813,12 +909,15 @@
   function strafeBuchen(tresor, fehlversuche) {
     var f = tresor.freigabe;
     if (!f || f.z) return null;
-    var sekunden = drandStrafe(tresor.konfig, fehlversuche, f.tresorzeit);
+    var ausschlag = ausschlagZiehen(tresor.konfig);
+    var sekunden = drandStrafe(tresor.konfig, fehlversuche, f.tresorzeit, ausschlag);
     if (!sekunden) return null;
     var konto = freigabeKonto(tresor);
     var ergebnis = konto.verschieben(sekunden);
     f.konto = konto.stand();
     ergebnis.art = 'strafe';
+    ergebnis.ausschlag = ausschlag;
+    ergebnis.angebot = angebotZiehen(tresor.konfig);
     ergebnis.neueZeit = freigabeZiel(tresor).zeit;
     return ergebnis;
   }
@@ -940,6 +1039,9 @@
     gutschriftWert: gutschriftWert,
     gutschriftBuchen: gutschriftBuchen,
     TAKT: TAKT,
+    AUSSCHLAG: AUSSCHLAG,
+    ausschlagZiehen: ausschlagZiehen,
+    ausschlagSpanne: ausschlagSpanne,
     zeitkontoVerschieben: zeitkontoVerschieben,
     notausgangUeberNetz: notausgangUeberNetz,
     strafzeit: strafzeit,

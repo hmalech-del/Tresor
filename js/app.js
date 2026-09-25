@@ -123,6 +123,12 @@
     });
   }
 
+  /* "meist 4 h bis 11 h, selten bis 29 h" */
+  function spanneText(sp) {
+    return util.dauer(sp.meistVon) + ' bis ' + util.dauer(sp.meistBis)
+      + (sp.seltenBis > sp.meistBis * 1.2 ? ', selten bis ' + util.dauer(sp.seltenBis) : '');
+  }
+
   /* "nach 7 Tage" ist falsch - nach verlangt den Dativ. Stunden und Minuten
    * sind abgekuerzt und aendern sich nicht. */
   function nachDauer(sekunden) {
@@ -136,12 +142,10 @@
     });
   }
 
-  /* Welches Zeitschloss gilt gerade? Unter "meinen Regeln" gibt es nur
+  /* Welches Zeitschloss gilt gerade? Unter Willkür gibt es nur
    * Rechenzeit oder keine - dort waehlt der Game Master. */
   function zeitschlossArt() {
-    if ($('#blindgang') && $('#blindgang').checked) {
-      return $('#blind-ohne-rechenzeit').checked ? 'ohne-rechenzeit' : 'rechenzeit';
-    }
+    if ($('#blindgang') && $('#blindgang').checked) return $('#blind-zeitschloss').value;
     return $('#sicherheit').value;
   }
 
@@ -228,7 +232,7 @@
     });
   }
 
-  /* "Meine Regeln": keine Zahl, die die Zukunft verrät.
+  /* Willkür: keine Zahl, die die Zukunft verrät.
    *
    * Was schon passiert ist, darf stehen bleiben - drei von fünf Fragmenten
    * sind offen, das sieht man ohnehin am Band. Weg muss alles, woraus sich
@@ -327,7 +331,7 @@
     if ($('#blindgang') && $('#blindgang').checked) {
       var sensorenMoeglich = !!($('#sensoren-aktiv') && !$('#sensoren-aktiv').disabled);
       return T.tresorLogik.blindKonfiguration(notausgang, sensorenMoeglich,
-        $('#blind-ohne-rechenzeit').checked);
+        $('#blind-zeitschloss').value);
     }
     var stufen = {};
     aktiveDimensionen().forEach(function (dimension) {
@@ -386,7 +390,7 @@
 
   /* Sichtbarkeit und Erklaerung der Notausgang-Felder.
    *
-   * Steht bewusst ausserhalb von aufwandAktualisieren: Unter "meinen Regeln"
+   * Steht bewusst ausserhalb von aufwandAktualisieren: Unter Willkür
    * gibt es nichts zu schaetzen, weshalb die Schaetzung dort frueh aussteigt -
    * aber der Notausgang ist genau dort der einzige Wert, den der Spieler
    * setzt, und der einzige Boden nach unten. Wer das Risiko eingeht, muss
@@ -439,12 +443,12 @@
     var anzeige = $('#schaetzung');
     if (!anzeige) return;
 
-    /* Unter "meinen Regeln" gibt es nichts zu schätzen - das ist der Punkt. Der
+    /* Unter Willkür gibt es nichts zu schätzen - das ist der Punkt. Der
      * Notausgang zahlt dort immer in Rechenzeit. */
     if ($('#blindgang') && $('#blindgang').checked) {
       anzeige.textContent = 'Das erfährst du nicht.';
       $('#schaetzung-detail').textContent = '';
-      notausgangFelderZeigen($('#blind-ohne-rechenzeit').checked);
+      notausgangFelderZeigen(zeitschlossArt() !== 'rechenzeit');
       $('#notausgang-aufwand').textContent = '';
       return;
     }
@@ -478,8 +482,9 @@
     var wert = (tz.maxSekunden - tz.minSekunden) / pruefungen;
     $('#tresorzeit-hinweis').textContent = (tz.minSekunden === tz.maxSekunden
       ? 'Kein Spielraum: Prüfungen holen keine Zeit zurück, Fehler schieben trotzdem.'
-      : 'Du startest bei ' + nachDauer(tz.maxSekunden) + '. Jede gelöste Prüfung holt rund ' + util.dauer(wert)
-        + ' zurück, bis ' + util.dauer(tz.minSekunden) + '. Jeder Fehler schiebt dich weg - bis zum Notausgang.')
+      : 'Du startest bei ' + nachDauer(tz.maxSekunden) + '. Jede gelöste Prüfung holt Zeit zurück, bis '
+        + util.dauer(tz.minSekunden) + ' - meist ' + spanneText(T.tresorLogik.ausschlagSpanne(konfig, wert, tz.maxSekunden))
+        + '. Jeder Fehler schiebt dich weg, bis zum Notausgang.')
       + (takt
         ? ' Die ' + pruefungen + ' Prüfungen kommen verteilt, etwa alle ' + util.dauer(takt)
           + '. Binnen ' + util.dauer(fenster) + ' gelöst zählt voll, später die Hälfte.'
@@ -487,16 +492,19 @@
 
     /* Strafe und Wurf erklaeren sich je nach Modus anders. */
     var strafOptionen = $('#strafzeit').options;
-    strafOptionen[1].textContent = drand ? 'mild – 6 % des Rahmens, steigend' : 'mild – ab 20 s, steigend';
-    strafOptionen[2].textContent = drand ? 'hart – 15 % des Rahmens, steigend' : 'hart – ab 60 s, steigend';
+    strafOptionen[1].textContent = drand ? 'mild – um 4 % des oberen Werts' : 'mild – ab 20 s, steigend';
+    strafOptionen[2].textContent = drand ? 'hart – um 8 % des oberen Werts' : 'hart – ab 60 s, steigend';
     $('#strafzeit-hinweis').textContent = drand
-      ? 'Eine Strafe schiebt die Freigabe nach hinten - bei ' + nachDauer(tz.maxSekunden) + ' mild um '
-        + util.dauer(tz.maxSekunden * 0.06) + '. Jeder weitere Fehlversuch das Anderthalbfache, eine Strafe höchstens den ganzen Rahmen.'
+      ? 'Eine Strafe schiebt die Freigabe nach hinten, meist '
+        + spanneText(T.tresorLogik.ausschlagSpanne(konfig,
+            T.tresorLogik.drandStrafe({ strafe: konfig.strafe || 1 }, 1, tz.maxSekunden), tz.maxSekunden))
+        + '. Wie viel, wird jedes Mal gezogen. Jeder weitere Fehlversuch an derselben Prüfung wiegt ein Drittel mehr.'
       : 'Jeder weitere Fehlversuch kostet das 1,7-Fache. Höchstens 30 Minuten.';
-    $('#gluecksspiel-titel').textContent = drand ? 'Strafen und Wartezeiten dürfen verwürfelt werden'
+    $('#gluecksspiel-titel').textContent = drand ? 'Gutschriften, Strafen und Wartezeiten dürfen verwürfelt werden'
       : 'Wartezeiten dürfen verwürfelt werden';
     $('#gluecksspiel-hinweis').textContent = drand
-      ? 'Einmal je Strafe oder Wartezeit. 5 oder 6: sie fällt weg. 1 bis 4: sie wird um die Hälfte länger. '
+      ? 'Wartezeiten immer, Gutschriften und Strafen ab und zu - etwa jede dritte. 5 oder 6: Die Strafe fällt weg, '
+        + 'die Gutschrift verdoppelt sich. 1 bis 4: Die Strafe wird um die Hälfte länger, die Gutschrift halbiert. '
         + 'Im Mittel kostet dich das nichts. Im Einzelfall alles.'
       : 'Einmal je Wartezeit. 5 oder 6: die Zeit fällt weg. 1 bis 4: der Rest wird um die Hälfte länger. '
         + 'Im Mittel kostet dich das nichts. Im Einzelfall alles.';
@@ -819,14 +827,19 @@
     var blindTeil = el('section', { class: 'karte blindkarte' }, [
       el('label', { class: 'schalterzeile' }, [
         el('input', { type: 'checkbox', id: 'blindgang' }),
-        el('span', { class: 'blindtitel', text: 'Meine Regeln' })
+        el('span', { class: 'blindtitel', text: 'Willkür' })
       ]),
       el('p', { class: 'flaut klein', text:
-        'Du setzt den Notausgang. Alles andere bestimme ich - wie viele Prüfungen, welche, wie hart. '
-        + 'Kein Fahrplan, keine Schätzung, keine Uhr. Du erfährst nichts, bis es so weit ist.' }),
-      el('label', { class: 'schalterzeile versteckt', id: 'blind-sanft-zeile' }, [
-        el('input', { type: 'checkbox', id: 'blind-ohne-rechenzeit' }),
-        el('span', { text: 'ohne Rechenzeit - schont den Akku, hält aber nur dich auf' })
+        'Du setzt den Notausgang. Alles andere bestimme ich - wie viele Prüfungen, welche, wie hart, '
+        + 'und was sie dich an Zeit kosten oder bringen. Kein Fahrplan, keine Schätzung, keine Uhr. '
+        + 'Du erfährst nichts, bis es so weit ist.' }),
+      el('div', { class: 'feld versteckt', id: 'blind-sanft-zeile' }, [
+        el('label', { for: 'blind-zeitschloss', text: 'Was ihn hält' }),
+        el('select', { id: 'blind-zeitschloss' }, [
+          el('option', { value: 'drand', selected: 'selected' }, 'das Netz - Zeit, die ich dir gebe oder nehme'),
+          el('option', { value: 'rechenzeit' }, 'Rechenzeit - das Gerät muss ackern'),
+          el('option', { value: 'ohne-rechenzeit' }, 'nur dein Vorsatz - schont den Akku')
+        ])
       ]),
       el('p', { class: 'warnung versteckt', id: 'blindgang-warnung', text: '' })
     ]);
@@ -981,7 +994,7 @@
     });
     $('#sensoren-freigeben').addEventListener('click', function () { sensorlageZeigen(true); });
     sensorlageZeigen(false);
-    /* Unter "meinen Regeln" zieht der Game Master die Dimensionen selbst - Stationen
+    /* Unter Willkür zieht der Game Master die Dimensionen selbst - Stationen
      * kämen ohne beschriebene Marken nicht zustande. */
 
     /* Der Modus blendet alles aus, was der Game Master selbst entscheidet - bis
@@ -991,9 +1004,14 @@
       blindTeil.classList.toggle('ist-an', an);
       $('#blind-sanft-zeile').classList.toggle('versteckt', !an);
       $('#blindgang-warnung').classList.toggle('versteckt', !an);
-      $('#blindgang-warnung').textContent = $('#blind-ohne-rechenzeit').checked
+      var art = $('#blind-zeitschloss').value;
+      $('#blindgang-warnung').textContent = art === 'ohne-rechenzeit'
         ? 'Ohne Rechenzeit hält dich nichts als dein eigener Vorsatz - wer den Browser-Speicher liest, '
           + 'hat das Geheimnis sofort. Der Notausgang zahlt dann in Wartezeit.'
+        : art === 'drand'
+        ? 'Immer mit Strafen, und ich ziehe, wie viel sie wiegen. Mal fast nichts, mal ein Vielfaches. '
+          + 'Setz den Notausgang so, dass du damit leben kannst - er ist die einzige Zahl, die gilt. '
+          + 'Zum Öffnen braucht es Internet.'
         : 'Immer mit Strafen. Setz den Notausgang so, dass du damit leben kannst - '
           + 'du weisst nicht, wie lang der Weg wird.';
       dimensionTeil.classList.toggle('versteckt', an);
@@ -1013,7 +1031,7 @@
       pruefeBereit();
     }
     $('#blindgang').addEventListener('change', blindgangAnwenden);
-    $('#blind-ohne-rechenzeit').addEventListener('change', blindgangAnwenden);
+    $('#blind-zeitschloss').addEventListener('change', blindgangAnwenden);
     $('#passphrase-aktiv').addEventListener('change', function () {
       $('#passphrase-felder').classList.toggle('versteckt', !this.checked);
       pruefeBereit();
@@ -1423,7 +1441,7 @@
       exitAnzeigeAktualisieren();          // erst jetzt hängt die Karte im Dokument
     }
 
-    /* Unter "meinen Regeln" gibt es keinen Fahrplan - auch keine leere Karte,
+    /* Unter Willkür gibt es keinen Fahrplan - auch keine leere Karte,
      * die daran erinnert. Was es nicht gibt, soll auch keinen Platz belegen. */
     if (!imDunkeln()) {
       wurzel.appendChild(el('section', { class: 'karte' }, [
@@ -1977,7 +1995,7 @@
     }
 
     var kopf = el('div', { class: 'aufgaben-kopf' }, lage ? [
-      el('span', { class: 'flaut', text: 'Prüfung ' + lage.nr + ' von ' + lage.gesamt }),
+      el('span', { class: 'flaut', text: imDunkeln() ? 'Prüfung' : 'Prüfung ' + lage.nr + ' von ' + lage.gesamt }),
       el('span', { class: 'flaut', text: gutschriftText(tresor, aufgabe) })
     ] : [
       el('span', { class: 'flaut', text: 'Fragment ' + (fragment.index + 1) + ' von ' + tresor.laenge }),
@@ -2153,9 +2171,20 @@
   function gutschriftText(tresor, aufgabe) {
     var wert = T.tresorLogik.gutschriftWert(tresor, aufgabe);
     if (!wert.sekunden) return '';
-    return 'holt ' + util.dauer(wert.sekunden)
-      + (!wert.puenktlich ? ' (verspätet)'
-        : tresor.freigabe.takt ? ' · pünktlich bis ' + util.zeitpunkt(aufgabe.puenktlichBis).replace(' Uhr', '') : '');
+    var frist = tresor.freigabe.takt && wert.puenktlich
+      ? 'pünktlich bis ' + util.zeitpunkt(aufgabe.puenktlichBis).replace(' Uhr', '') : '';
+    /* Unter Willkuer steht da kein Betrag - nur, bis wann es zaehlt. Das
+     * braucht man, um ueberhaupt puenktlich sein zu koennen. */
+    if (imDunkeln()) return frist || (wert.puenktlich ? '' : 'verspätet');
+    /* Der Betrag wird beim Loesen gezogen; hier steht sein Normalwert. */
+    return 'holt ~' + util.dauer(wert.sekunden) + (!wert.puenktlich ? ' (verspätet)' : frist ? ' · ' + frist : '');
+  }
+
+  /* Was der gezogene Ausschlag bedeutet - fuer den Kasten nach dem Buchen. */
+  function ausschlagWort(b) {
+    var x = b.ausschlag || 1;
+    if (b.art === 'gutschrift') return x >= 2.5 ? ' Ein Treffer.' : x >= 1.5 ? ' Mehr als sonst.' : x < 0.6 ? ' Weniger als sonst.' : '';
+    return x >= 2.5 ? ' Hart getroffen.' : x >= 1.5 ? ' Mehr als sonst.' : x < 0.6 ? ' Glück gehabt.' : '';
   }
 
   /* Die Uhr ueber allem, solange die Freigabe aussteht. Sie zeichnet den
@@ -2172,11 +2201,14 @@
     var wann = el('p', { class: 'flaut klein mittig-text', text: '' });
     karte.appendChild(anzeige);
     karte.appendChild(wann);
-    var unten = T.drand.zeitVon(f.runden[0]);
-    var oben = T.drand.zeitVon(f.runden[f.runden.length - 1]);
-    karte.appendChild(el('p', { class: 'flaut klein mittig-text', text:
-      'Bestenfalls ' + util.zeitpunkt(unten) + ' · spätestens ' + util.zeitpunkt(oben)
-      + (tresor.notausgang ? ' (Notausgang)' : '') }));
+    var dunkel = imDunkeln();
+    if (!dunkel) {
+      var unten = T.drand.zeitVon(f.runden[0]);
+      var oben = T.drand.zeitVon(f.runden[f.runden.length - 1]);
+      karte.appendChild(el('p', { class: 'flaut klein mittig-text', text:
+        'Bestenfalls ' + util.zeitpunkt(unten) + ' · spätestens ' + util.zeitpunkt(oben)
+        + (tresor.notausgang ? ' (Notausgang)' : '') }));
+    }
 
     var b = f.letzteBuchung || f.letzteStrafe;
     if (b && !b.erledigt && (b.gewuenscht || b.art === 'strafe')) {
@@ -2190,25 +2222,34 @@
            * Buchungen summieren sich richtig, auch wenn die Uhr erst beim
            * naechsten Sprossenwechsel springt. */
           ? (b.grund ? b.grund + ' ' : '') + 'Fehlversuch ' + b.fehlversuch + '. '
-            + (b.amDeckel && !b.wirksam ? 'Weiter nach hinten geht es nicht.' : '+' + util.dauer(b.gewuenscht) + '.')
-          : '−' + util.dauer(-b.gewuenscht) + (b.puenktlich ? '.' : ' - verspätet, nur die Hälfte.')
+            + (b.amDeckel && !b.wirksam ? 'Weiter nach hinten geht es nicht.' : '+' + util.dauer(b.gewuenscht) + '.' + ausschlagWort(b))
+          : '−' + util.dauer(-b.gewuenscht) + (b.puenktlich ? '.' : ' - verspätet, nur die Hälfte.') + ausschlagWort(b)
             + (b.amBoden ? ' Weiter nach vorn geht es nicht.' : '') })
       ]);
       karte.appendChild(kasten);
-      if (strafe && (tresor.konfig || {}).gluecksspiel && !b.gewuerfelt && b.gewuenscht > 0 && !(b.amDeckel && !b.wirksam)) {
-        /* Auch eine Verschiebung darf verwuerfelt werden - einmal. Gewinnt
-         * der Wurf, faellt sie weg; verliert er, wird sie gestreckt. */
-        T.herausforderungen.werkzeug.wuerfel(kasten, function (gewonnen, streckung) {
+      /* Ab und zu - nicht immer - bietet der Game Master einen Wurf an.
+       * Beide Wuerfe sind im Mittel ausgeglichen: 1/3 x 0 + 2/3 x 1,5 bei
+       * der Strafe, 1/3 x 2 + 2/3 x 0,5 bei der Gutschrift - jeweils genau 1. */
+      var betrag = Math.abs(b.gewuenscht || 0);
+      if (b.angebot && !b.gewuerfelt && betrag > 0 && !(strafe && b.amDeckel && !b.wirksam)) {
+        kasten.appendChild(el('p', { class: 'wachterwort', text: strafe ? 'Willst du es drauf ankommen lassen?' : 'Mehr? Oder weniger?' }));
+        T.herausforderungen.werkzeug.wuerfel(kasten, function (gewonnen) {
           b.gewuerfelt = true;
-          var zug = T.tresorLogik.zeitkontoVerschieben(tresor,
-            gewonnen ? -b.gewuenscht : Math.round(b.gewuenscht * (streckung - 1)));
-          b.nachWurf = zug ? zug.wirksam : 0;
+          /* Fuer beide dieselbe Bewegung: Gewonnen zieht die Freigabe um den
+           * Betrag nach vorn (Strafe weg / Gutschrift doppelt), verloren um
+           * den halben nach hinten (Strafe x1,5 / Gutschrift halbiert). */
+          var zug = T.tresorLogik.zeitkontoVerschieben(tresor, gewonnen ? -betrag : Math.round(betrag * 0.5));
+          b.nachWurf = zug ? zug.gewuenscht : 0;
           sichern(true);
           takt();
-        }, {
-          regel: '5 oder 6: diese Strafe fällt weg. 1 bis 4: sie wird um die Hälfte länger. Ein Wurf, keine Wiederholung.',
+        }, strafe ? {
+          regel: '5 oder 6: diese Strafe fällt weg. 1 bis 4: sie wird um die Hälfte länger. Ein Wurf - oder lass es.',
           gewonnen: 'Gewonnen. Die Strafe ist weg.',
           verloren: 'Verloren. Die Strafe wird um die Hälfte länger.'
+        } : {
+          regel: '5 oder 6: die Gutschrift verdoppelt sich. 1 bis 4: die Hälfte ist weg. Ein Wurf - oder lass es.',
+          gewonnen: 'Gewonnen. Noch einmal so viel.',
+          verloren: 'Verloren. Die Hälfte ist weg.'
         });
       }
       kasten.appendChild(el('button', { class: 'knopf', type: 'button', text: 'Verstanden',
@@ -2222,6 +2263,15 @@
     function takt() {
       var ziel = T.tresorLogik.freigabeZiel(tresor);
       var rest = (ziel.zeit - Date.now()) / 1000;
+      /* Unter Willkuer keine Uhr: Sie waere die eine Zahl, aus der sich alles
+       * ablesen liesse. Was eine Buchung bewegt hat, steht im Kasten - wohin
+       * es fuehrt, nicht. */
+      if (dunkel) {
+        anzeige.textContent = rest > 0 ? '· · ·' : 'Die Zeit ist um.';
+        anzeige.classList.remove('ist-lang');
+        wann.textContent = rest > 0 ? 'Wie lange noch, sage ich nicht.' : 'Hol dir, was dir zusteht.';
+        return;
+      }
       anzeige.textContent = rest > 0 ? restUhr(rest) : 'Die Zeit ist um.';
       anzeige.classList.toggle('ist-lang', rest >= 86400);
       wann.textContent = rest > 0 ? 'Offen ' + util.zeitpunkt(ziel.zeit) + '.' : 'Hol dir, was dir zusteht.';
@@ -2240,7 +2290,8 @@
     if (alleAbgelegt && tresor.freigabe.z) return;                     // nichts mehr zu tun
     util.leeren(karte);
     karte.appendChild(el('div', { class: 'aufgaben-kopf' }, [
-      el('span', { class: 'flaut', text: alleAbgelegt ? 'Alle Prüfungen abgelegt' : 'Prüfung ' + (lage.gesamt - lage.offen + 1) + ' von ' + lage.gesamt }),
+      el('span', { class: 'flaut', text: alleAbgelegt ? 'Alle Prüfungen abgelegt'
+        : imDunkeln() ? 'Prüfung' : 'Prüfung ' + (lage.gesamt - lage.offen + 1) + ' von ' + lage.gesamt }),
       el('span', { class: 'flaut', text: '' })
     ]));
     var buehne = el('div', { class: 'aufgaben-buehne' });
@@ -2255,8 +2306,10 @@
       var z = alleAbgelegt ? T.tresorLogik.freigabeZiel(tresor).zeit : ziel;
       var rest = (z - Date.now()) / 1000;
       if (rest <= 0) { clearInterval(uhr); zeichneTresor(); return; }
-      anzeige.textContent = restUhr(rest);
-      anzeige.classList.toggle('ist-lang', rest >= 86400);
+      /* Wann die naechste Pruefung kommt, muss man wissen - sonst kann man
+       * nicht puenktlich sein. Wann der Tresor aufgeht, unter Willkuer nicht. */
+      anzeige.textContent = alleAbgelegt && imDunkeln() ? '· · ·' : restUhr(rest);
+      anzeige.classList.toggle('ist-lang', rest >= 86400 && !(alleAbgelegt && imDunkeln()));
     };
     var uhr = setInterval(tick, 1000);
     tick();

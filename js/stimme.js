@@ -106,7 +106,7 @@
       'Keine Ausrüstung, kein Rabatt.',
       'Du weichst aus. Das kostet.'
     ],
-    /* "Meine Regeln": was der Spieler nicht erfaehrt */
+    /* Willkür: was der Spieler nicht erfaehrt */
     dunkel: [
       'Du erfährst es nicht.',
       'Das geht dich nichts an.',

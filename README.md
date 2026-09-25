@@ -219,11 +219,32 @@ darf aus sein, die App geschlossen.
 
 **Der Zeitrahmen.** Du gibst zwei Werte an: wann der Tresor *bestenfalls*
 aufgeht und wann *ohne eine einzige Prüfung*. Die Uhr startet oben. Jede
-gelöste Prüfung holt ein gleiches Stück zurück – wer alle löst, landet genau
-unten. Jede verhauene schiebt die Freigabe nach hinten, um einen Anteil des
-oberen Werts (mild 6 %, hart 15 %, jede Wiederholung das Anderthalbfache),
-höchstens bis zum Notausgang. Mit Glücksspiel darf jede Strafe einmal
-verwürfelt werden: 5–6 nimmt sie zurück, 1–4 streckt sie um die Hälfte.
+gelöste Prüfung holt Zeit zurück, jede verhauene schiebt die Freigabe nach
+hinten – höchstens bis zum Notausgang.
+
+**Wie viel, wird gezogen.** Jede Buchung hat einen Normalwert: Eine Gutschrift
+ist die Spanne des Rahmens geteilt durch die Zahl der Prüfungen (wer alle
+löst, landet im Mittel unten), eine Strafe 4 % (mild) oder 8 % (hart) des
+oberen Werts, jede Wiederholung an derselben Prüfung ein Drittel mehr. Davon
+wird jedes Mal ein Vielfaches gezogen:
+
+| Anteil | Vielfaches | bei 2–5 Tagen, 10 Prüfungen (Normalwert 7,2 h) |
+|---|---|---|
+| 55 % | 0,6–1× | 4–7 h |
+| 33 % | 1–1,5× | 7–11 h |
+| 10 % | 1,5–2,5× | 11–18 h |
+| 2 % | 2,5–4× | 18–29 h |
+
+Eine einzelne Buchung wiegt höchstens ein Viertel des oberen Werts. Gemessen
+an 40 000 Zügen: Mittel 1,12×, über 12 h bei 10 %, über einen Tag bei 0,8 %.
+Die Einrichtung nennt die Spannen für deine Werte.
+
+**Der Wurf.** Mit Glücksspiel bietet der Game Master ab und zu – etwa bei jeder
+dritten Buchung – einen Wurf an. 5–6: die Strafe fällt weg, die Gutschrift
+verdoppelt sich. 1–4: die Strafe wird um die Hälfte länger, die Gutschrift
+halbiert. Beide Würfe sind im Mittel genau ausgeglichen. Ausschlagen geht
+immer. Ob ein Wurf angeboten wird, wird beim Buchen gezogen – Neuladen würfelt
+nicht neu.
 
 **Der Takt.** Ab sechs Stunden unterer Grenze kommen die Prüfungen verteilt
 statt alle auf einmal – sonst wäre ein Wochentresor ein Nachmittag Arbeit und
@@ -762,7 +783,7 @@ Lärm. Sie liegen deshalb in einer einzigen zugeklappten Lade („verwaltung") a
 Fuß der Seite.
 
 Übrig bleiben drei Karten: das Band mit dem, was schon frei ist, die aktuelle
-Prüfung, der Notausgang. Unter „meinen Regeln" fällt der Fahrplan ganz weg –
+Prüfung, der Notausgang. Unter Willkür fällt der Fahrplan ganz weg –
 auch keine leere Karte, die daran erinnert. Was es nicht gibt, soll auch
 keinen Platz belegen.
 
@@ -792,12 +813,22 @@ Zeitschloss ist der **Bann**, die Strafzeit die **Strafe**, Aufgaben sind
 zugeklappt hinter „Was dahintersteckt". Diese README bleibt davon unberührt;
 sie ist für Entwickler und darf erklären.
 
-## Meine Regeln
+## Willkür
 
 Der harte Modus. Er hieß zuerst „Blindgang" – ein schlechtes Wort, weil es auf
-Deutsch auch die Fehlzündung meint. Der Game Master spricht in der ersten
-Person, also heißt der Modus, was er ist: **seine** Regeln. Der Schlüssel in
-der Konfiguration bleibt `blind`; der beschreibt die Mechanik.
+Deutsch auch die Fehlzündung meint –, dann „Meine Regeln", was nach
+Einstellungsseite klang. „Willkür" sagt, was er ist: Der Game Master
+entscheidet, und er muss es nicht begründen. Der Schlüssel in der
+Konfiguration bleibt `blind`; der beschreibt die Mechanik.
+
+**Am Netz** (Vorgabe) zieht er auch den Zeitrahmen, aus dem Notausgang: unten
+zwischen einem Fünftel und der Hälfte davon, oben zwischen 60 und 90 %. Die
+Buchungen streuen breiter – von einem Sechstel bis zum Sechsfachen des
+Normalwerts, jede siebte ist ein Treffer (ab 2,5×) –, der Wurf wird bei jeder
+zweiten angeboten, und bei langen Tresoren kommen die Prüfungen in
+ungleichen Abständen. Eine Uhr bis zur Freigabe gibt es nicht. Was eine
+Buchung bewegt hat, steht da; wohin es führt, nicht. Wann die nächste Prüfung
+kommt, schon – sonst könnte man nicht pünktlich sein.
 
 Der harte Modus. Du setzt genau einen Wert: den Notausgang. Alles andere zieht
 der Wächter selbst – wie viele Aufgaben je Fragment, aus welchen Dimensionen,
@@ -826,11 +857,11 @@ die Prozentzahl, zeigt also echtes Rechnen an und keine Dekoration.
 
 ### Keine Zahl, die die Zukunft verrät
 
-Unter „meinen Regeln" verschwindet jede Anzeige, aus der sich ablesen ließe, wie lange
+Unter Willkür verschwindet jede Anzeige, aus der sich ablesen ließe, wie lange
 es noch dauert. Was bereits geschehen ist, bleibt stehen – drei von fünf
 Fragmenten offen sieht man ohnehin am Band.
 
-| | normal | Meine Regeln |
+| | normal | Willkür |
 |---|---|---|
 | Bann | Countdown und Prozent | `· · ·` und das Mahlwerk |
 | Strafe | Countdown | `· · ·` |
@@ -849,7 +880,7 @@ gesetzt. Nur der gezogene Wert und der Fortschritt dorthin fehlen.
 Weil der Notausgang hier der einzige Wert ist, den der Spieler setzt, bleiben
 alle drei Spielarten einstellbar – feste Dauer, gezogene Spanne, geheime
 Spanne. Das war eine Weile kaputt: Die Sichtbarkeit der Felder hing an
-`aufwandAktualisieren`, und die Schätzung steigt unter „meinen Regeln" früh
+`aufwandAktualisieren`, und die Schätzung steigt unter Willkür früh
 aus, bevor sie dort ankommt. Wer „feste Zeit" wählte, bekam kein Feld. Die
 Umschaltung steht jetzt in `notausgangFelderZeigen` und wird aus beiden Wegen
 aufgerufen.
@@ -859,7 +890,7 @@ Einzige, was du selbst festlegst.
 
 ## Das Glücksspiel
 
-Optional, in den Zeitregeln zuschaltbar (unter „meinen Regeln" immer an). Bei jeder
+Optional, in den Zeitregeln zuschaltbar (unter Willkür immer an). Bei jeder
 Sperrfrist und jeder Strafe darfst du **einmal** würfeln:
 
 * **5 oder 6** – die Wartezeit fällt weg.
