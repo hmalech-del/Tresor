@@ -245,7 +245,7 @@ Ampere. Am Handy-Ladegerät mit 500 mA startet der ESP32 neu.
 ## Drucken
 
 **Die fertigen STL liegen neben dieser Datei** – `koerper.stl`, `deckel.stl`,
-`riegel.stl` und `pruefstueck.stl`. Du brauchst OpenSCAD nur, wenn du am Modell
+`riegel.stl`, `pruefstueck.stl` und `pruefriegel.stl`. Du brauchst OpenSCAD nur, wenn du am Modell
 etwas änderst. `pruefung.py` schlägt Alarm, sobald eine STL älter ist als
 `tresorbox.scad` – genau das war sie einmal, als der Platinensockel dazukam.
 
@@ -271,6 +271,7 @@ nach oben offen.
 
 ```
 openscad -D 'teil="pruefstueck"' -o pruefstueck.stl tresorbox.scad
+openscad -D 'teil="pruefriegel"' -o pruefriegel.stl tresorbox.scad   # nur der kurze Riegel
 ```
 
 60 × 78 × 27 mm, rund 25 Minuten, drei getrennte Teile. Darin steckt der
@@ -310,6 +311,61 @@ Loch gleiten.
 | Riegel hakt in der Mitte | `spiel_decke` auf 1,0 – die Brücke sackt durch |
 | Zunge geht schwer in den Schlitz | `spiel_zunge` auf 0,65 |
 | Riegel trifft das Loch nicht | `spiel_loch_y` auf 1,3 |
+
+### Dann mit Servo
+
+Wenn sich Riegel und Zunge von Hand gut bewegen, lohnt der zweite Test: ob
+das Servo in seine Tasche passt, der Stift im Querschlitz läuft und der
+Hub reicht. Genau das lässt sich an keinem Bildschirm prüfen.
+
+**Stufe 1 – ohne Strom.** Horn vorbereiten wie unter *Zusammenbau*, Schritt 1
+(Loch 9 mm von der Mitte auf 3 mm, M3-Schraube durch, kontern). Servo von
+oben in die Tasche, Horn aufstecken (noch nicht festschrauben), Riegel in die
+Bohrung, bis der Stift in den Querschlitz fällt. Zunge mit der Schulter auf
+den Block setzen. Dann das Horn **sanft** von Hand drehen, jeweils nur etwa
+eine Achteldrehung (45°) aus der Mitte – weiter läuft der Stift aus seinem
+Schlitz und klemmt:
+
+- Der Riegel muss ohne Haken hin und her laufen, gut 12 mm weit.
+- Zur einen Seite fährt die Spitze durch das Loch der Zunge – die Zunge
+  lässt sich dann nicht mehr herausheben.
+- Zur anderen Seite steht die Spitze vor der Zunge, und sie hebt sich frei.
+
+Klemmt es, hier aufhören, nicht mit Kraft weiterdrehen: Das Getriebe ist
+das Erste, was bricht.
+
+**Stufe 2 – mit Strom.** ESP32 und Servo verdrahten wie unten beschrieben,
+dann `servotest/servotest.ino` mit der Arduino-IDE aufspielen (Board
+„ESP32 Dev Module", Bibliothek „ESP32Servo"). Im seriellen Monitor
+(115200 Baud):
+
+| Taste | was passiert |
+|---|---|
+| `m` | Mitte, 90° – **zuerst**, dann das Horn so aufstecken, dass der Riegel auf halbem Weg steht, und festschrauben |
+| `z` / `a` | zu / auf, je 45° aus der Mitte |
+| `+` / `-` | ein Grad nachstellen, falls eine Endlage nicht ganz reicht |
+| `d` | 20 Zyklen zu und auf – der Dauertest |
+
+Das Programm fährt langsam und schaltet das Servo nach jeder Fahrt ab. Fährt
+`z` auf statt zu, steht die Drehrichtung andersherum: `RICHTUNG` im Programm
+auf `-1`. Brummt das Servo in einer Endlage, drückt es gegen einen Anschlag –
+dann die Endlage mit `+`/`-` ein, zwei Grad zurücknehmen.
+
+Das Testprogramm ist **nicht die Firmware** – es kennt kein Bluetooth und
+keinen Handschlag. Es ist nur dafür da, die Mechanik unter Strom zu sehen.
+Und es ist hier nicht kompiliert worden; meldet die IDE einen Fehler, ist
+das ein Fehler im Programm, nicht bei dir.
+
+**Nur den kurzen Riegel nachdrucken:** Bis 26. 9. war er am falschen Ende
+gekürzt – ohne Spitze, sodass er mit Servo 8 mm vor der Zunge stehen blieb.
+Von Hand fällt das nicht auf. Wer das Prüfstück schon hat, druckt nur
+`pruefriegel.stl` (ca. 5 Minuten).
+
+**Stützen ausschalten.** Keines der Teile braucht welche. Setzt der Slicer
+trotzdem welche (meist in die Riegelbohrung oder unter das Loch der Zunge),
+steht „Stützen: überall" an – die Brücken dort sind 15 mm breit und drucken
+frei. Weggekratzte Stützen in der Bohrung hinterlassen Grate, die den Riegel
+bremsen.
 
 Erst wenn das sitzt, die große Kiste drucken.
 
@@ -482,7 +538,8 @@ unbedingt `pruefung.py`.
 
 ## Noch nicht gebaut
 
-Die Firmware und die Web-Bluetooth-Seite fehlen. Geplant ist eine
+Die Firmware und die Web-Bluetooth-Seite fehlen. (`servotest/` ist nur ein
+Testprogramm für die Mechanik.) Geplant ist eine
 Challenge-Response über BLE: Das Schloss würfelt eine Nonce, die App antwortet
 mit `HMAC-SHA256(geheimnis, nonce)`, das Schloss prüft und öffnet zwei
 Sekunden. Kein Pairing, nicht wiederholbar.

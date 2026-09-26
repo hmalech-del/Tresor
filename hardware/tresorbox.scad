@@ -25,9 +25,10 @@
  *   openscad -D 'teil="deckel"'  -o deckel.stl  tresorbox.scad
  *   openscad -D 'teil="riegel"'  -o riegel.stl  tresorbox.scad
  *   openscad -D 'teil="pruefstueck"' -o pruefstueck.stl tresorbox.scad
+ *   openscad -D 'teil="pruefriegel"' -o pruefriegel.stl tresorbox.scad   (nur der kurze Riegel)
  */
 
-teil = "alles";              // koerper | deckel | riegel | pruefstueck | alles
+teil = "alles";              // koerper | deckel | riegel | pruefstueck | pruefriegel | alles
 zustand = "zu";              // fuer die Ansicht: zu | offen
 $fn = 48;
 
@@ -371,6 +372,22 @@ module mechanik() {
  *
  * Es benutzt dieselben Module wie die Kiste. Baute man es nach, pruefte es
  * seine eigene Kopie. */
+/* Der kurze Riegel des Pruefstuecks: gekuerzt am HINTEREN Ende, damit Spitze,
+ * Fase und Querschlitz im selben Abstand bleiben wie am langen. Frueher war
+ * er am falschen Ende gekappt - von Hand geschoben fiel das nicht auf, mit
+ * Servo aber blieb die Spitze 8 mm vor der Zunge stehen und haette nie
+ * verriegelt. Liegend, Unterseite auf z = 0. */
+pruef_riegel_von = -riegel_l/2 + schlitz_von_links - (stift_d + 0.6)/2 - 3;   // 3 mm hinter dem Querschlitz
+pruef_riegel_l   = riegel_l/2 - pruef_riegel_von;
+module pruefriegel() {
+  translate([-(pruef_riegel_von + pruef_riegel_l/2), 0, riegel_h/2])
+    intersection() {
+      riegel();
+      translate([pruef_riegel_von + pruef_riegel_l/2, 0, 0])
+        cube([pruef_riegel_l, riegel_b + 2, riegel_h + 2], center = true);
+    }
+}
+
 module pruefstueck() {
   scheibe = zunge_b + 12;
   schnitt_z = boden + bohrung_z0 - 6;
@@ -396,11 +413,7 @@ module pruefstueck() {
   hinten = wand + zunge_y + scheibe/2;
   abstand = 6;
   // kurzer Riegel daneben
-  translate([0, hinten + abstand + riegel_b/2, riegel_h/2])
-    intersection() {
-      translate([riegel_l/2 - 16, 0, 0]) riegel();
-      cube([32, riegel_b + 2, riegel_h + 2], center = true);
-    }
+  translate([0, hinten + abstand + riegel_b/2, 0]) pruefriegel();
   /* Kurze Zunge mit Schulter. Ohne Deckel fiele sie bis auf den
    * Schlitzboden, 3 mm tiefer als in der Kiste - dann traefe der Riegel ihr
    * Loch nicht, und der Test sagte nichts. Die Schulter liegt auf der
@@ -431,6 +444,7 @@ module pruefstueck() {
 }
 
 if (teil == "pruefstueck") pruefstueck();
+else if (teil == "pruefriegel") pruefriegel();
 else if (teil == "mechanik") mechanik();
 else if (teil == "koerper") koerper();
 else if (teil == "deckel") deckel();

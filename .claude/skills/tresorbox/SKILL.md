@@ -8,18 +8,23 @@ description: Kontext für die Tresorbox (hardware/ im Repo hmalech-del/tresor) -
 Eine gedruckte Kiste (PETG), die ein Servo verriegelt. Später soll die
 Tresor-App sie per Bluetooth öffnen – erst, wenn der Tresor offen ist.
 
-**Stand:** konstruiert und nachgerechnet, **noch nicht gedruckt, keine
-Firmware**. Der Nutzer hat das DevKit gewählt und kauft die Teile. Alles, was
-über die Konstruktion hinausgeht, ist auf Hardware ungetestet – das in
-Antworten nicht verschweigen.
+**Stand (26. 9.):** Das **Prüfstück ist gedruckt**, Riegel und Zunge laufen
+von Hand ordentlich (der Slicer hatte Stützen gesetzt, die der Nutzer
+wegkratzen musste – keines der Teile braucht welche). Der kurze Riegel seines
+Drucks ist noch der alte, am falschen Ende gekürzte: für den Servotest
+`pruefriegel.stl` nachdrucken. Nächster Schritt: Servotest (README "Dann mit
+Servo", `servotest/servotest.ino`). Die große Kiste ist noch nicht gedruckt,
+**Firmware gibt es keine**. Alles über die Mechanik hinaus ist ungetestet –
+das in Antworten nicht verschweigen.
 
 ## Dateien (`hardware/`)
 
 | Datei | Wofür |
 |---|---|
-| `tresorbox.scad` | das parametrische Modell; alle Maße oben als Variablen, `teil = koerper \| deckel \| riegel \| pruefstueck \| alles` |
-| `pruefung.py` | rechnet die kritischen Beziehungen nach (Riegel durch Zunge und wieder frei, Stift/Schlitz in beiden Endlagen, Servo in der Wand, Platinensockel, Kabelloch, Nutzraum, STL-Aktualität, Zahl getrennter Teile je STL – das Prüfstück muss drei haben; einmal war die Zunge mit dem Block verschmolzen) |
+| `tresorbox.scad` | das parametrische Modell; alle Maße oben als Variablen, `teil = koerper \| deckel \| riegel \| pruefstueck \| pruefriegel \| alles` |
+| `pruefung.py` | rechnet die kritischen Beziehungen nach (Riegel durch Zunge und wieder frei, Stift/Schlitz in beiden Endlagen, Servo in der Wand, Platinensockel, Kabelloch, Nutzraum, STL-Aktualität, Zahl getrennter Teile je STL – das Prüfstück muss drei haben; einmal war die Zunge mit dem Block verschmolzen; Abstand Spitze→Querschlitz am kurzen Riegel gleich dem langen – er war einmal am falschen Ende gekürzt) |
 | `kurbelschleife.py` → `.svg` | Zeichnung des Getriebes aus denselben Parametern |
+| `servotest/servotest.ino` | Arduino-Testprogramm (ESP32Servo): Mitte/zu/auf, nachstellen, 20er-Dauertest, fährt langsam und macht `detach`. **Nicht die Firmware**, hier nie kompiliert (keine Toolchain erreichbar) |
 | `*.stl`, `*.png` | fertige Druckdateien und Vorschaubilder |
 | `README.md` | Nutzer-Doku: Funktionsweise, Einkaufszettel, Drucken, Zusammenbau, Verdrahtung, Toleranzen |
 

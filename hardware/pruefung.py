@@ -194,7 +194,7 @@ print("\nDateien")
 # koennen sie aber veralten: Genau das war der Fall, als koerper.stl noch
 # ohne Platinensockel im Repo lag. Also nachsehen, ob sie juenger sind.
 scad = pathlib.Path(__file__).with_name("tresorbox.scad")
-for name in ("koerper", "deckel", "riegel", "pruefstueck"):
+for name in ("koerper", "deckel", "riegel", "pruefstueck", "pruefriegel"):
     datei = scad.with_name(name + ".stl")
     if not datei.exists():
         pruefe(f"{name}.stl vorhanden", False, "fehlt - openscad laufen lassen")
@@ -224,12 +224,29 @@ def teile_in(datei):
     return len({wurzel(a) for a, _, _ in ecken})
 
 for name, soll, was in (("pruefstueck", 3, "Blockausschnitt, Riegel, Zunge"),
-                        ("riegel", 1, "ein Stueck"), ("deckel", 1, "ein Stueck")):
+                        ("riegel", 1, "ein Stueck"), ("deckel", 1, "ein Stueck"),
+                        ("pruefriegel", 1, "ein Stueck")):
     datei = scad.with_name(name + ".stl")
     if datei.exists():
         n = teile_in(datei)
         pruefe(f"{name}.stl: {soll} getrennte Teile", n == soll,
                f"{n} gefunden ({was})" if n == soll else f"{n} gefunden, erwartet {soll}: {was}")
+
+# Der kurze Riegel muss Spitze und Querschlitz im selben Abstand tragen wie
+# der lange - sonst verriegelt er mit Servo nie. Er war einmal am falschen
+# Ende gekuerzt: ohne Spitze, 8 mm zu kurz nach vorn.
+def spitze_bis_schlitz(datei):
+    xs = sorted({round(float(x), 3) for x in re.findall(r"vertex (\S+) ", datei.read_text())})
+    spitze = xs[-1]
+    innen = [x for x in xs if xs[0] < x < spitze - 3]   # ohne Enden und Fase: die Schlitzkanten
+    return spitze - sum(innen) / len(innen) if len(innen) == 2 else None
+
+lang, kurz = scad.with_name("riegel.stl"), scad.with_name("pruefriegel.stl")
+if lang.exists() and kurz.exists():
+    a, b = spitze_bis_schlitz(lang), spitze_bis_schlitz(kurz)
+    pruefe("kurzer Riegel: Spitze -> Querschlitz wie am langen",
+           a is not None and b is not None and abs(a - b) < 0.05,
+           f"{b:.2f} mm, lang {a:.2f} mm" if a and b else "Schlitz nicht gefunden")
 
 print()
 if fehler:
