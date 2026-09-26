@@ -88,7 +88,7 @@
             if (kontext.fehlschlag('Tonfolge verhauen.')) return;
             folge = []; eingabe = 0;
             fortschritt.setze(0); fortschritt.text('0 von ' + p.laenge);
-            uhren.push(setTimeout(naechsteRunde, 900));
+            b.tor(naechsteRunde, 'Noch einmal');
             return;
           }
           eingabe++;
@@ -101,7 +101,7 @@
         });
       });
 
-      naechsteRunde();
+      b.tor(naechsteRunde);
       return aufraeumen;
     }
   });
@@ -164,6 +164,12 @@
         strom = bauStrom(); stelle = -1; treffer = 0;
         fortschritt.setze(0); fortschritt.text('0 von ' + p.treffer);
         anzeige.textContent = '·';
+        b.tor(los, 'Noch einmal');
+      }
+
+      function los() {
+        clearInterval(uhr);
+        b.sag('', '');
         uhr = setInterval(schritt, p.tempo);
       }
 
@@ -195,7 +201,7 @@
         b.sag('Treffer.', 'gut');
       });
 
-      uhr = setInterval(schritt, p.tempo);
+      b.tor(los);
       return function () { clearInterval(uhr); };
     }
   });
@@ -246,7 +252,8 @@
         fortschritt.setze(0); fortschritt.text('0 von ' + p.runden);
         b.sag(grund + ' Von vorn.', 'fehler');
         if (kontext.fehlschlag(grund)) return;
-        uhr = setTimeout(neueRunde, 800);
+        tinte = null;
+        b.tor(neueRunde, 'Noch einmal');
       }
 
       knoepfe.forEach(function (knopf, index) {
@@ -262,7 +269,7 @@
         });
       });
 
-      neueRunde();
+      b.tor(neueRunde);
       return function () { clearTimeout(uhr); };
     }
   });
@@ -311,8 +318,10 @@
             if (feld.disabled) return;
             if (zahl !== gesucht) {
               b.sag(zahl + ' statt ' + gesucht + '. Von vorn.', 'fehler');
+              if (stopp) { stopp(); stopp = null; }
               if (kontext.fehlschlag('Zahl übersprungen.')) return;
-              aufbauen();
+              anzeige.textContent = util.uhrwerk(p.sekunden);
+              b.tor(los, 'Noch einmal');
               return;
             }
             feld.disabled = true;
@@ -327,16 +336,26 @@
         });
       }
 
-      aufbauen();
-      stopp = W.takt(function (delta) {
-        rest -= delta;
-        anzeige.textContent = util.uhrwerk(Math.max(0, rest));
-        if (rest > 0) return;
-        b.sag('Zeit vorbei. Von vorn.', 'fehler');
-        if (kontext.fehlschlag('Zeit vorbei.')) { rest = p.sekunden; return; }
+      /* Die Uhr laeuft erst nach "Los", und nach einem Fehler steht das Tor
+       * wieder - mit frisch gemischtem Gitter. */
+      function los() {
+        if (stopp) stopp();
         aufbauen();
-      });
+        b.sag('', '');
+        stopp = W.takt(function (delta) {
+          rest -= delta;
+          anzeige.textContent = util.uhrwerk(Math.max(0, rest));
+          if (rest > 0) return;
+          stopp();
+          stopp = null;
+          b.sag('Zeit vorbei. Von vorn.', 'fehler');
+          if (kontext.fehlschlag('Zeit vorbei.')) return;
+          b.tor(los, 'Noch einmal');
+        });
+      }
 
+      aufbauen();
+      b.tor(los);
       return function () { if (stopp) stopp(); };
     }
   });

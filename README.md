@@ -540,6 +540,13 @@ Nichts davon ist schwer – aber nebenbei geht es nicht.
 | **Stroop** | Die Schriftfarbe antippen, nicht das Wort |
 | **Zahlenjagd** | Schulte-Tabelle: 1 bis n² der Reihe nach finden, gegen die Uhr |
 
+Alle vier laufen auf Zeit – und deshalb erst nach **„Los"**. Bis dahin steht
+nur die Regel da, die Aufgabe selbst ist verborgen (bei der Zahlenjagd ließe
+sich das Gitter sonst vorab absuchen). Nach einem Fehler steht das Tor wieder
+(„Noch einmal"), statt dass der Strom sofort weiterläuft. Früher liefen sie
+los, sobald sie auf dem Schirm standen; am Netz kostete dann der erste
+verpasste Treffer eine Strafe, bevor man die Regel gelesen hatte.
+
 ### Sensoren
 
 Optional, und nur wenn das Gerät sie wirklich hat. Der Schalter steht in der

@@ -44,11 +44,36 @@
     wurzel.appendChild(koerper);
     var meldung = el('p', { class: 'aufgabe-meldung', role: 'status' });
     wurzel.appendChild(meldung);
+    var torElement = null;
     return {
       koerper: koerper,
       sag: function (text, art) {
         meldung.textContent = text || '';
         meldung.className = 'aufgabe-meldung' + (art ? ' ist-' + art : '');
+      },
+      /* Startknopf fuer Aufgaben auf Zeit: erst lesen, dann los.
+       *
+       * Frueher liefen N-Back, Stroop, Zahlenjagd und Tonfolge los, sobald
+       * sie auf dem Schirm standen - und nach jedem Fehler sofort wieder.
+       * Am Netz zeichnet ein Fehler die Ansicht neu, die Aufgabe startete
+       * erneut, waehrend man noch die Strafe las, und der naechste verpasste
+       * Treffer kostete die naechste Strafe. Man verlor, ohne je die Regel
+       * gelesen zu haben.
+       *
+       * Solange das Tor steht, ist der Koerper verborgen: Bei der Zahlenjagd
+       * liesse sich das Gitter sonst vorab absuchen. */
+      tor: function (beiStart, text) {
+        if (torElement) torElement.remove();
+        koerper.hidden = true;
+        var knopf = el('button', { class: 'knopf gross haupt', type: 'button', text: text || 'Los' });
+        torElement = el('div', { class: 'starttor' }, [knopf]);
+        wurzel.insertBefore(torElement, koerper);
+        knopf.addEventListener('click', function () {
+          torElement.remove();
+          torElement = null;
+          koerper.hidden = false;
+          beiStart();
+        });
       }
     };
   }

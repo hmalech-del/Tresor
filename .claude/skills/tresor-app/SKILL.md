@@ -124,7 +124,9 @@ die Zahl im Kommentar und in der README nachziehen.
 - Neue Game-Master-Sätze nach den Leitplanken in `stimme.js`: von oben herab,
   kein Lob über "ausreichend", kein Mitleid, kurz.
 - Neue Aufgabe: `registrieren({...})`, siehe README "Eine eigene Aufgabe
-  hinzufügen".
+  hinzufügen". Läuft sie auf Zeit, startet sie hinter `b.tor(los)` (aus
+  `W.buehne`) und stellt nach einem Fehler `b.tor(los, 'Noch einmal')` –
+  sonst rennt sie los, bevor man die Regel gelesen hat (so war es bei N-Back).
 
 ## Testen
 

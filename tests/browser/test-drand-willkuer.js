@@ -29,7 +29,9 @@ const pruefe = (n, ok, t) => { console.log(`  [${ok ? 'ok  ' : 'FEHL'}] ${n.padE
   const warnung = await seite.textContent('#blindgang-warnung');
   pruefe('Warnung sagt, dass Strafen gezogen werden', /ich ziehe, wie viel sie wiegen/.test(warnung), '');
   await seite.evaluate(() => { const s = document.querySelector('#notausgang-dauer'); const o = document.createElement('option');
-    o.value = '60'; o.dataset.sekunden = '60'; s.appendChild(o); s.value = '60'; s.dispatchEvent(new Event('change')); });
+    // 10 min: lang genug, dass die Zeit unter Last nicht mitten im Test ablaeuft -
+    // dann ginge der Tresor auf, und es gaebe nichts mehr zu bestrafen.
+    o.value = '600'; o.dataset.sekunden = '600'; s.appendChild(o); s.value = '600'; s.dispatchEvent(new Event('change')); });
   await seite.click('#verriegeln');
   await seite.waitForSelector('.freigabe-karte', { timeout: 60000 });
 
@@ -37,8 +39,8 @@ const pruefe = (n, ok, t) => { console.log(`  [${ok ? 'ok  ' : 'FEHL'}] ${n.padE
   const tz = t.konfig.tresorzeit, fr = t.freigabe;
   console.log('Rahmen');
   pruefe('Willkuer am Netz', t.konfig.blind && t.konfig.sicherheit === 'drand', t.konfig.sicherheit);
-  pruefe('Rahmen vom Game Master aus dem Notausgang', tz.minSekunden >= 12 && tz.minSekunden <= 30 && tz.maxSekunden >= 36 && tz.maxSekunden <= 54,
-    `${tz.minSekunden} s .. ${tz.maxSekunden} s bei 60 s Notausgang`);
+  pruefe('Rahmen vom Game Master aus dem Notausgang', tz.minSekunden >= 120 && tz.minSekunden <= 300 && tz.maxSekunden >= 360 && tz.maxSekunden <= 540,
+    `${tz.minSekunden} s .. ${tz.maxSekunden} s bei 600 s Notausgang`);
   pruefe('Uhr startet oben', fr.konto.zielSek === tz.maxSekunden, fr.konto.zielSek + ' s');
   const alle = t.fragmente.flatMap(x => x.aufgaben);
   const abst = alle.slice(1).map((a, i) => a.frei - alle[i].frei);
