@@ -208,7 +208,10 @@ module zungenschlitz_cut() {
       cube([zunge_d + 2*spiel_zunge, zunge_b + 2*spiel_zunge, zunge_l + 12]);
     /* Trichter am Schlitzmund: faengt die Zunge auf, wenn der Deckel schief
      * aufgesetzt wird. */
-    translate([0, wand + zunge_y, boden + innen_z - 2])
+    /* Er sitzt auf der Blockoberkante, nicht unter dem Deckel: Der Block
+     * endet rand_h + 2 mm tiefer. Frueher lag der Trichter dort oben in der
+     * Luft und schnitt nichts. */
+    translate([0, wand + zunge_y, boden + innen_z - rand_h - 2 - 2])
       hull() {
         translate([0, 0, 2]) cube([zunge_d + 2*spiel_zunge + 5, zunge_b + 2*spiel_zunge + 5, 0.1], center = true);
         cube([zunge_d + 2*spiel_zunge, zunge_b + 2*spiel_zunge, 0.1], center = true);
@@ -398,13 +401,33 @@ module pruefstueck() {
       translate([riegel_l/2 - 16, 0, 0]) riegel();
       cube([32, riegel_b + 2, riegel_h + 2], center = true);
     }
-  // kurze Zunge daneben
-  translate([-34, hinten + abstand + (zunge_b + 2)/2, 0])
-    rotate([0, 0, 0])
-      intersection() {
-        translate([0, -(wand + zunge_y), zunge_l]) zunge();
-        translate([0, 0, 9]) cube([zunge_d + 2, zunge_b + 2, 18], center = true);
-      }
+  /* Kurze Zunge mit Schulter. Ohne Deckel fiele sie bis auf den
+   * Schlitzboden, 3 mm tiefer als in der Kiste - dann traefe der Riegel ihr
+   * Loch nicht, und der Test sagte nichts. Die Schulter liegt auf der
+   * Blockoberkante, wo sonst der Deckel die Zunge haelt, und setzt sie auf
+   * genau die Hoehe, auf der sie in der Kiste haengt.
+   *
+   * Gedruckt wird sie auf der Schulter, Spitze nach oben - so, wie die Zunge
+   * am Deckel entsteht. Damit prueft das Stueck auch die Bruecke ueber dem
+   * Riegelloch, und die Schulter gibt ihr einen breiten Fuss. Frueher stand
+   * hier ein 6 mm duennes Blatt hochkant, und ueber dem Loch blieb ein halber
+   * Millimeter Material. */
+  luft = rand_h + 2;                       // Deckelunterseite ueber der Blockoberkante
+  schulter_h = 3;
+  schulter_d = zunge_d + 12;
+  schulter_b = zunge_b + 12;
+  translate([-34, hinten + abstand + schulter_b/2, -(luft - schulter_h)])
+    mirror([0, 0, 1])
+      translate([0, -(wand + zunge_y), 0])
+        union() {
+          intersection() {
+            zunge();
+            translate([-zunge_d, wand + zunge_y - zunge_b, -zunge_l - 1])
+              cube([2 * zunge_d, 2 * zunge_b, zunge_l + 1 - luft]);
+          }
+          translate([-schulter_d/2, wand + zunge_y - schulter_b/2, -luft])
+            cube([schulter_d, schulter_b, schulter_h]);
+        }
 }
 
 if (teil == "pruefstueck") pruefstueck();

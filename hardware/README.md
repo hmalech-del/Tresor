@@ -8,7 +8,7 @@ Drei gedruckte Teile, drei gekaufte, rund 14 Euro.
 ![Prüfstück](pruefstueck.png)
 
 *Oben die Kiste, darunter das Prüfstück: Blockausschnitt mit Bohrung und
-Schlitz, dazu kurzer Riegel und kurze Zunge. 20 Minuten Druck.*
+Schlitz, dazu kurzer Riegel und kurze Zunge mit Schulter. 25 Minuten Druck.*
 
 ## Wie sie hält
 
@@ -273,10 +273,19 @@ nach oben offen.
 openscad -D 'teil="pruefstueck"' -o pruefstueck.stl tresorbox.scad
 ```
 
-60 × 67 × 21 mm, rund 25 Minuten. Darin steckt der Ausschnitt des Blocks mit
-Riegelbohrung, Zungenschlitz **und der vollständigen Servotasche**, dazu ein
-kurzer Riegel und eine kurze Zunge – erzeugt aus **denselben Modulen** wie die
-Kiste. Baute man es nach, prüfte es seine eigene Kopie.
+60 × 78 × 27 mm, rund 25 Minuten, drei getrennte Teile. Darin steckt der
+Ausschnitt des Blocks mit Riegelbohrung, Zungenschlitz **und der vollständigen
+Servotasche**, dazu ein kurzer Riegel und eine kurze Zunge – erzeugt aus
+**denselben Modulen** wie die Kiste. Baute man es nach, prüfte es seine eigene
+Kopie.
+
+**Die Zunge hat eine Schulter.** In der Kiste hängt sie am Deckel; allein fiele
+sie bis auf den Schlitzboden, 3 mm zu tief, und der Riegel träfe ihr Loch nie.
+Die Schulter liegt auf der Blockoberkante und hält sie auf genau der Höhe, auf
+der sie später hängt. Gedruckt wird sie **auf der Schulter, Spitze nach oben** –
+so, wie die Zunge am Deckel entsteht. Damit prüft das Stück auch die Brücke
+über dem Riegelloch, und die Schulter gibt einen breiten Fuß. Alle drei Teile
+liegen in der Datei schon richtig; im Slicer nichts drehen.
 
 **Was du dafür brauchst:** für den rein mechanischen Test gar nichts außer den
 drei gedruckten Teilen. Riegel von Hand durch die Bohrung schieben, Zunge in
@@ -291,7 +300,8 @@ Spiel, und die gibt es noch nicht.
 Damit beantwortest du in 20 Minuten die einzige Frage, die sich vorher nicht
 rechnen lässt: ob *dein* Drucker diese Passungen trifft. Der Riegel soll unter
 seinem eigenen Gewicht durch die Bohrung rutschen, die Zunge ohne Kraft in den
-Schlitz fallen.
+Schlitz fallen, bis die Schulter aufliegt – und dann muss der Riegel durch ihr
+Loch gleiten.
 
 | Befund | Stellschraube |
 |---|---|

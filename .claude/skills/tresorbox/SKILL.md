@@ -41,7 +41,7 @@ hinter der Zunge, offen 3,2 mm davor. Nur zwei Endlagen, kein Gelenk.
 Brücke und sackt), `spiel_zunge 0.5` (**führendes** Merkmal), `spiel_loch_y 1.0`
 (quer stapeln sich Riegel- und Zungenspiel), `spiel_loch_z 0.5`,
 `spiel_rand 0.8` (Deckelrand bewusst lose), `spiel_servo 0.5`. Grundsatz: nur
-ein Merkmal führt, alle anderen sind lose. Das **Prüfstück** (60 × 67 × 21 mm, drei getrennte Teile,
+ein Merkmal führt, alle anderen sind lose. Das **Prüfstück** (60 × 78 × 27 mm, drei getrennte Teile; die kurze Zunge hat eine Schulter, die sie auf Deckelhöhe hält, und steht beim Druck auf ihr,
 ~25 min) testet genau diese Passungen, gebaut aus denselben Modulen; die
 Tabelle "Befund → Stellschraube" steht in der README.
 
