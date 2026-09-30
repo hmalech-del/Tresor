@@ -99,7 +99,8 @@ Etikettenschwindel – nicht wieder einführen.
   kein Pfand, dort sind Rätsel nicht aufgebbar.
 - **Der Stein** (`STEIN`): eigene Karte, jederzeit, beliebig lange, losgelöst
   von den Prüfungen. 150 Stöße links/rechts im Wechsel = ein Gipfel; am Netz
-  1,5 ‰ des Rahmens nach vorn (nie unter `unten`), sonst 30 s auf
+  0,3 % des oberen Werts nach vorn (Maßstab wie die Strafen; nie unter
+  `unten`; der Nutzer fand Spanne-basierte 1,5 ‰ zweimal zu wenig), sonst 60 s auf
   `tresor.steinVorrat`, der laufende oder nächste Wartezeiten bezahlt. Der
   laufende Aufstieg liegt in `zustand.stein`, damit er Neuzeichnen übersteht.
 - **Notausgang**: zweiter Weg zum ganzen Geheimnis, fest/Spanne/geheim; am Netz

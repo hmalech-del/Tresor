@@ -1166,20 +1166,27 @@
    * hinauf; oben rollt er wieder hinunter, und dafuer gibt es ein Stueck
    * Zeit. Jeder Gipfel gleich viel: Er soll monoton sein, nicht klug.
    *
-   *   am Netz: Die Freigabe rueckt nach vorn, um anderthalb Tausendstel des
-   *     Zeitrahmens (oben minus unten). Bei vier Stoessen je Sekunde sind das
-   *     rund 15 % des Rahmens je Stunde - bei 2 bis 5 Tagen gut 6 min je
-   *     Gipfel, gut 10 h je Stunde Schieben. Unter die untere Grenze kommt auch
-   *     der Stein nicht; das bleibt die Zusage des Rahmens.
-   *   sonst: 30 s je Gipfel auf einen Vorrat. Laeuft gerade eine Wartezeit,
+   *   am Netz: Die Freigabe rueckt nach vorn, um 0,3 % des oberen Werts -
+   *     derselbe Massstab wie die Strafen (4 bzw. 8 % davon). Eine milde
+   *     Strafe ist so nach gut einem Dutzend Gipfeln abgetragen, zehn
+   *     Minuten Schieben. Bei 5 Tagen oben: gut 21 min je Gipfel, rund ein
+   *     Tag je Stunde. Unter die untere Grenze kommt auch der Stein nicht;
+   *     das bleibt die Zusage des Rahmens.
+   *
+   *     Frueher war der Massstab die Spanne (oben minus unten), 1,5 Promille
+   *     davon. Unter Willkuer ist die Spanne oft schmal, die Strafen aber
+   *     schieben weit darueber hinaus - ein Gipfel brachte dann Minuten gegen
+   *     Tage. Und bei festem Rahmen (unten = oben) gab es gar keinen Stein,
+   *     obwohl Strafen auch dort schieben.
+   *   sonst: 60 s je Gipfel auf einen Vorrat. Laeuft gerade eine Wartezeit,
    *     schrumpft sie sofort; sonst wird die naechste damit bezahlt.
    *
    * Unter Willkuer ist jeder Bissen gezogen, und manchmal rutscht der Stein
    * kurz vor dem Gipfel ab. Als Objekt, damit Tests es stauchen koennen. */
   var STEIN = {
     stoesse: 150,
-    netzAnteil: 0.0015,
-    wartenBissen: 30,
+    netzAnteil: 0.003,
+    wartenBissen: 60,
     abrutschen: 0.15
   };
 
@@ -1188,14 +1195,14 @@
   function steinArt(tresor) {
     if (!tresor || alleOffen(tresor)) return null;
     var f = tresor.freigabe;
-    if (f) return (!f.z && Date.now() < freigabeZiel(tresor).zeit && f.leiter[f.leiter.length - 1] > f.leiter[0] && f.rahmen[1] > f.rahmen[0]) ? 'netz' : null;
+    if (f) return (!f.z && Date.now() < freigabeZiel(tresor).zeit && f.leiter[f.leiter.length - 1] > f.leiter[0]) ? 'netz' : null;
     return 'vorrat';
   }
 
   /* Normalwert eines Gipfels in Sekunden. */
   function steinBissen(tresor) {
     var art = steinArt(tresor);
-    if (art === 'netz') return Math.max(1, Math.round((tresor.freigabe.rahmen[1] - tresor.freigabe.rahmen[0]) * STEIN.netzAnteil));
+    if (art === 'netz') return Math.max(1, Math.round(tresor.freigabe.tresorzeit * STEIN.netzAnteil));
     return art === 'vorrat' ? STEIN.wartenBissen : 0;
   }
 

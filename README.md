@@ -276,14 +276,20 @@ Zeit – jedes Mal gleich viel, so lange man will:
 
 | Zeitschloss | ein Gipfel bringt |
 |---|---|
-| fern (Netz) | anderthalb Tausendstel des Zeitrahmens (oben minus unten); die Freigabe rückt sofort nach vorn |
-| eisern, nachsichtig | 30 s auf einen Vorrat; läuft gerade eine Wartezeit (Strafe, Kapitulation), schrumpft sie sofort, sonst bezahlt der Vorrat die nächste |
+| fern (Netz) | 0,3 % des oberen Werts – derselbe Maßstab wie die Strafen (4 bzw. 8 % davon); die Freigabe rückt sofort nach vorn |
+| eisern, nachsichtig | 60 s auf einen Vorrat; läuft gerade eine Wartezeit (Strafe, Kapitulation), schrumpft sie sofort, sonst bezahlt der Vorrat die nächste |
 
-Bei vier Stößen je Sekunde ist ein Gipfel rund 40 s Arbeit. Eine Stunde
-Schieben holt am Netz so etwa 15 % des Rahmens – bei 2 bis 5 Tagen gut 6 min
-je Gipfel, gut 10 h je Stunde. Grenzen gibt es genau eine: Unter die untere
-Grenze des Rahmens schiebt auch der Stein nicht; ist sie erreicht, verschwindet
-die Karte. Am Netz ohne Spielraum im Rahmen gibt es ihn nicht. Der
+Bei vier Stößen je Sekunde ist ein Gipfel rund 40 s Arbeit. Eine milde
+Strafe (4 % des oberen Werts) ist nach gut einem Dutzend Gipfeln abgetragen,
+rund zehn Minuten Schieben; bei 5 Tagen oben bringt ein Gipfel gut 21 min,
+eine Stunde Schieben rund einen Tag. Grenzen gibt es genau eine: Unter die
+untere Grenze des Rahmens schiebt auch der Stein nicht; ist sie erreicht,
+verschwindet die Karte – bei festem Rahmen (unten = oben) also, bis eine
+Strafe etwas zum Abtragen bringt.
+
+Früher war der Maßstab die Spanne zwischen unten und oben, anderthalb
+Promille davon. Unter Willkür ist die Spanne oft schmal, die Strafen aber
+schieben weit darüber hinaus – ein Gipfel brachte dann Minuten gegen Tage. Der
 Rechenschloss-Anteil eines eisernen Tresors bleibt unberührt – dort wirkt der
 Stein nur auf Wartezeiten.
 

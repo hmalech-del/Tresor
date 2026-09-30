@@ -75,7 +75,8 @@ async function stossen(seite, folge) {
     e.boden = { ziel: t.freigabe.konto.zielSek, unten: t.freigabe.leiter[0], letzter: letzter.sekunden, amBoden: L.steinAmBoden(t) };
     e.zaehler = { gipfel: t.steinGipfel, summe: t.steinSumme };
     t.freigabe.z = 'ab'; e.nachFreigabe = L.steinArt(t);
-    const fest = await bauen('drand', [3000, 3000]); e.ohneSpielraum = L.steinArt(fest);
+    const fest = await bauen('drand', [3000, 3000]); e.ohneSpielraum = L.steinArt(fest) === 'netz' && L.steinAmBoden(fest);
+    L.zeitkontoVerschieben(fest, 600); e.festNachStrafe = L.steinGipfel(fest).sekunden;
     // Willkuer: gezogen
     const w = await bauen('drand', [2000, 12000]); w.konfig.blind = true;
     const z = []; for (let i = 0; i < 30; i++) z.push(L.steinGipfel(w).sekunden);
@@ -96,11 +97,12 @@ async function stossen(seite, folge) {
     e.nieMehrAlsRest = Math.round(L.steinVorratEinloesen(v, a)); e.restVorrat = Math.round(v.steinVorrat);
     return e;
   });
-  pruefe('am Netz: Bissen = 1,5/1000 des Rahmens', r.art === 'netz' && r.bissen === 15, r.bissen + ' s');
-  pruefe('jeder Gipfel gleich viel', r.folge.every(x => x === 15) && r.nach5 === r.start - 75, r.folge.join(', '));
+  pruefe('am Netz: Bissen = 0,3 % des oberen Werts', r.art === 'netz' && r.bissen === 36, r.bissen + ' s');
+  pruefe('jeder Gipfel gleich viel', r.folge.every(x => x === 36) && r.nach5 === r.start - 180, r.folge.join(', '));
   pruefe('beliebig oft - bis zur unteren Grenze, nicht darunter', r.boden.ziel === r.boden.unten && r.boden.letzter === 0 && r.boden.amBoden, `${r.boden.ziel} / ${r.boden.unten}`);
   pruefe('Bilanz zaehlt Gipfel und Zeit', r.zaehler.gipfel === 2005 && r.zaehler.summe === 10000, `${r.zaehler.gipfel} Gipfel, ${r.zaehler.summe} s`);
-  pruefe('nach der Freigabe / ohne Spielraum: kein Stein', r.nachFreigabe === null && r.ohneSpielraum === null, `${r.nachFreigabe} / ${r.ohneSpielraum}`);
+  pruefe('nach der Freigabe: kein Stein', r.nachFreigabe === null, String(r.nachFreigabe));
+  pruefe('fester Rahmen: am Boden, nach einer Strafe arbeitet er sie ab', r.ohneSpielraum && r.festNachStrafe === 9, r.festNachStrafe + ' s');
   pruefe('Willkuer: Bissen gezogen', r.willkuer.max > r.willkuer.min, `${r.willkuer.min}..${r.willkuer.max} s`);
   pruefe('Willkuer: rutscht etwa jedes 7. Mal ab, sonst nie', r.rutscht > 0.12 && r.rutscht < 0.18 && !r.rutschtNormal, (r.rutscht * 100).toFixed(1) + ' %');
   pruefe('ohne Netz: Gipfel fuellen den Vorrat', r.vArt === 'vorrat' && r.vorrat === 40 && r.vEingeloest === 0, r.vorrat + ' s');
@@ -114,7 +116,7 @@ async function stossen(seite, folge) {
   await einrichten(s1, { zeitschloss: 'drand', tz: [100, 1000] });
   pruefe('Pruefung und Stein zugleich da', !!(await s1.$('#t-bestehen')) && !!(await s1.$('.stein-karte')), '');
   const regel = (await s1.textContent('.stein-karte')).replace(/\s+/g, ' ');
-  pruefe('Regel nennt den Bissen', /Jeder Gipfel holt 1 s/.test(regel), regel.slice(regel.indexOf('Jeder'), regel.indexOf('Jeder') + 50));
+  pruefe('Regel nennt den Bissen', /Jeder Gipfel holt 3 s/.test(regel), regel.slice(regel.indexOf('Jeder'), regel.indexOf('Jeder') + 50));
   const vorher = (await gespeichert(s1)).freigabe.konto.zielSek;
   await s1.click('.stein-karte button:text-is("Den Stein rollen")');
   pruefe('Zaehler zeigt die Stoesse', (await s1.textContent('.stein-zaehler')) === 'Noch 6 Stöße', await s1.textContent('.stein-zaehler'));
@@ -127,9 +129,9 @@ async function stossen(seite, folge) {
   for (let runde = 0; runde < 3; runde++) await stossen(s1, ['Links', 'Rechts', 'Links', 'Rechts', 'Links', 'Rechts']);
   const meldung = await s1.textContent('.steinbox .aufgabe-meldung');
   const nachher = (await gespeichert(s1)).freigabe.konto.zielSek;
-  pruefe('dreimal oben: Freigabe 3 s frueher, gespeichert', vorher - nachher === 3, `${vorher} -> ${nachher} · ${meldung}`);
+  pruefe('dreimal oben: Freigabe 9 s frueher, gespeichert', vorher - nachher === 9, `${vorher} -> ${nachher} · ${meldung}`);
   pruefe('danach gleich schwer, nicht schwerer', (await s1.textContent('.stein-zaehler')) === 'Noch 6 Stöße', await s1.textContent('.stein-zaehler'));
-  pruefe('Bilanz in der Karte', /3-mal oben gewesen · zusammen −3 s/.test(await s1.textContent('.stein-karte')), '');
+  pruefe('Bilanz in der Karte', /3-mal oben gewesen · zusammen −9 s/.test(await s1.textContent('.stein-karte')), '');
   // halber Aufstieg, dann Pruefung loesen: die Ansicht zeichnet neu, der Stein bleibt, wo er war
   await stossen(s1, ['Links', 'Rechts', 'Links']);
   await s1.click('#t-bestehen');
