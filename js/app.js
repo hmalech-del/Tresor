@@ -256,6 +256,14 @@
     return !!(((zustand.tresor || {}).konfig) || {}).blind;
   }
 
+  /* Willkuer mit Uhr: Alles bleibt verborgen - Rahmen, Notausgang, was eine
+   * Pruefung wert ist -, nur die Restzeit bis zur Freigabe steht da. Man
+   * sieht sie springen und weiss nie, wohin als naechstes. */
+  function uhrSichtbar() {
+    var k = ((zustand.tresor || {}).konfig) || {};
+    return !k.blind || !!k.blindUhr;
+  }
+
   function offeneSensorAufgaben(tresor) {
     return (tresor.fragmente || []).some(function (fragment) {
       if (fragment.offen) return false;
@@ -331,8 +339,10 @@
     };
     if ($('#blindgang') && $('#blindgang').checked) {
       var sensorenMoeglich = !!($('#sensoren-aktiv') && !$('#sensoren-aktiv').disabled);
-      return T.tresorLogik.blindKonfiguration(notausgang, sensorenMoeglich,
+      var blind = T.tresorLogik.blindKonfiguration(notausgang, sensorenMoeglich,
         $('#blind-zeitschloss').value);
+      if (blind.sicherheit === 'drand' && $('#blind-uhr').checked) blind.blindUhr = true;
+      return blind;
     }
     var stufen = {};
     aktiveDimensionen().forEach(function (dimension) {
@@ -842,6 +852,11 @@
           el('option', { value: 'ohne-rechenzeit' }, 'nur dein Vorsatz - schont den Akku')
         ])
       ]),
+      /* Nur am Netz gibt es eine Uhr, die springen kann. */
+      el('label', { class: 'schalterzeile versteckt', id: 'blind-uhr-zeile' }, [
+        el('input', { type: 'checkbox', id: 'blind-uhr' }),
+        el('span', { text: 'Die Uhr zeigen - du siehst die Freigabe springen, nie sicher, wohin als Nächstes' })
+      ]),
       el('p', { class: 'warnung versteckt', id: 'blindgang-warnung', text: '' })
     ]);
 
@@ -1006,12 +1021,14 @@
       $('#blind-sanft-zeile').classList.toggle('versteckt', !an);
       $('#blindgang-warnung').classList.toggle('versteckt', !an);
       var art = $('#blind-zeitschloss').value;
+      $('#blind-uhr-zeile').classList.toggle('versteckt', !an || art !== 'drand');
       $('#blindgang-warnung').textContent = art === 'ohne-rechenzeit'
         ? 'Ohne Rechenzeit hält dich nichts als dein eigener Vorsatz - wer den Browser-Speicher liest, '
           + 'hat das Geheimnis sofort. Der Notausgang zahlt dann in Wartezeit.'
         : art === 'drand'
         ? 'Immer mit Strafen, und ich ziehe, wie viel sie wiegen. Mal fast nichts, mal ein Vielfaches. '
-          + 'Setz den Notausgang so, dass du damit leben kannst - er ist die einzige Zahl, die gilt. '
+          + ($('#blind-uhr').checked ? 'Die Uhr siehst du - wohin sie springt, nicht. '
+            : 'Setz den Notausgang so, dass du damit leben kannst - er ist die einzige Zahl, die gilt. ')
           + 'Zum Öffnen braucht es Internet.'
         : 'Immer mit Strafen. Setz den Notausgang so, dass du damit leben kannst - '
           + 'du weisst nicht, wie lang der Weg wird.';
@@ -1033,6 +1050,7 @@
     }
     $('#blindgang').addEventListener('change', blindgangAnwenden);
     $('#blind-zeitschloss').addEventListener('change', blindgangAnwenden);
+    $('#blind-uhr').addEventListener('change', blindgangAnwenden);
     $('#passphrase-aktiv').addEventListener('change', function () {
       $('#passphrase-felder').classList.toggle('versteckt', !this.checked);
       pruefeBereit();
@@ -2002,6 +2020,18 @@
         netzAbholen(karte);
         return;
       }
+      /* Die feste Reihe ist durch, die Zeit laeuft noch: Nachschub. Anlegen
+       * braucht fuer Raetsel eine Schluesselableitung, also asynchron. Gelingt
+       * es nicht (kein passendes Modul), nicht endlos neu versuchen. */
+      if (!zustand.nachschubAus && T.tresorLogik.nachschubFaellig(tresor)) {
+        util.leeren(karte).appendChild(el('p', { class: 'flaut', text: 'Nachschub ...' }));
+        T.tresorLogik.nachschubAnlegen(tresor).then(function (neu) {
+          if (!neu) zustand.nachschubAus = true;
+          sichern(true);
+          zeichneTresor();
+        }).catch(function () { zustand.nachschubAus = true; zeichneTresor(); });
+        return;
+      }
       if (!lage.aufgabe) { netzWarten(karte, lage); return; }
       fragment = lage.fragment;
       aufgabe = lage.aufgabe;
@@ -2012,7 +2042,8 @@
     }
 
     var kopf = el('div', { class: 'aufgaben-kopf' }, lage ? [
-      el('span', { class: 'flaut', text: imDunkeln() ? 'Prüfung' : 'Prüfung ' + lage.nr + ' von ' + lage.gesamt }),
+      el('span', { class: 'flaut', text: lage.extra ? (imDunkeln() ? 'Nachschub' : 'Nachschub ' + lage.nr)
+        : imDunkeln() ? 'Prüfung' : 'Prüfung ' + lage.nr + ' von ' + lage.gesamt }),
       el('span', { class: 'flaut', text: gutschriftText(tresor, aufgabe) })
     ] : [
       el('span', { class: 'flaut', text: 'Fragment ' + (fragment.index + 1) + ' von ' + tresor.laenge }),
@@ -2312,7 +2343,7 @@
       /* Unter Willkuer keine Uhr: Sie waere die eine Zahl, aus der sich alles
        * ablesen liesse. Was eine Buchung bewegt hat, steht im Kasten - wohin
        * es fuehrt, nicht. */
-      if (dunkel) {
+      if (dunkel && !uhrSichtbar()) {
         anzeige.textContent = rest > 0 ? '· · ·' : 'Die Zeit ist um.';
         anzeige.classList.remove('ist-lang');
         wann.textContent = rest > 0 ? 'Wie lange noch, sage ich nicht.' : 'Hol dir, was dir zusteht.';
@@ -2320,7 +2351,9 @@
       }
       anzeige.textContent = rest > 0 ? restUhr(rest) : 'Die Zeit ist um.';
       anzeige.classList.toggle('ist-lang', rest >= 86400);
-      wann.textContent = rest > 0 ? 'Offen ' + util.zeitpunkt(ziel.zeit) + '.' : 'Hol dir, was dir zusteht.';
+      wann.textContent = rest > 0
+        ? 'Offen ' + util.zeitpunkt(ziel.zeit) + (dunkel ? ' - wenn nichts dazwischenkommt.' : '.')
+        : 'Hol dir, was dir zusteht.';
     }
     takt();
     zustand.freigabeUhr = setInterval(function () { takt(true); }, 1000);
@@ -2337,6 +2370,7 @@
     util.leeren(karte);
     karte.appendChild(el('div', { class: 'aufgaben-kopf' }, [
       el('span', { class: 'flaut', text: alleAbgelegt ? 'Alle Prüfungen abgelegt'
+        : lage.naechsteExtra ? 'Nachschub'
         : imDunkeln() ? 'Prüfung' : 'Prüfung ' + (lage.gesamt - lage.offen + 1) + ' von ' + lage.gesamt }),
       el('span', { class: 'flaut', text: '' })
     ]));
@@ -2354,8 +2388,9 @@
       if (rest <= 0) { clearInterval(uhr); zeichneTresor(); return; }
       /* Wann die naechste Pruefung kommt, muss man wissen - sonst kann man
        * nicht puenktlich sein. Wann der Tresor aufgeht, unter Willkuer nicht. */
-      anzeige.textContent = alleAbgelegt && imDunkeln() ? '· · ·' : restUhr(rest);
-      anzeige.classList.toggle('ist-lang', rest >= 86400 && !(alleAbgelegt && imDunkeln()));
+      var verborgen = alleAbgelegt && !uhrSichtbar();
+      anzeige.textContent = verborgen ? '· · ·' : restUhr(rest);
+      anzeige.classList.toggle('ist-lang', rest >= 86400 && !verborgen);
     };
     var uhr = setInterval(tick, 1000);
     tick();

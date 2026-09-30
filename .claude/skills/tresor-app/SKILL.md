@@ -66,6 +66,16 @@ er). Kryptografisch fest sind nur Boden und Deckel der Leiter; alles
 dazwischen ist App-Logik. Alle Fragmente öffnen **gemeinsam** zur Freigabe –
 gewollt, sonst ließen sich die letzten Ziffern raten.
 
+**Nachschub** (`NACHSCHUB`, `nachschubFaellig`, `nachschubAnlegen`): Ist die
+feste Reihe durch und läuft die Zeit noch, kommt eine Prüfung nach der
+anderen in `freigabe.nachschub` (Pseudo-Fragment `index: 'x'`), im Takt,
+immer nur eine bereit, nur aufs Zeitkonto, Rätsel mit eigenem Prüfwert. Anlass:
+Unter Willkür hatten Strafen die Zeit um Tage verlängert, alle Prüfungen waren
+durch, und nichts ließ sich mehr bewegen.
+
+**Willkür mit Uhr** (`konfig.blindUhr`, nur am Netz; `uhrSichtbar()` in
+`app.js`): nur die Restzeit sichtbar, alles andere bleibt dunkel.
+
 **Die Zeit entscheidet, nicht die Prüfungen.** Prüfungen verkürzen oder (mit
 Fehlern) verlängern die Zeit; sie sind kein Tor. Ist die Uhr um, stößt die
 Freigabe-Karte das Neuzeichnen an (auch mitten in einer Prüfung),

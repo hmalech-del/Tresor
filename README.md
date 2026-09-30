@@ -321,6 +321,22 @@ früher geht der Tresor nie auf. Eine Ausnahme: Tresore von vor dem Pfand – do
 steckt eine Rätsel-Lösung wirklich im Schlüssel, und nur dieses Fragment
 bleibt zu, bis das Rätsel gelöst ist.
 
+**Nachschub.** Die Prüfungen der Fragmente sind beim Verriegeln abgezählt,
+das Zeitkonto aber nicht: Strafen können es weit über sie hinaus treiben.
+Dann wären alle Prüfungen durch, und es blieben Tage, an denen sich nichts
+mehr bewegen ließe. Deshalb kommt, solange die Zeit läuft, **Nachschub** –
+eine Prüfung nach der anderen, aus denselben Dimensionen und Stufen:
+
+- im Takt der Reihe; ohne Takt im Abstand untere Grenze / Anzahl der
+  Prüfungen, mindestens eine Minute; unter Willkür unregelmäßig,
+- nie mehr als einer bereit – wer zwei Tage nicht hineinschaut, findet
+  einen vor, nicht zwanzig,
+- mit Gutschrift, Strafe, Wurf und Kapitulation wie jede andere Prüfung,
+- nur aufs Zeitkonto: Im Schlüssel steckt er nicht, auch ein Rätsel prüft
+  seine Antwort gegen einen eigenen Prüfwert,
+- nicht mehr am Boden des Rahmens (dort gäbe es nur noch zu verlieren) und
+  nicht nach der Freigabe.
+
 **Die Leiter.** Beim Verriegeln entsteht ein Zeitschlüssel `Z` für den ganzen
 Tresor. Er wird auf eine Leiter künftiger Runden verschlossen, von der unteren
 Grenze bis zum Notausgang (ohne Notausgang bis zum Zehnfachen des oberen Werts). Die
@@ -899,6 +915,12 @@ zweiten angeboten, und bei langen Tresoren kommen die Prüfungen in
 ungleichen Abständen. Eine Uhr bis zur Freigabe gibt es nicht. Was eine
 Buchung bewegt hat, steht da; wohin es führt, nicht. Wann die nächste Prüfung
 kommt, schon – sonst könnte man nicht pünktlich sein.
+
+**Willkür mit Uhr.** Wer es gemeiner mag, setzt beim Einrichten „Die Uhr
+zeigen" (nur am Netz). Dann läuft die Restzeit bis zur Freigabe sichtbar –
+„wenn nichts dazwischenkommt". Alles andere bleibt verborgen: der Rahmen,
+der Notausgang, was eine Prüfung wert ist. Man sieht die Uhr bei jeder
+Buchung, jedem Wurf, jedem Stein springen und weiß nie, wohin als Nächstes.
 
 Der harte Modus. Du setzt genau einen Wert: den Notausgang. Alles andere zieht
 der Wächter selbst – wie viele Aufgaben je Fragment, aus welchen Dimensionen,

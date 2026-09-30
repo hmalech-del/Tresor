@@ -918,17 +918,109 @@
       });
       if (alleErledigt && !fragment.offen) bereit.push(fragment);
     });
+    /* Nachschub: Pruefungen, die nach der festen Reihe kommen, solange die
+     * Zeit laeuft. Sie haengen an keinem Fragment, nur am Zeitkonto. */
+    var zusatz = nachschubFragment(tresor);
+    zusatz.aufgaben.forEach(function (aufgabe, k) {
+      if (!aufgabe.erledigt && !aufgabe.verfallen) offen.push({ fragment: zusatz, aufgabe: aufgabe, nr: k + 1, extra: true });
+    });
     var jetztDran = offen.filter(function (e) { return (e.aufgabe.frei || 0) <= jetzt; })[0] || null;
     var naechste = jetztDran ? null : offen[0] || null;
     return {
       fragment: jetztDran && jetztDran.fragment,
       aufgabe: jetztDran && jetztDran.aufgabe,
       nr: jetztDran ? jetztDran.nr : 0,
+      extra: !!(jetztDran && jetztDran.extra),
       gesamt: gesamt,
       naechsteAb: naechste ? naechste.aufgabe.frei : 0,
+      naechsteExtra: !!(naechste && naechste.extra),
       offen: offen.length,
       bereit: bereit
     };
+  }
+
+  /* ---------- Nachschub ----------
+   *
+   * Die Pruefungen der Fragmente sind beim Verriegeln abgezaehlt - sie
+   * stecken im Schluessel. Das Zeitkonto aber kann durch Strafen weit ueber
+   * sie hinauswachsen. Dann waren die Pruefungen durch und es blieben Tage
+   * bis zur Freigabe, ohne dass sich noch etwas bewegen liess.
+   *
+   * Solange die Zeit laeuft, kommt deshalb Nachschub: eine Pruefung nach der
+   * anderen, im Takt der Reihe (ohne Takt im Abstand unten / Anzahl, mindestens
+   * eine Minute), unter Willkuer in unregelmaessigen Abstaenden. Sie wirkt
+   * nur auf das Zeitkonto - Gutschrift, Strafe, Kapitulation wie jede andere.
+   * Im Schluessel steckt sie nicht; auch ein Raetsel prueft seine Antwort nur
+   * gegen einen eigenen Pruefwert.
+   *
+   * Es liegt nie mehr als eine bereit: Wer zwei Tage nicht hineinschaut,
+   * findet eine vor, nicht zwanzig. Am Boden des Rahmens kommt keine mehr -
+   * dort gaebe es nur noch etwas zu verlieren. */
+  var NACHSCHUB = { abstandMin: 60 };
+
+  function nachschubFragment(tresor) {
+    var f = tresor.freigabe || {};
+    return { index: 'x', aufgaben: f.nachschub || [], offen: false, extra: true };
+  }
+
+  function nachschubAbstand(tresor) {
+    var f = tresor.freigabe;
+    var n = tresor.fragmente.reduce(function (s, fr) { return s + fr.aufgaben.length; }, 0) || 1;
+    return f.takt || Math.max(NACHSCHUB.abstandMin, f.rahmen[0] / n);
+  }
+
+  /* Wann die naechste kaeme - oder 0, wenn keine faellig ist. faktor streckt
+   * den Abstand (Willkuer); gezogen wird er nur beim Anlegen. */
+  function nachschubAb(tresor, jetzt, faktor) {
+    jetzt = jetzt || Date.now();
+    var f = tresor.freigabe;
+    if (!f || f.z || !f.gutschrift || steinAmBoden(tresor)) return 0;
+    var letzte = 0, offen = false;
+    tresor.fragmente.forEach(function (fr) {
+      fr.aufgaben.forEach(function (a) {
+        if (!a.erledigt && !a.verfallen) offen = true;
+        letzte = Math.max(letzte, a.frei || f.start);
+      });
+    });
+    (f.nachschub || []).forEach(function (a) {
+      if (!a.erledigt && !a.verfallen) offen = true;
+      letzte = Math.max(letzte, a.frei || f.start);
+    });
+    if (offen) return 0;
+    if (typeof faktor !== 'number') faktor = 1;
+    var ab = Math.max(jetzt, letzte + Math.round(nachschubAbstand(tresor) * faktor * 1000));
+    return ab < freigabeZiel(tresor).zeit ? ab : 0;
+  }
+
+  function nachschubFaellig(tresor, jetzt) {
+    return nachschubAb(tresor, jetzt, (tresor.konfig || {}).blind ? 0.3 : 1) > 0;
+  }
+
+  async function nachschubAnlegen(tresor, jetzt) {
+    var faktor = (tresor.konfig || {}).blind ? 0.3 + zufallsAnteil() * 1.4 : 1;
+    var ab = nachschubAb(tresor, jetzt, faktor) || nachschubAb(tresor, jetzt, 0.3);
+    if (!ab) return null;
+    var f = tresor.freigabe;
+    var konfig = {};
+    Object.keys(tresor.konfig || {}).forEach(function (k) { konfig[k] = tresor.konfig[k]; });
+    konfig.aufgabenProFragment = 1;
+    var zufall = new T.Zufall(zufallsGanz(1, 2000000000));
+    var eintrag = null;
+    for (var versuch = 0; versuch < 4 && !(eintrag && eintrag.aufgaben.length); versuch++) {
+      eintrag = aufgabenPlan(zufall, konfig, 1, true)[0];
+    }
+    if (!eintrag || !eintrag.aufgaben.length) return null;
+    var aufgabe = eintrag.aufgaben[0];
+    if (eintrag.loesungen.length) {
+      var salz = T.krypto.neuesSalz();
+      aufgabe.pruefung = { salz: salz, hash: await T.krypto.antwortPruefung(eintrag.loesungen[0], salz, T.krypto.ITERATIONEN) };
+    }
+    aufgabe.extra = true;
+    aufgabe.frei = ab;
+    aufgabe.puenktlichBis = ab + Math.round(Math.max(nachschubAbstand(tresor), TAKT.fensterMin) * 1000);
+    f.nachschub = f.nachschub || [];
+    f.nachschub.push(aufgabe);
+    return aufgabe;
   }
 
   /* Was eine Pruefung jetzt einbringt - fuer die Anzeige vor dem Loesen. */
@@ -1014,7 +1106,7 @@
   /* Geht Aufgeben hier? Eine Pruefung, deren Loesung im Schluessel steckt,
    * nur mit Pfand - ohne Pfand gaebe es die Loesung nirgends. */
   function kapitulationMoeglich(fragment, aufgabe) {
-    if (!aufgabe.pruefung) return { ok: true };
+    if (!aufgabe.pruefung || aufgabe.extra) return { ok: true };
     if (aufgabe.pfand) return { ok: true, pfand: true };
     return { ok: false, grund: 'schluessel' };
   }
@@ -1265,6 +1357,9 @@
     freigabeHolen: freigabeHolen,
     strafeBuchen: strafeBuchen,
     netzLage: netzLage,
+    NACHSCHUB: NACHSCHUB,
+    nachschubFaellig: nachschubFaellig,
+    nachschubAnlegen: nachschubAnlegen,
     freigabeOeffenbar: freigabeOeffenbar,
     freigabeAlleOeffnen: freigabeAlleOeffnen,
     gutschriftWert: gutschriftWert,
