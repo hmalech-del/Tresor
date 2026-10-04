@@ -10,6 +10,15 @@ Drei gedruckte Teile, drei gekaufte, rund 14 Euro.
 *Oben die Kiste, darunter das Prüfstück: Blockausschnitt mit Bohrung und
 Schlitz, dazu kurzer Riegel und kurze Zunge mit Schulter. 25 Minuten Druck.*
 
+> **Stand 4. 10.: Die Servotasche ist falsch konstruiert – die große Kiste
+> noch nicht drucken.** Die Servoachse sitzt nur 7,7 mm neben der
+> Riegelmitte; der Rumpf ist aber gut 12 mm breit und reicht bis in
+> Riegelhöhe. Er ragt dadurch 5,5 mm in die Bahn des Riegels – das Servo
+> passt nicht neben ihn. Das gedruckte Prüfstück hat es gezeigt;
+> `pruefung.py` prüft es jetzt („Servorumpf bleibt aus der Riegelbahn") und
+> schlägt an. Die Lösung: Servo weiter vom Riegel weg, längerer Hebel, dafür
+> kleinerer Schwenk. Dafür braucht es die echten Maße von Servo und Horn.
+
 ## Wie sie hält
 
 Am Deckel hängt eine Zunge nach unten – ein flaches Blatt **quer** zur

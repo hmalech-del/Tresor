@@ -12,8 +12,14 @@ Tresor-App sie per Bluetooth öffnen – erst, wenn der Tresor offen ist.
 von Hand ordentlich (der Slicer hatte Stützen gesetzt, die der Nutzer
 wegkratzen musste – keines der Teile braucht welche). Der kurze Riegel seines
 Drucks ist noch der alte, am falschen Ende gekürzte: für den Servotest
-`pruefriegel.stl` nachdrucken. Nächster Schritt: Servotest (README "Dann mit
-Servo", `servotest/servotest.ino`). Die große Kiste ist noch nicht gedruckt,
+`pruefriegel.stl` nachdrucken. **4. 10.: Konstruktionsfehler gefunden** – Servorumpf
+schneidet die Riegelbahn (Achse 7,7 mm neben Riegelmitte, Rumpf 6,2 mm halb
+breit, reicht bis Riegelhöhe: 5,5 mm quer, 7 mm hoch). `pruefung.py` prüft das
+jetzt und schlägt an. Auch der Hornfreiraum (r = stift_radius + 4 = 13 mm)
+ist kürzer als ein echtes einarmiges Horn. Geplante Lösung: Achse ≥ 14–15 mm
+von der Riegelmitte, Stift in einem äußeren Hornloch (~15–16 mm), Schwenk
+entsprechend kleiner (Hub 12,7 = 2·r·sin θ, θ ≈ 23°). Wartet auf die
+gemessenen Maße von Servo und Horn (Nutzer misst). Die große Kiste ist noch nicht gedruckt,
 **Firmware gibt es keine**. Alles über die Mechanik hinaus ist ungetestet –
 das in Antworten nicht verschweigen.
 

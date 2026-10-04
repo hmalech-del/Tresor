@@ -83,6 +83,18 @@ pruefe("Servotasche bricht nicht durch", servo_vorn > 1.0,
        f"Tasche beginnt {servo_vorn:.1f} mm hinter der Innenwand")
 pruefe("Servo passt in die Blocktiefe", servo_achse_y + servo_y / 2 + s_servo < block_y - 1,
        f"Rumpf endet bei {servo_achse_y + servo_y/2:.1f}, Block ist {block_y} tief")
+# Rumpf und Riegel duerfen sich nicht schneiden. Diese Pruefung fehlte - und
+# genau da lag der Fehler: Die Achse sitzt 7,7 mm neben der Riegelmitte, der
+# Rumpf ist aber 6,2 mm halb breit und reicht in Riegelhoehe hinauf. Er
+# ragte 5,5 mm in die Bahn des Riegels. Erst das gedruckte Pruefstueck hat
+# es gezeigt.
+rumpf_y = (servo_achse_y - servo_y / 2, servo_achse_y + servo_y / 2)
+riegel_y = (zunge_y - riegel_b / 2, zunge_y + riegel_b / 2)
+ueber_y = min(rumpf_y[1], riegel_y[1]) - max(rumpf_y[0], riegel_y[0])
+ueber_z = min(servo_oben, riegel_z + riegel_h / 2) - max(servo_oben - servo_z, riegel_z - riegel_h / 2)
+pruefe("Servorumpf bleibt aus der Riegelbahn", ueber_y < 0 or ueber_z < 0,
+       f"frei: {-max(ueber_y, ueber_z):.1f} mm" if (ueber_y < 0 or ueber_z < 0) else
+       f"SCHNEIDET: {ueber_y:.1f} mm quer, {ueber_z:.1f} mm hoch - das Servo passt nicht neben den Riegel")
 pruefe("Zunge passt in die Blocktiefe",
        zunge_y + zunge_b / 2 + s_zunge < block_y - 1 and zunge_y - zunge_b / 2 - s_zunge > 1,
        f"Zunge {zunge_y - zunge_b/2:.1f} bis {zunge_y + zunge_b/2:.1f} in {block_y} mm")
