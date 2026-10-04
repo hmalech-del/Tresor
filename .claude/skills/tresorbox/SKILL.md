@@ -8,18 +8,19 @@ description: Kontext für die Tresorbox (hardware/ im Repo hmalech-del/tresor) -
 Eine gedruckte Kiste (PETG), die ein Servo verriegelt. Später soll die
 Tresor-App sie per Bluetooth öffnen – erst, wenn der Tresor offen ist.
 
-**Stand (26. 9.):** Das **Prüfstück ist gedruckt**, Riegel und Zunge laufen
+**Stand:** (26. 9.) Das **Prüfstück ist gedruckt**, Riegel und Zunge laufen
 von Hand ordentlich (der Slicer hatte Stützen gesetzt, die der Nutzer
 wegkratzen musste – keines der Teile braucht welche). Der kurze Riegel seines
 Drucks ist noch der alte, am falschen Ende gekürzte: für den Servotest
-`pruefriegel.stl` nachdrucken. **4. 10.: Konstruktionsfehler gefunden** – Servorumpf
-schneidet die Riegelbahn (Achse 7,7 mm neben Riegelmitte, Rumpf 6,2 mm halb
-breit, reicht bis Riegelhöhe: 5,5 mm quer, 7 mm hoch). `pruefung.py` prüft das
-jetzt und schlägt an. Auch der Hornfreiraum (r = stift_radius + 4 = 13 mm)
-ist kürzer als ein echtes einarmiges Horn. Geplante Lösung: Achse ≥ 14–15 mm
-von der Riegelmitte, Stift in einem äußeren Hornloch (~15–16 mm), Schwenk
-entsprechend kleiner (Hub 12,7 = 2·r·sin θ, θ ≈ 23°). Wartet auf die
-gemessenen Maße von Servo und Horn (Nutzer misst). Die große Kiste ist noch nicht gedruckt,
+`pruefriegel.stl` nachdrucken. **4. 10.: Servotasche neu konstruiert** nach am echten MG90S
+gemessenen Maßen (Rumpf 22×12×22, Laschen 32 lang, Unterseite 17 über Boden,
+2 dick; Welle 5 von der Kabelseite; Hornarm 18 lang, Arm-Unterseite 10,5 über
+Gehäuse; Hornlöcher 3,5–16 mm, 7 Stück, 1 mm). Vorher schnitt der Rumpf die
+Riegelbahn (Achse nur 7,7 mm neben der Riegelmitte). Jetzt: Stift im
+äußersten Loch (r = 16), Schwenk ±23,4°, Achse 15,3 mm neben dem Riegel,
+Zunge 23 mm tief (vorher 20), M2-Stift statt M3, Hornfreiraum als Fächer,
+Kabelschlitz an der Wellenseite, Einlegerinne links der Zunge (vorher hätte sich der Riegel nie einsetzen lassen: Tunnel ab Blockende, nur 12 mm Platz), Prüfstück in voller Blockhöhe
+(61×85×39 mm). Der Nutzer muss alles neu drucken; noch nicht gedruckt. Die große Kiste ist noch nicht gedruckt,
 **Firmware gibt es keine**. Alles über die Mechanik hinaus ist ungetestet –
 das in Antworten nicht verschweigen.
 
@@ -30,7 +31,8 @@ das in Antworten nicht verschweigen.
 | `tresorbox.scad` | das parametrische Modell; alle Maße oben als Variablen, `teil = koerper \| deckel \| riegel \| pruefstueck \| pruefriegel \| alles` |
 | `pruefung.py` | rechnet die kritischen Beziehungen nach (Riegel durch Zunge und wieder frei, Stift/Schlitz in beiden Endlagen, Servo in der Wand, Platinensockel, Kabelloch, Nutzraum, STL-Aktualität, Zahl getrennter Teile je STL – das Prüfstück muss drei haben; einmal war die Zunge mit dem Block verschmolzen; Abstand Spitze→Querschlitz am kurzen Riegel gleich dem langen – er war einmal am falschen Ende gekürzt) |
 | `kurbelschleife.py` → `.svg` | Zeichnung des Getriebes aus denselben Parametern |
-| `servotest/servotest.ino` | Arduino-Testprogramm (ESP32Servo): Mitte/zu/auf, nachstellen, 20er-Dauertest, fährt langsam und macht `detach`. **Nicht die Firmware**, hier nie kompiliert (keine Toolchain erreichbar) |
+| `kollision.scad` | Kollisionsfälle (Rumpf, Laschen, Arm, Stift gegen Körper/Riegel, beide Endlagen) und `fall="ansicht"` für `servo-sitz.png`; `pruefung.py` rendert sie (`--schnell` überspringt) |
+| `servotest/servotest.ino` | Arduino-Testprogramm (ESP32Servo): Mitte/zu/auf (±23°), nachstellen, 20er-Dauertest, fährt langsam und macht `detach`. **Nicht die Firmware**, hier nie kompiliert (keine Toolchain erreichbar) |
 | `*.stl`, `*.png` | fertige Druckdateien und Vorschaubilder |
 | `README.md` | Nutzer-Doku: Funktionsweise, Einkaufszettel, Drucken, Zusammenbau, Verdrahtung, Toleranzen |
 
@@ -42,9 +44,11 @@ diesen Schlitz und durch ein Loch in der Zunge. Zug am Deckel geht über
 Zunge → Riegel → Bohrungswand in den Körper, **nicht ins Servo**.
 
 Das Servo schiebt den Riegel über eine **Kurbelschleife** (scotch yoke): ein
-M3-Stift im einarmigen Horn, 9 mm von der Achse, läuft in einem Querschlitz
-des Riegels. ±45° Schwenk → 12,7 mm Hub; verriegelt steht die Spitze 3,5 mm
-hinter der Zunge, offen 3,2 mm davor. Nur zwei Endlagen, kein Gelenk.
+M2-Stift im äußersten Loch des einarmigen Horns, 16 mm von der Achse, läuft in
+einem Querschlitz des Riegels (7,6 mm lang). ±23,4° Schwenk → 12,7 mm Hub;
+verriegelt steht die Spitze 3,5 mm hinter der Zunge, offen 3,2 mm davor. Das
+Servo steht ganz neben dem Riegel (Achse 15,3 mm von der Riegelmitte), der
+Hornarm greift 1,2 mm über dem Riegel hinüber. Nur zwei Endlagen, kein Gelenk.
 
 ## Toleranzen – getrennt nach Aufgabe
 
@@ -52,17 +56,26 @@ hinter der Zunge, offen 3,2 mm davor. Nur zwei Endlagen, kein Gelenk.
 Brücke und sackt), `spiel_zunge 0.5` (**führendes** Merkmal), `spiel_loch_y 1.0`
 (quer stapeln sich Riegel- und Zungenspiel), `spiel_loch_z 0.5`,
 `spiel_rand 0.8` (Deckelrand bewusst lose), `spiel_servo 0.5`. Grundsatz: nur
-ein Merkmal führt, alle anderen sind lose. Das **Prüfstück** (60 × 78 × 27 mm, drei getrennte Teile; die kurze Zunge hat eine Schulter, die sie auf Deckelhöhe hält, und steht beim Druck auf ihr,
-~25 min) testet genau diese Passungen, gebaut aus denselben Modulen; die
+ein Merkmal führt, alle anderen sind lose. Das **Prüfstück** (61 × 85 × 39 mm, volle Blockhöhe mit ganzer Servotasche; drei getrennte Teile; die kurze Zunge hat eine Schulter, die sie auf Deckelhöhe hält, und steht beim Druck auf ihr;
+~1 h) testet genau diese Passungen, gebaut aus denselben Modulen; die
 Tabelle "Befund → Stellschraube" steht in der README.
+
+## Zusammenbau in der fertigen Kiste (README "Zusammenbau")
+
+Elektronik zuerst: Platine auf Sockel, USB durch rechte Wand, Servo in die
+Tasche (Kabel in den Schlitz), Kabel über die Blockoberkante oder links vorbei
+nach hinten, Testprogramm `m`. Dann Mechanik: Horn mit M2-Stift, Riegel in die
+Rinne (Spitze in Mitte des Zungenschlitzes), Horn aufstecken (Stift in den
+Querschlitz), Wellenschräubchen, erst von Hand, dann `z`/`a`/`d`, Deckel.
 
 ## Elektronik
 
 - **ESP32 DevKitC** (WROOM-32, 30/38 Pin, Stiftleisten gelötet) – Vorgabe
   `platine = "devkit"`; `"supermini"` (ESP32-C3) ist der alternative Sockel.
   Kein ESP32-S2, kein ESP8266 (kein Bluetooth), kein WROOM-32U.
-- **MG90S** (SG90 maßgleich, aber Plastikgetriebe). Wellenschräubchen fürs
-  Horn ist Pflicht.
+- **MG90S** (gemessen, siehe Stand; SG90 fast maßgleich, aber Plastikgetriebe).
+  Wellenschräubchen fürs Horn ist Pflicht. Stift: M2 × 10–14, Hornloch auf
+  1,6 mm aufbohren, schneidet selbst.
 - Servo: braun → GND, rot → 5V/VIN, orange → **GPIO 18** (keine
   Strapping-Pins 0/2/12/15). **Elko 1000 µF** zwischen 5V und GND nah am Servo,
   sonst Brownout-Neustart beim Anfahren. Netzteil ≥ 1 A.

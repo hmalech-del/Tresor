@@ -6,7 +6,7 @@ liegen im Block und sind unsichtbar. Diese Pruefung rechnet stattdessen
 nach, ob sich alles trifft, und faellt auf, sobald jemand an den Parametern
 dreht. Nach jeder Aenderung an tresorbox.scad laufen lassen.
 """
-import math, re, sys, pathlib
+import math, re, sys, pathlib, shutil, subprocess, tempfile
 
 quelle = pathlib.Path(__file__).with_name("tresorbox.scad").read_text(encoding="utf-8")
 
@@ -32,7 +32,8 @@ s_loch_y, s_loch_z = p("spiel_loch_y"), p("spiel_loch_z")
 
 weg = 2 * stift_radius * math.sin(math.radians(schwenk))
 servo_achse_y = zunge_y - stift_radius * (1 + math.cos(math.radians(schwenk))) / 2
-servo_oben = riegel_z + 3
+horn_unterseite, horn_luft = p("horn_unterseite"), p("horn_luft")
+servo_oben = riegel_z + riegel_h / 2 + horn_luft - horn_unterseite
 spitze_zu = zunge_d / 2 + 3.5
 spitze_auf = spitze_zu - weg
 schlitz_von_links = riegel_l - (spitze_zu - servo_achse_x) + stift_radius * math.sin(math.radians(schwenk))
@@ -63,6 +64,20 @@ pruefe("Bohrung reicht weit genug",
 pruefe("Riegel schmaler als die Zunge",
        riegel_b + 2 * s_riegel < zunge_b - 4,
        f"Riegel {riegel_b} mm in einer {zunge_b} mm breiten Zunge")
+
+# Einsetzen: Die Rinne links der Zunge muss den Riegel aufnehmen, der
+# Tunnel an der Zunge ihn halten. Frueher gab es keine Rinne, und der Riegel
+# haette durch 12 mm Platz zwischen Block und Wand gemusst.
+einlege_ende = -(zunge_d / 2 + 5)
+rinne = einlege_ende - (-block_b / 2)
+platz_links = (innen_x - block_b) / 2
+pruefe("Riegel laesst sich einsetzen", rinne >= riegel_l * 0.8 or platz_links >= riegel_l + 5,
+       f"Rinne {rinne:.0f} mm von oben offen, Riegel {riegel_l:.0f} mm (links nur {platz_links:.0f} mm Platz)")
+decke = -(zunge_d / 2 + s_zunge) - einlege_ende
+pruefe("Decke stuetzt den Riegel links der Zunge", decke >= 3,
+       f"{decke:.1f} mm geschlossene Decke zwischen Rinne und Zungenschlitz")
+pruefe("Riegel steckt verriegelt im Tunnel", spitze_zu - riegel_l < einlege_ende - 5,
+       f"verriegelt von {spitze_zu - riegel_l:+.1f} bis {spitze_zu:+.1f}, Tunnel ab {einlege_ende:+.1f}")
 
 print("\nKurbelschleife")
 for name, spitze, theta in [("verriegelt", spitze_zu, schwenk), ("offen", spitze_auf, -schwenk)]:
@@ -259,6 +274,32 @@ if lang.exists() and kurz.exists():
     pruefe("kurzer Riegel: Spitze -> Querschlitz wie am langen",
            a is not None and b is not None and abs(a - b) < 0.05,
            f"{b:.2f} mm, lang {a:.2f} mm" if a and b else "Schlitz nicht gefunden")
+
+# Kollisionen am echten Modell: Servo, Laschen, Hornarm und Stift gegen
+# Koerper und Riegel, in beiden Endlagen. Rechnet OpenSCAD (dauert etwa
+# eine Minute); mit --schnell uebersprungen.
+FAELLE = [("rumpf_koerper", "Rumpf in der Tasche"), ("laschen_koerper", "Laschen auf der Stufe"),
+          ("rumpf_riegel_zu", "Rumpf neben dem Riegel (zu)"), ("rumpf_riegel_auf", "Rumpf neben dem Riegel (auf)"),
+          ("arm_koerper_zu", "Hornarm frei (zu)"), ("arm_koerper_mitte", "Hornarm frei (Mitte)"),
+          ("arm_koerper_auf", "Hornarm frei (auf)"), ("arm_riegel_zu", "Arm ueber dem Riegel (zu)"),
+          ("arm_riegel_auf", "Arm ueber dem Riegel (auf)"), ("stift_koerper_zu", "Stift frei im Block (zu)"),
+          ("stift_koerper_auf", "Stift frei im Block (auf)"), ("stift_riegel_zu", "Stift im Querschlitz (zu)"),
+          ("stift_riegel_auf", "Stift im Querschlitz (auf)")]
+print("\nKollisionen")
+if "--schnell" in sys.argv:
+    print("  [info] uebersprungen (--schnell)")
+elif not shutil.which("openscad"):
+    print("  [info] OpenSCAD fehlt - Kollisionen nicht gerechnet")
+else:
+    with tempfile.TemporaryDirectory() as tmp:
+        for fall, name in FAELLE:
+            ziel = pathlib.Path(tmp) / (fall + ".stl")
+            lauf = subprocess.run(["openscad", "-D", f'fall="{fall}"', "-o", str(ziel),
+                                   str(scad.with_name("kollision.scad"))], capture_output=True, text=True)
+            ausgabe = lauf.stdout + lauf.stderr
+            # leer, oder nur Beruehrung ohne Volumen (Laschen auf ihrer Stufe)
+            frei = "empty" in ausgabe or re.search(r"Facets:\s+0\b", ausgabe) is not None
+            pruefe(name, frei, "frei" if frei else f"SCHNEIDET - openscad -D 'fall=\"{fall}\"' kollision.scad")
 
 print()
 if fehler:

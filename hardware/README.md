@@ -10,14 +10,23 @@ Drei gedruckte Teile, drei gekaufte, rund 14 Euro.
 *Oben die Kiste, darunter das Prüfstück: Blockausschnitt mit Bohrung und
 Schlitz, dazu kurzer Riegel und kurze Zunge mit Schulter. 25 Minuten Druck.*
 
-> **Stand 4. 10.: Die Servotasche ist falsch konstruiert – die große Kiste
-> noch nicht drucken.** Die Servoachse sitzt nur 7,7 mm neben der
-> Riegelmitte; der Rumpf ist aber gut 12 mm breit und reicht bis in
-> Riegelhöhe. Er ragt dadurch 5,5 mm in die Bahn des Riegels – das Servo
-> passt nicht neben ihn. Das gedruckte Prüfstück hat es gezeigt;
-> `pruefung.py` prüft es jetzt („Servorumpf bleibt aus der Riegelbahn") und
-> schlägt an. Die Lösung: Servo weiter vom Riegel weg, längerer Hebel, dafür
-> kleinerer Schwenk. Dafür braucht es die echten Maße von Servo und Horn.
+> **Stand 4. 10.: Servotasche neu konstruiert – erst das neue Prüfstück
+> drucken.** Im ersten Entwurf stand die Servoachse nur 7,7 mm neben der
+> Riegelmitte; der Rumpf ragte 5,5 mm in die Bahn des Riegels, und der Platz
+> fürs Horn war zu klein. Das gedruckte Prüfstück hat es gezeigt. Jetzt sitzt
+> das Servo ganz neben dem Riegel, nach den am echten MG90S gemessenen Maßen,
+> und der Stift im äußersten Hornloch, 16 mm von der Achse. Außerdem ließ
+> sich der Riegel in der fertigen Kiste gar nicht einsetzen (der Tunnel begann
+> am Blockende, daneben sind nur 12 mm Platz); links der Zunge ist die Bohrung
+> jetzt eine nach oben offene Rinne. `pruefung.py`
+> rechnet dazu mit OpenSCAD alle Kollisionen von Rumpf, Laschen, Hornarm und
+> Stift gegen Körper und Riegel nach.
+
+![Servo im Schnitt](servo-sitz.png)
+
+*Schnitt durch die Servoachse: Das Servo hängt an seinen Laschen in der
+Tasche, der Hornarm greift über den Riegel (gelb), der Stift steckt in dessen
+Querschlitz.*
 
 ## Wie sie hält
 
@@ -28,11 +37,11 @@ das Loch in der Zunge.
 
 Zieht jemand am Deckel, drückt die Zunge gegen den Riegel und der gegen die
 Wand seiner Bohrung. **Die Kraft läuft in den Körper, nicht ins Getriebe.** Das
-Servo schiebt den Riegel nur längs, über einen M3-Stift, der in einem
+Servo schiebt den Riegel nur längs, über einen M2-Stift, der in einem
 Querschlitz läuft – eine Kurbelschleife. Die Bauart verträgt Toleranzen, und
 genau das braucht man bei gedruckten Teilen.
 
-Der Hub ergibt sich aus der Kurbel: 9 mm Stiftradius, ±45° Schwenk, macht
+Der Hub ergibt sich aus der Kurbel: 16 mm Stiftradius, ±23,4° Schwenk, macht
 12,7 mm. Verriegelt steht die Spitze 3,5 mm hinter der Zunge, offen 3,2 mm
 davor.
 
@@ -43,7 +52,8 @@ davor.
 Das Servo dreht, der Riegel schiebt – dazwischen steht **keine Umlenkung, kein
 Gelenk, kein Gewinde**. Nur ein Stift in einem Schlitz.
 
-Am Servohorn sitzt ein M3-Stift, 9 mm von der Achse. Dreht das Horn, läuft der
+Am Servohorn sitzt ein M2-Stift, 16 mm von der Achse – im äußersten Loch des
+einarmigen Horns. Dreht das Horn, läuft der
 Stift auf einem Kreis. Dieser Stift steckt in einem Schlitz, der **quer zur
 Fahrtrichtung** durch den Riegel geht.
 
@@ -51,12 +61,18 @@ Damit zerfällt die Kreisbewegung in zwei Anteile:
 
 | | was der Stift tut | was der Riegel merkt |
 |---|---|---|
-| **längs** (x) | wandert ±6,4 mm | wird geschoben – das ist der Hub |
-| **quer** (y) | wandert 2,6 mm | **nichts** – der Stift gleitet im Schlitz auf und ab |
+| **längs** (x) | wandert ±6,35 mm | wird geschoben – das ist der Hub |
+| **quer** (y) | wandert 1,3 mm | **nichts** – der Stift gleitet im Schlitz auf und ab |
 
 Der Schlitz führt den Riegel also nur in einer Richtung und lässt ihn in der
-anderen los. Deshalb muss er quer liegen und 11,3 mm lang sein: 2,6 mm für die
-Seitwärtsbewegung, 3 mm für den Stift, Rest Luft.
+anderen los. Deshalb muss er quer liegen und 7,6 mm lang sein: 2,6 mm für die
+Seitwärtsbewegung (doppelt gerechnet), 2 mm für den Stift, Rest Luft.
+
+**Warum der lange Hebel.** Der Rumpf des Servos ist 12 mm breit und reicht
+bis knapp unter den Riegel. Er muss deshalb ganz neben ihm stehen – die Achse
+15,3 mm von der Riegelmitte. So weit reicht nur das äußerste Hornloch. Mit
+dem längeren Hebel genügt ein kleinerer Schwenk für denselben Hub: ±23,4°
+statt ±45°.
 
 In der Mechanik heißt das **Kurbelschleife** (englisch *scotch yoke*) –
 dasselbe Prinzip wie in einer Stichsäge, nur dass dort ein Motor durchdreht und
@@ -71,7 +87,7 @@ Warum diese Bauart und nicht ein Gestänge:
   Riegel und der gegen die Wand seiner Bohrung. Über den Stift läuft dabei
   keine Kraft, weil die Zugrichtung quer zu seinem Schlitz steht. Das Getriebe
   des Servos bleibt lastfrei – sonst wäre es das erste, was bricht.
-- **Sie kennt zwei Endlagen.** −45° und +45°, mehr muss die Firmware nicht
+- **Sie kennt zwei Endlagen.** −23° und +23°, mehr muss die Firmware nicht
   wissen. Es gibt keine Zwischenstellung, die man anfahren müsste.
 
 Die Zeichnung entsteht mit `python3 kurbelschleife.py` aus denselben Parametern
@@ -86,10 +102,10 @@ konstruiert.
 | # | Teil | Worauf achten | ca. |
 |---|---|---|---|
 | 1 | **ESP32 DevKitC**, 30 oder 38 Pin | Platine bis 55 × 28 mm. **Stiftleisten vorverlötet** – sonst brauchst du einen Lötkolben. Gleich **zwei** nehmen | 6 € |
-| 2 | **Servo MG90S** (9 g) | Rumpf 23,2 × 12,4 × 23 mm, Flanschabstand 32,5 mm. Der billigere **SG90** ist maßgleich, hat aber Plastikgetriebe | 3 € |
-| 3 | **Servohorn + Schräubchen** | liegen dem Servo bei – siehe unten. Das einarmige Horn braucht ein Loch **9 mm von der Mitte**, notfalls auf 3 mm aufbohren | – |
+| 2 | **Servo MG90S** (9 g) | gemessen: Rumpf 22 × 12 × 22 mm, über die Laschen 32 mm, Laschen 17 mm über dem Boden. Der billigere **SG90** ist fast maßgleich, hat aber Plastikgetriebe | 3 € |
+| 3 | **Servohorn + Schräubchen** | liegen dem Servo bei – siehe unten. Das einarmige Horn braucht sein **äußerstes Loch bei 16 mm** von der Mitte; es wird auf 1,6 mm aufgebohrt | – |
 | 4 | **Elko 1000 µF, ≥ 6,3 V** | radial, Raster 5 mm | 0,50 € |
-| 5 | **M3-Schraube, 12 mm** | Zylinderkopf, plus **eine M3-Mutter** zum Kontern | 0,20 € |
+| 5 | **M2-Schraube, 10–14 mm** | Zylinderkopf; sie schneidet ihr Gewinde im Horn selbst, eine Mutter braucht es nicht | 0,20 € |
 | 6 | **Dupont-Litzen** | **männlich/weiblich**, 10–20 cm. Am besten ein gemischter Satz – für den Kondensator sind zwei weiblich/weibliche praktisch | 2 € |
 | 7 | **USB-Kabel + 5-V-Netzteil, ≥ 1 A** | **Datenkabel**, kein reines Ladekabel. Steckertyp prüfen: ältere DevKits haben Micro-USB | 5 € |
 | 8 | **Kabelbinder, klein** | Zugentlastung, kommt durch den Tunnel im Platinensockel | – |
@@ -103,7 +119,7 @@ Im Tütchen eines MG90S oder SG90 liegen üblicherweise:
 
 | | brauchen wir | wofür |
 |---|---|---|
-| **3 Hörner** (einarmig, zweiarmig, Kreuz) | **das einarmige** | trägt den M3-Mitnehmer |
+| **3 Hörner** (einarmig, zweiarmig, Kreuz) | **das einarmige** | trägt den M2-Mitnehmer |
 | **1 Schräubchen** für die Abtriebswelle | **ja** | hält das Horn auf der Verzahnung. Fehlt es, arbeitet sich das Horn los |
 | **2 Blechschrauben** für die Flansche | **ja** | schrauben das Servo in die Tasche |
 | 2 Gummitüllen + 2 Messinghülsen | nein | Schwingungsdämpfung für Modellflieger |
@@ -118,7 +134,7 @@ horns"** sagt. Manche Angebote sind Servos pur, besonders die ganz billigen.
 Die Hörner sind zwischen SG90 und MG90S austauschbar (beide 21 Zähne) – wenn
 du irgendwo noch eins liegen hast, geht das auch.
 
-Was **nicht** dabei ist: die M3-Schraube und die Mutter aus der Liste. Das
+Was **nicht** dabei ist: die M2-Schraube aus der Liste. Das
 beiliegende Schräubchen hält nur das Horn auf der Welle; der Mitnehmer, der
 in den Riegelschlitz greift, ist ein eigenes Teil.
 
@@ -180,7 +196,7 @@ muss ESP32-**WROOM-32** stehen. Ein S2-Board sieht von oben fast gleich aus.
 | **Reichelt, Conrad** | × 2–3 | 2–3 Tage | wenn du ohnehin Kleinteile brauchst – Kondensator, Schrauben, Kabelbinder |
 | **Amazon** | × 2–3 | 1–2 Tage | dieselben Klone, nur schneller und teurer |
 
-Praktisch: Netzteil, Kabelbinder und M3-Schraube hast du vermutlich schon.
+Praktisch: Netzteil und Kabelbinder hast du vermutlich schon.
 Wirklich bestellen musst du nur Board, Servo und Kondensator – das geht in
 **einer** Bestellung bei einem der deutschen Händler.
 
@@ -196,7 +212,8 @@ klemmt er.
 
 **Servo-Set statt Einzelservo.** Vierer- oder Fünferpacks kosten kaum mehr
 als zwei einzelne, und die Hörner streuen: Du willst das auswählen, dessen
-äußerstes Loch am nächsten an 9 mm liegt.
+äußerstes Loch am nächsten an 16 mm liegt. Liegt es woanders, `stift_radius`
+in `tresorbox.scad` anpassen und `pruefung.py` laufen lassen.
 
 **Kondensator nicht einzeln bestellen.** Ein Elko kostet 30 Cent, das Porto
 das Zehnfache. Nimm ein Sortiment, oder leg ihn einer größeren Bestellung bei.
@@ -214,9 +231,8 @@ direkt vom Board ans Servo.
 ### Nur fürs Prüfstück
 
 **Nichts davon.** Die drei gedruckten Teile reichen für den mechanischen Test
-(ca. 22 g Filament). Wenn Servo und M3-Schraube schon da sind, nimm sie mit –
-die Tasche ist vollständig enthalten und SG90-Klone streuen um bis zu drei
-Zehntel. ESP32, Kondensator und Kabel brauchst du erst mit der Firmware.
+Wenn Servo und M2-Schraube schon da sind, nimm sie mit – die Tasche ist
+vollständig enthalten, und Klone streuen um bis zu drei Zehntel. ESP32, Kondensator und Kabel brauchst du erst mit der Firmware.
 
 ### Warum diese Teile
 
@@ -237,9 +253,12 @@ openscad -D 'teil="koerper"' -D 'platine="supermini"' -o koerper.stl tresorbox.s
 Anlaufen des Servos ein und der ESP32 startet neu – jedes Mal, wenn das
 Schloss aufgehen soll. Das ist der Fehler, den man zwei Abende lang sucht.
 
-**M3 mit 12 mm.** Sie steckt von oben durchs Horn und greift als Mitnehmer in
-den Querschlitz des Riegels. Die Länge ist unkritisch: 8 bis 12 mm dürfen
-unten herausstehen, darunter liegt ein Freigang.
+**M2 mit 10 bis 14 mm.** Sie steckt von oben im äußersten Hornloch und greift
+als Mitnehmer in den Querschlitz des Riegels. Eine M3 wäre zu dick: Der Arm
+ist nur 2 mm stark, ein 3-mm-Loch so nah an der Spitze ließe kaum Material.
+Das 1-mm-Loch auf 1,6 mm aufbohren, die Schraube von oben eindrehen – sie
+schneidet ihr Gewinde selbst, ein Tropfen Sekundenkleber sichert sie. Die
+Länge ist unkritisch, unter der Bohrung liegt ein Freigang.
 
 **Das Kabelloch sitzt rechts, nicht hinten.** Die Platine steht auf einem
 4 mm hohen Sockel, damit die USB-Buchse auf Lochhöhe liegt, und 28 mm vor der
@@ -283,7 +302,8 @@ openscad -D 'teil="pruefstueck"' -o pruefstueck.stl tresorbox.scad
 openscad -D 'teil="pruefriegel"' -o pruefriegel.stl tresorbox.scad   # nur der kurze Riegel
 ```
 
-60 × 78 × 27 mm, rund 25 Minuten, drei getrennte Teile. Darin steckt der
+61 × 85 × 39 mm, gut eine Stunde, drei getrennte Teile. Der Block steht in
+voller Höhe, weil das Servo mit seinem Rumpf bis fast auf den Boden reicht. Darin steckt der
 Ausschnitt des Blocks mit Riegelbohrung, Zungenschlitz **und der vollständigen
 Servotasche**, dazu ein kurzer Riegel und eine kurze Zunge – erzeugt aus
 **denselben Modulen** wie die Kiste. Baute man es nach, prüfte es seine eigene
@@ -301,7 +321,7 @@ liegen in der Datei schon richtig; im Slicer nichts drehen.
 drei gedruckten Teilen. Riegel von Hand durch die Bohrung schieben, Zunge in
 den Schlitz fallen lassen – das beantwortet schon die meisten Fragen.
 
-Wenn du **Servo und M3-Schraube** schon da hast, setz sie gleich mit ein: Die
+Wenn du **Servo und M2-Schraube** schon da hast, setz sie gleich mit ein: Die
 Tasche ist vollständig enthalten, und Klone streuen um bis zu drei Zehntel.
 Das merkt man lieber jetzt als an der fertigen Kiste. **ESP32, Kondensator und
 Kabel brauchst du für den Test nicht** – die kommen erst mit der Firmware ins
@@ -328,12 +348,13 @@ das Servo in seine Tasche passt, der Stift im Querschlitz läuft und der
 Hub reicht. Genau das lässt sich an keinem Bildschirm prüfen.
 
 **Stufe 1 – ohne Strom.** Horn vorbereiten wie unter *Zusammenbau*, Schritt 1
-(Loch 9 mm von der Mitte auf 3 mm, M3-Schraube durch, kontern). Servo von
-oben in die Tasche, Horn aufstecken (noch nicht festschrauben), Riegel in die
-Bohrung, bis der Stift in den Querschlitz fällt. Zunge mit der Schulter auf
-den Block setzen. Dann das Horn **sanft** von Hand drehen, jeweils nur etwa
-eine Achteldrehung (45°) aus der Mitte – weiter läuft der Stift aus seinem
-Schlitz und klemmt:
+(äußerstes Loch auf 1,6 mm, M2-Schraube von oben eindrehen). Servo von oben in
+die Tasche, das Kabel in den Schlitz an der Wellenseite, Laschen auf ihre
+Stufe. Riegel in die Bohrung, Querschlitz unter die Stelle, wo der Stift
+hinkommt. Dann das Horn aufstecken (noch nicht festschrauben), sodass der
+Stift in den Querschlitz fällt. Zunge mit der Schulter auf den Block setzen.
+Das Horn **sanft** von Hand drehen, jeweils nur gut 20° aus der Mitte –
+weiter läuft der Stift aus seinem Schlitz und klemmt:
 
 - Der Riegel muss ohne Haken hin und her laufen, gut 12 mm weit.
 - Zur einen Seite fährt die Spitze durch das Loch der Zunge – die Zunge
@@ -351,7 +372,7 @@ dann `servotest/servotest.ino` mit der Arduino-IDE aufspielen (Board
 | Taste | was passiert |
 |---|---|
 | `m` | Mitte, 90° – **zuerst**, dann das Horn so aufstecken, dass der Riegel auf halbem Weg steht, und festschrauben |
-| `z` / `a` | zu / auf, je 45° aus der Mitte |
+| `z` / `a` | zu / auf, je 23° aus der Mitte |
 | `+` / `-` | ein Grad nachstellen, falls eine Endlage nicht ganz reicht |
 | `d` | 20 Zyklen zu und auf – der Dauertest |
 
@@ -365,10 +386,9 @@ keinen Handschlag. Es ist nur dafür da, die Mechanik unter Strom zu sehen.
 Und es ist hier nicht kompiliert worden; meldet die IDE einen Fehler, ist
 das ein Fehler im Programm, nicht bei dir.
 
-**Nur den kurzen Riegel nachdrucken:** Bis 26. 9. war er am falschen Ende
-gekürzt – ohne Spitze, sodass er mit Servo 8 mm vor der Zunge stehen blieb.
-Von Hand fällt das nicht auf. Wer das Prüfstück schon hat, druckt nur
-`pruefriegel.stl` (ca. 5 Minuten).
+**Alles neu drucken, nicht nur den Riegel.** Seit dem 4. 10. ist die
+Servotasche neu konstruiert, und auch der Querschlitz im Riegel ist ein
+anderer (schmaler, für den M2-Stift). Prüfstücke von davor passen nicht mehr.
 
 **Stützen ausschalten.** Keines der Teile braucht welche. Setzt der Slicer
 trotzdem welche (meist in die Riegelbohrung oder unter das Loch der Zunge),
@@ -380,29 +400,48 @@ Erst wenn das sitzt, die große Kiste drucken.
 
 ## Zusammenbau
 
-1. **Horn vorbereiten.** Einarmiges Servohorn nehmen, das äußerste Loch (9 mm
-   von der Mitte) auf 3 mm aufbohren. M3-Schraube von oben durchstecken,
-   sodass sie nach unten zeigt, mit der Mutter oben kontern. 8 bis 12 mm
-   dürfen unten herausstehen – die Länge ist unkritisch, unter der Bohrung
-   liegt ein Freigang.
-2. **Riegel einschieben.** Von innen links in die Bohrung, bis der Querschlitz
-   unter der Servoachse steht.
-3. **Servo einsetzen.** Von oben in die Tasche, der Stift muss in den
-   Querschlitz fallen. Flansche festschrauben.
-4. **Von Hand prüfen.** Horn hin und her drehen – der Riegel muss über die
-   vollen 12,7 mm laufen, ohne zu haken. **Erst danach Strom anschließen.**
-   Ein Servo, das gegen einen klemmenden Riegel drückt, zieht 700 mA, wird
-   heiß und stirbt.
-5. **Mittelstellung finden.** Servo auf 90° fahren, *dann* das Horn
-   aufstecken – der Riegel soll dabei auf halbem Weg stehen. Steckst du es
-   schief auf, fehlt an einem Ende der Hub. Sitzt es richtig, das
-   **beiliegende Schräubchen in die Abtriebswelle drehen**. Ohne das rutscht
-   das Horn nach ein paar Dutzend Schaltspielen auf der Verzahnung durch, und
-   der Riegel fährt nicht mehr weit genug.
-6. **Verdrahten** (siehe unten), Platine auf den Sockel setzen und mit dem
-   Kabelbinder durch den Tunnel festziehen. Das Kabel von außen durch das
-   12-mm-Loch in der rechten Wand schieben – der Stecker passt hindurch – und
-   bei offenem Deckel einstecken.
+Die Reihenfolge ist so gewählt, dass jeder Schritt von oben erreichbar ist
+und das Servo nie gegen einen Riegel fährt, der noch nicht richtig liegt.
+
+**Elektronik zuerst – solange die Kiste leer ist:**
+
+1. **Platine auf den Sockel** (hinten rechts), mit dem Kabelbinder durch den
+   Tunnel im Sockel festziehen. Die USB-Buchse zeigt zur rechten Wand.
+2. **USB-Kabel** von außen durch das 12-mm-Loch in der rechten Wand schieben –
+   der Stecker passt hindurch – und einstecken. Es liegt in einer Flucht mit
+   der Buchse; 28 mm Platz zwischen Platine und Wand reichen für den Stecker.
+3. **Servo einsetzen.** Von oben in die Tasche vorn im Block, das Kabel in den
+   Schlitz an der Wellenseite (links). Die Laschen liegen auf ihrer Stufe; mit
+   den beiden beiliegenden Blechschrauben festschrauben (vorgebohrt).
+4. **Servokabel zur Platine.** Aus dem Schlitz nach oben, über die
+   Blockoberkante oder links am Block vorbei (12 mm Platz) nach hinten. Mit
+   männlich/weiblichen Dupont-Litzen an die Platine, Elko dazu – siehe
+   *Verdrahtung*. Zwischen Blockoberkante und Deckel bleiben 6 mm; dort darf
+   das Kabel liegen, nur nicht über dem Zungenschlitz in der Mitte.
+5. **Testprogramm aufspielen** (`servotest/`, über dasselbe USB-Kabel am
+   Rechner) und `m` senden: Das Servo steht in der Mitte.
+
+**Dann die Mechanik:**
+
+6. **Horn vorbereiten.** Das äußerste Loch des einarmigen Horns (16 mm von der
+   Mitte) auf 1,6 mm aufbohren, die M2-Schraube (10–14 mm) von oben
+   eindrehen, bis der Kopf aufliegt – sie schneidet ihr Gewinde selbst. Ein
+   Tropfen Sekundenkleber sichert sie.
+7. **Riegel einlegen.** Von oben in die offene Rinne links der Zunge, Spitze
+   nach rechts, und so weit nach rechts schieben, dass die Spitze in der
+   Mitte des Zungenschlitzes steht. Dann liegt der Querschlitz genau unter
+   der Stelle, an der der Stift in Mittelstellung ankommt.
+8. **Horn aufstecken** – der Arm zeigt zum Riegel, der Stift fällt in den
+   Querschlitz. Sitzt es um einen Zahn schief, wieder abziehen und neu
+   aufsetzen. Dann das **beiliegende Schräubchen in die Abtriebswelle
+   drehen**; ohne das rutscht das Horn nach ein paar Dutzend Schaltspielen
+   durch.
+9. **Von Hand prüfen, dann mit Strom.** Erst sanft am Horn drehen, gut 20° in
+   jede Richtung: Der Riegel muss ohne Haken laufen. Dann `z` und `a`, mit
+   `+`/`-` nachstellen, zum Schluss `d` (20 Zyklen). Ein Servo, das gegen einen
+   klemmenden Riegel drückt, zieht 700 mA, wird heiß und stirbt.
+10. **Deckel aufsetzen**, `z` – die Zunge darf sich nicht mehr herausziehen
+    lassen. `a` – sie geht frei.
 
 ## Verdrahtung
 
@@ -465,7 +504,7 @@ Beides ist bestimmt, und viel Spiel hieße dort nur, dass der Deckel wackelt.
 Dazu drei Fasen, die Maßabweichungen abfangen statt sie zu verbieten: ein
 Trichter am Schlitzmund, eine Anfasung an der Zungenspitze und eine rundum
 laufende Fase an der Riegelspitze. Und ein Freigang unter der Bohrung für den
-Mitnehmerstift – ohne ihn müsste die M3-Schraube auf ein Zehntel genau
+Mitnehmerstift – ohne ihn müsste die M2-Schraube auf ein Zehntel genau
 abgelängt werden.
 
 ## Maße nachrechnen
@@ -480,6 +519,13 @@ python3 pruefung.py
 Das rechnet die kritischen Beziehungen nach: ob der Riegel durch die Zunge
 geht **und** sie wieder freigibt, ob Stift und Querschlitz sich in beiden
 Endlagen treffen, ob das Servo hineinpasst, ohne die Wand zu durchbrechen.
+
+Seit dem 4. 10. rechnet sie außerdem mit OpenSCAD (`kollision.scad`) nach,
+ob sich Servorumpf, Laschen, Hornarm und Stift mit Körper oder Riegel
+schneiden – in beiden Endlagen. Diese Prüfung fehlte, als der erste Entwurf
+entstand; das Servo stand dort nur als Achse im Modell, und erst das
+gedruckte Prüfstück zeigte, dass sein Rumpf in der Riegelbahn stand. Mit
+`--schnell` lässt sie sich überspringen.
 
 Die Prüfung ist nicht Zierde. Beim Entwurf hat sie drei Fehler gefunden, die
 auf dem Bildschirm unsichtbar waren: eine Servotasche, die durch die

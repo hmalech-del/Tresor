@@ -4,8 +4,8 @@
  * Zeilenende egal):
  *
  *   m   Mitte (90 Grad) - zum Aufstecken des Horns, Riegel auf halbem Weg
- *   z   zu    (Mitte + 45 Grad)
- *   a   auf   (Mitte - 45 Grad)
+ *   z   zu    (Mitte + 23 Grad)
+ *   a   auf   (Mitte - 23 Grad)
  *   +   ein Grad weiter in Richtung "zu"   (Endlage nachstellen)
  *   -   ein Grad weiter in Richtung "auf"
  *   d   Dauertest: 20-mal zu und auf, mit Pause
@@ -23,7 +23,7 @@
 
 const int PIN = 18;
 const int MITTE = 90;
-const int SCHWENK = 45;          // wie schwenk in tresorbox.scad
+const int SCHWENK = 23;          // wie schwenk in tresorbox.scad (23,4 Grad)
 const int RICHTUNG = 1;          // -1, wenn "zu" und "auf" vertauscht sind
 const int SCHRITT_MS = 12;       // langsam fahren: Klemmt etwas, knallt es nicht
 

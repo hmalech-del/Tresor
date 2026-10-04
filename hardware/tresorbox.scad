@@ -95,15 +95,33 @@ riegel_b   = 14;             // Riegel: Breite (Y)
 riegel_h   = 8;              // Riegel: Hoehe (Z)
 riegel_l   = 40;             // Riegel: Laenge (X)
 
-/* ---------- Servo SG90 ---------- */
-servo_x = 23.2;
-servo_y = 12.4;
-servo_z = 23;
-servo_flansch_x = 32.5;
-servo_achse_versatz = 5.9;   // Achse vom Rand des Rumpfs
-stift_radius = 9;            // Lochabstand im Servohorn
-stift_d = 3;                 // M3-Schraube als Mitnehmer
-schwenk = 45;                // Servoausschlag in beide Richtungen
+/* ---------- Servo MG90S - am echten Teil gemessen (4. 10.) ----------
+ *
+ * Vorher standen hier Datenblattwerte eines SG90, und das Servo war nur als
+ * Achse modelliert. So fiel nicht auf, dass sein Rumpf in der Bahn des
+ * Riegels stand. Jetzt: gemessene Masse, und pruefung.py rechnet den Rumpf
+ * gegen den Riegel. */
+servo_x = 22;                // Rumpflaenge ohne Laschen
+servo_y = 12;                // Rumpfbreite
+servo_z = 22;                // Boden bis Gehaeuseoberkante, ohne Wellenaufbau
+servo_flansch_x = 32;        // ueber die Laschen
+servo_flansch_z = 17;        // Unterseite der Laschen ueber dem Boden
+servo_flansch_d = 2;         // Laschendicke
+servo_loch_abstand = 27.5;   // Schraubloecher der Laschen, Mitte zu Mitte (Datenblatt)
+servo_achse_versatz = 5;     // Wellenmitte von der schmalen Kante auf der Kabelseite
+horn_unterseite = 10.5;      // Arm-Unterseite ueber der Gehaeuseoberkante, aufgesteckt
+horn_arm = 18;               // Wellenmitte bis Armspitze
+horn_luft = 1.2;             // Arm ueber der Riegeloberkante
+/* Der Stift sitzt im aeussersten Loch des Horns, 16 mm von der Achse. Nur
+ * so weit reicht der Arm am Rumpf vorbei bis zur Riegelmitte (siehe
+ * servo_achse_y). Eine M2-Schraube statt M3: Der Arm ist 2 mm duenn, ein
+ * 3-mm-Loch liesse an der Spitze kaum Material. Das 1-mm-Loch auf 1,6 mm
+ * aufbohren, die Schraube schneidet ihr Gewinde selbst. */
+stift_radius = 16;
+stift_d = 2;
+/* Der Hub soll 12,7 mm bleiben: 2 x 16 x sin(23,4) = 12,71. Als Zahl
+ * eingetragen, damit pruefung.py und kurbelschleife.py sie lesen koennen. */
+schwenk = 23.4;
 
 /* Der Hub ergibt sich aus der Kurbel, nicht umgekehrt. */
 riegel_weg = 2 * stift_radius * sin(schwenk);   // 12,7 mm
@@ -147,21 +165,30 @@ aussen_z = innen_z + boden;
 block_y   = 38;              // Tiefe des Blocks: Zunge plus Servorumpf
 block_b   = 96;
 riegel_z  = 28;              // Hoehe der Riegelachse ueber dem Boden
-zunge_y   = 20;              // Mitte der Zunge, von der Innenwand aus
+zunge_y   = 23;              // Mitte der Zunge, von der Innenwand aus
 
 /* Zwei Bedingungen bestimmen die Servoachse.
  *
- * Kinematik: Der Stift sitzt 9 mm von der Achse und schwenkt +-45 Grad. Sein
- * Abstand zur Achse in y schwankt dabei zwischen 6,4 und 9 mm - die Achse
- * liegt also 7,7 mm vor der Riegelmitte, dann bleibt er im Querschlitz.
+ * Kinematik: Der Stift sitzt 16 mm von der Achse und schwenkt +-23,4 Grad.
+ * Sein Abstand zur Achse in y schwankt dabei zwischen 14,7 und 16 mm - die
+ * Achse liegt also 15,3 mm vor der Riegelmitte, dann bleibt er im
+ * Querschlitz.
  *
- * Platz: Der Rumpf ist 12,4 mm tief. Beim ersten Entwurf lag die Zunge 9 mm
- * hinter der Wand, die Achse damit bei 1,3 - die Tasche brach durch die
- * Vorderwand. Deshalb sitzt die Zunge 20 mm tief. */
+ * Platz: Der Rumpf ist 12 mm breit und reicht bis knapp unter den Riegel.
+ * Er muss deshalb ganz neben ihm stehen: 6 mm halbe Rumpfbreite, 7 mm halbe
+ * Riegelbreite, dazwischen Spiel und eine Wand. Im ersten Entwurf (Stift bei
+ * 9 mm, +-45 Grad) lag die Achse nur 7,7 mm neben der Riegelmitte - der
+ * Rumpf ragte 5,5 mm in die Riegelbahn. Erst das gedruckte Pruefstueck hat
+ * es gezeigt.
+ *
+ * Vorn darf die Tasche nicht durch die Wand brechen. Deshalb sitzt die
+ * Zunge 23 mm tief (vorher 20). */
 servo_achse_x = -30;
 servo_achse_y = zunge_y - (stift_radius * (1 + cos(schwenk)) / 2);
-servo_oben    = riegel_z + 3;   // Oberkante Servo: das Horn liegt knapp
-                                // ueber dem Querschlitz des Riegels
+/* Hoehe: Der Hornarm muss ueber den Riegel hinweg, mit horn_luft Abstand. */
+servo_oben    = riegel_z + riegel_h / 2 + horn_luft - horn_unterseite;
+servo_unten   = servo_oben - servo_z;
+servo_mitte_x = servo_achse_x - servo_achse_versatz + servo_x / 2;
 
 /* Die Bohrung ist unten knapp und oben weit.
  *
@@ -181,6 +208,8 @@ bohrung_z0 = riegel_z - riegel_h / 2 - spiel_riegel / 2;   // Unterkante
  * hier zunge_d/2 + 7 - dann blieben offen 0,3 mm Luft vor der Zunge, und der
  * Deckel waere nicht abgegangen. */
 riegel_spitze_zu = zunge_d / 2 + 3.5;
+/* Bis hierher (x) ist die Bohrung links der Zunge oben offen, siehe koerper(). */
+einlege_ende = -(zunge_d / 2 + 5);
 schlitz_von_links = riegel_l - (riegel_spitze_zu - servo_achse_x) + stift_radius * sin(schwenk);
 
 /* ---------- Gemeinsame Aussparungen ----------
@@ -243,21 +272,52 @@ module koerper() {
     zungenschlitz_cut();
     // Links offen, damit sich der Riegel von innen einschieben laesst
     bohrung_cut(-block_b/2 - 1, block_b/2 + riegel_spitze_zu + 4);
+    /* Einlegerinne: Links der Zunge ist die Bohrung nach oben offen.
+     *
+     * Vorher war sie ein geschlossener Tunnel, der am linken Blockende
+     * begann - "von innen links einschieben" hiess es. Dort sind zwischen
+     * Block und Wand aber nur 12 mm Platz, und der Riegel ist 40 mm lang.
+     * In der fertigen Kiste haette er sich nie einsetzen lassen.
+     *
+     * Die Decke braucht es nur an der Zunge: Zieht jemand am Deckel, drueckt
+     * die Zunge den Riegel nach oben, und links wie rechts von ihr muss er
+     * sich an der Decke abstuetzen. Weiter links traegt sie nichts. Der
+     * Riegel wird von oben in die Rinne gelegt und nach rechts in den kurzen
+     * Tunnel geschoben; die untere Haelfte der Bohrung fuehrt ihn weiter. */
+    translate([-block_b/2 - 1, wand + zunge_y - bohrung_b/2, boden + riegel_z])
+      cube([block_b/2 + 1 + einlege_ende, bohrung_b, innen_z]);
 
-    // Servotasche, nach oben offen
+    // Servotasche, nach oben offen: Rumpf von oben einsetzen
     translate([servo_achse_x - servo_achse_versatz - spiel_servo,
-               wand + servo_achse_y - servo_y/2 - spiel_servo, boden + servo_oben - servo_z])
-      cube([servo_x + 2*spiel_servo, servo_y + 2*spiel_servo, servo_z + 30]);
+               wand + servo_achse_y - servo_y/2 - spiel_servo, boden + servo_unten])
+      cube([servo_x + 2*spiel_servo, servo_y + 2*spiel_servo, innen_z]);
+    /* Die Laschen liegen auf einer Stufe; gehalten wird das Servo von den
+     * zwei Schrauben, die mitgeliefert werden. */
+    translate([servo_mitte_x - servo_flansch_x/2 - spiel_servo,
+               wand + servo_achse_y - servo_y/2 - spiel_servo, boden + servo_unten + servo_flansch_z])
+      cube([servo_flansch_x + 2*spiel_servo, servo_y + 2*spiel_servo, innen_z]);
+    for (s = [-1, 1])
+      translate([servo_mitte_x + s * servo_loch_abstand/2, wand + servo_achse_y,
+                 boden + servo_unten + servo_flansch_z - 6])
+        cylinder(d = 1.6, h = 7);
+    /* Das Kabel kommt an der Wellenseite heraus, 4 mm ueber dem Boden. Ein
+     * Schlitz an dieser Stirnseite fuehrt es nach oben. */
+    translate([servo_achse_x - servo_achse_versatz - spiel_servo - 3,
+               wand + servo_achse_y - 2.5, boden + servo_unten])
+      cube([3.1, 5, innen_z]);
 
-    // Freiraum fuer Horn und Stift
-    translate([servo_achse_x, wand + servo_achse_y, boden + riegel_z - riegel_h/2 - 1])
-      cylinder(r = stift_radius + 4, h = 30);
-
-    // Auflage fuer die Schraubflansche
-    for (dx = [-servo_flansch_x/2, servo_flansch_x/2])
-      translate([servo_achse_x - servo_achse_versatz + servo_x/2 + dx - 3,
-                 wand + servo_achse_y - servo_y/2 - 2, boden + servo_oben - 4.5])
-        cube([6, servo_y + 4, 3]);
+    /* Freiraum fuer den Hornarm: ein Faecher, nicht ein Kreis. Der Arm ist
+     * 18 mm lang und schwenkt nur +-23,4 Grad zum Riegel hin; ein voller
+     * Kreis wuerde die Vorderwand anschneiden. Der Rand ist reichlich, weil
+     * der Arm an der Nabe breiter ist. Er beginnt auf halber Riegelhoehe:
+     * Darunter fuehrt die Bohrung den Riegel weiter. */
+    translate([servo_achse_x, wand + servo_achse_y, boden + riegel_z])
+      linear_extrude(innen_z)
+        union() {
+          circle(r = 6.5);
+          polygon(concat([[0, 0]], [for (w = [90 - schwenk - 25 : 4 : 90 + schwenk + 25.1])
+            [(horn_arm + 2) * cos(w), (horn_arm + 2) * sin(w)]]));
+        }
 
     // Kabeldurchlass in der rechten Wand, auf Hoehe der USB-Buchse und in
     // einer Flucht mit ihr. Vorher sass er in der Rueckwand - der Stecker
@@ -390,21 +450,24 @@ module pruefriegel() {
 
 module pruefstueck() {
   scheibe = zunge_b + 12;
-  schnitt_z = boden + bohrung_z0 - 6;
-  /* Ausschnitt des Blocks um Zunge und Riegelbohrung, unten abgeschnitten
-   * und auf null gesetzt - ein Ausschnitt behaelt sonst seine urspruengliche
-   * Hoehe und schwebt im Slicer 20 mm ueber der Platte. */
+  /* Volle Blockhoehe, vom Innenboden an: Das Servo haengt mit seinem Rumpf
+   * bis fast auf den Boden. Frueher war das Stueck nur 21 mm hoch - die
+   * Laschenauflage waere dabei abgeschnitten worden. */
+  schnitt_z = boden;
+  vorn  = wand + servo_achse_y - servo_y/2 - spiel_servo - 3;          // 3 mm Wand vor der Tasche
+  links = servo_mitte_x - servo_flansch_x/2 - spiel_servo - 3;         // 3 mm hinter der Laschenauflage
+  /* Ausschnitt des Blocks um Servo, Zunge und Riegelbohrung, auf null
+   * gesetzt - ein Ausschnitt behaelt sonst seine urspruengliche Hoehe und
+   * schwebt im Slicer ueber der Platte. Er enthaelt die ganze Servotasche
+   * mit Laschenauflage und Kabelschlitz: Klone streuen, und das merkt man
+   * lieber am Pruefstueck als an der fertigen Kiste. */
   translate([0, 0, -schnitt_z])
-    difference() {
-      intersection() {
-        koerper();
-        /* Reicht bis hinter die Servotasche: So laesst sich auch das Servo
-         * probehalber einsetzen. Klone streuen um bis zu drei Zehntel, und
-         * das merkt man lieber am Pruefstueck als an der fertigen Kiste. */
-        translate([servo_achse_x - servo_achse_versatz - 8, wand + zunge_y - scheibe/2, boden])
-          cube([(riegel_spitze_zu + 10) - (servo_achse_x - servo_achse_versatz - 8), scheibe, innen_z]);
-      }
-      translate([-60, -10, 0]) cube([200, 200, schnitt_z]);
+    intersection() {
+      koerper();
+      /* Nur bis zur Blockoberkante: Darueber stuende sonst ein duenner
+       * Streifen der Kistenwand hoch. */
+      translate([links, vorn, boden])
+        cube([(riegel_spitze_zu + 10) - links, wand + zunge_y + scheibe/2 - vorn, innen_z - rand_h - 2]);
     }
   /* Riegel und Zunge liegen daneben, mit Abstand zur Hinterkante des
    * Ausschnitts - nicht zu scheibe gerechnet. Der Ausschnitt beginnt bei
@@ -449,4 +512,4 @@ else if (teil == "mechanik") mechanik();
 else if (teil == "koerper") koerper();
 else if (teil == "deckel") deckel();
 else if (teil == "riegel") riegel();
-else baugruppe();
+else if (teil == "alles") baugruppe();   // "nichts": fuer kollision.scad
