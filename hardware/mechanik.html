@@ -1,0 +1,409 @@
+<title>Tresorbox-Verschluss</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600&family=Archivo+Narrow:wght@600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: Werkstattblatt - Steuerleiste oben, darunter Draufsicht und Schnitt
+   uebereinander, beide im selben Massstab (1 mm = 8 Einheiten), Erklaerung daneben. */
+:root {
+  --papier: #f3f4f1;
+  --flaeche: #e2e5df;
+  --block: #cfd4cb;
+  --schnitt: #b7beb3;
+  --tinte: #20251f;
+  --leise: #5d665b;
+  --linie: #8a9387;
+  --messing: #c9952b;
+  --messing-kante: #8a6414;
+  --servo: #6b3f8f;
+  --servo-hell: #9d77bd;
+  --horn: #1c1c1c;
+  --stahl: #9aa3ad;
+  --zunge: #3f7fb5;
+  --kraft: #c8452d;
+  --gut: #2f7d4f;
+  --anzeige: #ffffff;
+  --display: "Archivo Narrow", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --text: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --zahl: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --papier: #161a17; --flaeche: #20261f; --block: #2d342c; --schnitt: #3b4439;
+    --tinte: #e6ebe3; --leise: #a3ad9f; --linie: #6f796c;
+    --messing: #d9a640; --messing-kante: #f0c66e; --servo: #8b5db0; --servo-hell: #b591d3;
+    --horn: #0a0a0a; --stahl: #b9c2cc; --zunge: #5f9fd6; --kraft: #ec6b52; --gut: #5cbf85;
+    --anzeige: #1d221c; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --papier: #161a17; --flaeche: #20261f; --block: #2d342c; --schnitt: #3b4439;
+  --tinte: #e6ebe3; --leise: #a3ad9f; --linie: #6f796c;
+  --messing: #d9a640; --messing-kante: #f0c66e; --servo: #8b5db0; --servo-hell: #b591d3;
+  --horn: #0a0a0a; --stahl: #b9c2cc; --zunge: #5f9fd6; --kraft: #ec6b52; --gut: #5cbf85;
+  --anzeige: #1d221c; color-scheme: dark;
+}
+body { background: var(--papier); color: var(--tinte); font: 15px/1.55 var(--text); }
+.blatt { max-width: 1120px; margin: 0 auto; padding-inline: 16px; padding-block: 24px 48px; display: grid; gap: 22px; }
+h1 { font: 700 clamp(26px, 4vw, 36px)/1.1 var(--display); letter-spacing: .01em; margin: 0; text-wrap: balance; }
+.kopf p { margin: 6px 0 0; color: var(--leise); max-width: 68ch; }
+.steuer { display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: center; background: var(--anzeige);
+  border: 1px solid var(--linie); border-radius: 6px; padding: 14px 16px; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 2; }
+.regler { display: grid; gap: 4px; flex: 1 1 260px; min-width: 0; }
+.regler label { font: 600 12px var(--text); text-transform: uppercase; letter-spacing: .08em; color: var(--leise); }
+.regler input { width: 100%; accent-color: var(--messing); }
+.enden { display: flex; justify-content: space-between; font: 12px var(--zahl); color: var(--leise); }
+.knoepfe { display: flex; gap: 8px; flex-wrap: wrap; }
+button { font: 600 14px var(--text); padding: 8px 14px; border-radius: 4px; border: 1px solid var(--linie);
+  background: var(--papier); color: var(--tinte); cursor: pointer; }
+button:hover { border-color: var(--tinte); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--zunge); outline-offset: 2px; }
+button[aria-pressed="true"] { background: var(--tinte); color: var(--papier); }
+.werte { display: flex; gap: 18px; flex-wrap: wrap; font: 13px var(--zahl); font-variant-numeric: tabular-nums; }
+.werte div { display: grid; gap: 1px; }
+.werte span:first-child { font: 600 11px var(--text); text-transform: uppercase; letter-spacing: .08em; color: var(--leise); }
+.zustand { font: 700 15px var(--display); letter-spacing: .03em; padding: 3px 10px; border-radius: 3px; border: 1.5px solid currentColor; }
+.zustand.zu { color: var(--gut); } .zustand.auf { color: var(--zunge); } .zustand.halb { color: var(--kraft); }
+.ansichten { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 300px); gap: 18px 28px; align-items: start; }
+@media (max-width: 820px) { .ansichten { grid-template-columns: minmax(0, 1fr); } }
+figure { margin: 0; display: grid; gap: 8px; min-width: 0; }
+.zeichnung { overflow-x: auto; background: var(--flaeche); border: 1px solid var(--linie); border-radius: 6px; }
+.zeichnung svg { display: block; width: 100%; min-width: 520px; height: auto; }
+figcaption { font-size: 13px; color: var(--leise); max-width: 70ch; }
+figcaption strong { color: var(--tinte); font-weight: 600; }
+.ansicht-titel { font: 700 13px var(--display); text-transform: uppercase; letter-spacing: .1em; color: var(--leise); margin: 0; }
+aside { display: grid; gap: 16px; min-width: 0; }
+aside h2 { font: 700 18px var(--display); margin: 0 0 4px; }
+aside ol { margin: 0; padding-left: 20px; display: grid; gap: 8px; font-size: 14px; }
+aside p { margin: 0; font-size: 14px; }
+.notiz { border-left: 3px solid var(--kraft); padding-left: 10px; }
+/* Zeichnung */
+.papier { fill: var(--flaeche); }
+.blockflaeche { fill: var(--block); stroke: var(--linie); stroke-width: 1; }
+.ausschnitt { fill: var(--schnitt); stroke: var(--linie); stroke-width: 1; }
+.offen { fill: var(--flaeche); stroke: var(--linie); stroke-width: 1; }
+.tunnel { fill: none; stroke: var(--leise); stroke-width: 1.2; stroke-dasharray: 5 4; }
+.wand { fill: var(--schnitt); stroke: var(--linie); }
+.servo { fill: var(--servo); }
+.lasche { fill: var(--servo-hell); }
+.servo-hinten { fill: none; stroke: var(--servo); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.riegel { fill: var(--messing); stroke: var(--messing-kante); stroke-width: 1.2; }
+.schlitz { fill: var(--flaeche); stroke: var(--messing-kante); stroke-width: 1; }
+.zunge { fill: var(--zunge); fill-opacity: .28; stroke: var(--zunge); stroke-width: 1.6; }
+.zunge-voll { fill: var(--zunge); fill-opacity: .55; stroke: var(--zunge); stroke-width: 1.4; }
+.horn { fill: var(--horn); }
+.stift { fill: var(--stahl); stroke: var(--tinte); stroke-width: .8; }
+.bahn { fill: none; stroke: var(--leise); stroke-width: 1; stroke-dasharray: 2 4; }
+.mass { stroke: var(--leise); stroke-width: 1; fill: none; }
+.beschrift { fill: var(--tinte); font: 600 12px var(--text); }
+.klein { fill: var(--leise); font: 11px var(--text); }
+.zahl-svg { fill: var(--tinte); font: 600 11px var(--zahl); }
+.leiter { stroke: var(--leise); stroke-width: .8; fill: none; }
+.kraftpfeil { stroke: var(--kraft); stroke-width: 2.4; fill: none; }
+.kraftspitze { fill: var(--kraft); }
+.kraft-text { fill: var(--kraft); font: 700 12px var(--text); }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<main class="blatt">
+  <header class="kopf">
+    <h1>Tresorbox-Verschluss</h1>
+    <p>So wird aus dem Drehen des Servos ein Schieben des Riegels – maßstäblich aus dem OpenSCAD-Modell, mit den an deinem MG90S gemessenen Maßen. Zieh am Regler oder spiel die Bewegung ab.</p>
+  </header>
+
+  <section class="steuer" aria-label="Servo bewegen">
+    <div class="regler">
+      <label for="winkel">Servowinkel aus der Mitte</label>
+      <input id="winkel" type="range" min="-23.4" max="23.4" step="0.1" value="23.4">
+      <div class="enden"><span>−23,4° auf</span><span>0° Mitte</span><span>+23,4° zu</span></div>
+    </div>
+    <div class="knoepfe">
+      <button id="k-auf" type="button">Auf</button>
+      <button id="k-zu" type="button">Zu</button>
+      <button id="k-spiel" type="button" aria-pressed="false">Abspielen</button>
+    </div>
+    <div class="werte" aria-live="polite">
+      <div><span>Winkel</span><span id="w-winkel">+23,4°</span></div>
+      <div><span>Riegelspitze</span><span id="w-spitze">+6,5 mm</span></div>
+      <div><span>Stift quer</span><span id="w-quer">−0,7 mm</span></div>
+      <div><span>Zustand</span><span id="w-zustand" class="zustand zu">verriegelt</span></div>
+    </div>
+  </section>
+
+  <div class="ansichten">
+    <div style="display:grid;gap:22px;min-width:0">
+      <figure>
+        <p class="ansicht-titel">Draufsicht – Deckel abgenommen</p>
+        <div class="zeichnung"><svg id="oben" viewBox="0 0 640 400" role="img"
+          aria-label="Draufsicht: Das Servo steht vorn neben dem Riegel. Sein Hornarm greift über den Riegel, der Stift sitzt im Querschlitz. Dreht das Horn, schiebt der Stift den Riegel durch die Zunge."></svg></div>
+        <figcaption><strong>Der Stift läuft auf einem Kreis</strong> (gepunktet, 16 mm Radius). Längs schiebt er den Riegel um 12,7 mm, quer gleitet er nur 1,3 mm im Querschlitz auf und ab – deshalb nimmt der Riegel nur die Längsbewegung mit. Die Zunge (blau) hängt am Deckel; der Riegel fährt durch das Loch in ihr.</figcaption>
+      </figure>
+      <figure>
+        <p class="ansicht-titel">Schnitt durch die Riegelmitte – von vorn</p>
+        <div class="zeichnung"><svg id="schnitt" viewBox="0 0 640 460" role="img"
+          aria-label="Schnitt von vorn: Der Riegel liegt in der Bohrung, die Zunge hängt vom Deckel hinein. Das Servo steht davor, sein Arm liegt über dem Riegel, der Stift reicht von oben durch den Querschlitz. Beim Ziehen am Deckel stützt sich der Riegel an der Tunneldecke ab."></svg></div>
+        <figcaption><strong>Gestrichelt: das Servo</strong> – es steht vor der Schnittebene, neben dem Riegel. Sein Arm liegt 1,2 mm über dem Riegel, der Stift greift von oben durch den Querschlitz. <strong>Rote Pfeile</strong> (nur verriegelt): Zieht jemand am Deckel, drückt die Zunge den Riegel gegen die Tunneldecke. Die Kraft endet im Block, das Servo trägt nichts.</figcaption>
+      </figure>
+    </div>
+    <aside>
+      <div>
+        <h2>Was passiert</h2>
+        <ol>
+          <li>Das Servo dreht sein Horn um höchstens 23,4° aus der Mitte.</li>
+          <li>Der M2-Stift im äußersten Hornloch beschreibt dabei einen Kreisbogen.</li>
+          <li>Der Querschlitz im Riegel nimmt nur den Längsanteil mit: Der Riegel fährt 12,7 mm.</li>
+          <li>Zu: Die Spitze steckt 3,5 mm hinter der Zunge. Auf: Sie steht 3,2 mm davor, die Zunge hebt sich frei.</li>
+        </ol>
+      </div>
+      <div>
+        <h2>Warum so</h2>
+        <p>Das Servo-Gehäuse ist 12 mm breit und reicht bis knapp unter den Riegel. Es muss deshalb ganz neben ihm stehen – die Achse 15,3 mm von der Riegelmitte. So weit reicht nur das äußerste Hornloch; mit dem langen Hebel genügt ein kleiner Schwenk.</p>
+      </div>
+      <p class="notiz">Links der Zunge ist die Bohrung oben offen (Rinne): Dort wird der Riegel eingelegt. Die Decke braucht es nur an der Zunge – dort, wo sich der Riegel beim Ziehen abstützt.</p>
+      <p class="notiz">Das Servokabel läuft unten aus dem Block: durch einen kurzen Kanal unter der linken Lasche (gestrichelt), dann im offenen Schlitz zum linken Blockende. Nach oben ginge es nicht – dort sitzt die Lasche mit ihrer Schraube.</p>
+    </aside>
+  </div>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  var NS = 'http://www.w3.org/2000/svg';
+  /* Masse aus tresorbox.scad (mm, relativ zur vorderen Innenwand und zum Innenboden) */
+  var M = {
+    r: 16, schwenk: 23.4, achse: [-30, 7.66], zungeY: 23,
+    riegelL: 40, riegelB: 14, riegelZ: 28, riegelH: 8, spitzeZuStift: 30.15,
+    schlitzX: 2.6, schlitzY: 7.6,
+    servo: [-35, -13, 1.66, 13.66], lasche: [-40, -8], servoUnten: 0.7, servoOben: 22.7,
+    laschenZ: [17.7, 19.7], armZ: [33.2, 35.2], hornArm: 18,
+    blockL: -48, blockOben: 39, deckelU: 45,
+    bohrung: [15.65, 30.35], bohrungZ: [23.825, 32.975], tunnelBis: 10.5, rinneBis: -8,
+    zunge: [-3, 3, 11, 35], zungeZ: [15, 45], lochZ: [23.5, 32.5], zungenSchlitz: [-3.5, 3.5, 10.5, 35.5, 12],
+    freigang: [-38.35, -21.65, 20.825, 24.825]
+  };
+  var K = 8;                        // 1 mm = 8 Einheiten
+  var X0 = -54;                     // linker Rand der Zeichnung in mm
+  function X(x) { return (x - X0) * K; }
+  function Yo(y) { return (42 - y) * K; }   // Draufsicht: hinten oben
+  function Zs(z) { return (54 - z) * K; }   // Schnitt: oben oben
+
+  function el(name, attrs, eltern) {
+    var e = document.createElementNS(NS, name);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    if (eltern) eltern.appendChild(e);
+    return e;
+  }
+  function rechteck(svg, x1, x2, y1, y2, cls, f) {
+    var a = f(y1), b = f(y2);
+    return el('rect', { x: X(x1), y: Math.min(a, b), width: (x2 - x1) * K, height: Math.abs(a - b), 'class': cls }, svg);
+  }
+  function text(svg, x, y, t, cls, anker) {
+    var e = el('text', { x: x, y: y, 'class': cls || 'beschrift', 'text-anchor': anker || 'start' }, svg);
+    e.textContent = t; return e;
+  }
+  function leiter(svg, x1, y1, x2, y2) { el('line', { x1: x1, y1: y1, x2: x2, y2: y2, 'class': 'leiter' }, svg); }
+  function pfeil(svg, x1, y1, x2, y2) {
+    var g = el('g', {}, svg);
+    el('line', { x1: x1, y1: y1, x2: x2, y2: y2, 'class': 'kraftpfeil' }, g);
+    var w = Math.atan2(y2 - y1, x2 - x1), s = 9;
+    el('polygon', { points: [x2, y2, x2 - s * Math.cos(w - .45), y2 - s * Math.sin(w - .45), x2 - s * Math.cos(w + .45), y2 - s * Math.sin(w + .45)].join(' '), 'class': 'kraftspitze' }, g);
+    return g;
+  }
+
+  /* ---------- Draufsicht ---------- */
+  var oben = document.getElementById('oben');
+  el('rect', { x: 0, y: 0, width: 640, height: 400, 'class': 'papier' }, oben);
+  rechteck(oben, X0, 26, -3, 0, 'wand', Yo);                                   // Vorderwand
+  text(oben, X(-52), Yo(-1.2) + 4, 'Vorderwand', 'klein');
+  rechteck(oben, M.blockL, 26, 0, 38, 'blockflaeche', Yo);                    // Verschlussblock
+  text(oben, X(25), Yo(2.2), 'Verschlussblock', 'klein', 'end');
+  // Rinne (offen) und Tunnel (Decke)
+  rechteck(oben, M.blockL - 1, M.rinneBis, M.bohrung[0], M.bohrung[1], 'offen', Yo);
+  rechteck(oben, M.rinneBis, M.tunnelBis, M.bohrung[0], M.bohrung[1], 'tunnel', Yo);
+  // Hornfreiraum (Faecher)
+  (function () {
+    var p = [X(M.achse[0]) + ',' + Yo(M.achse[1])];
+    for (var w = -48.4; w <= 48.41; w += 4) {
+      var rad = w * Math.PI / 180;
+      p.push(X(M.achse[0] + 20 * Math.sin(rad)) + ',' + Yo(M.achse[1] + 20 * Math.cos(rad)));
+    }
+    el('polygon', { points: p.join(' '), 'class': 'offen' }, oben);
+  })();
+  // Servotasche, Laschenstufe, Kabelschlitz, Zungenschlitz
+  rechteck(oben, -40.4, -7.6, 1.26, 14.06, 'ausschnitt', Yo);
+  rechteck(oben, M.blockL - 1, -41.5, 3.16, 12.16, 'offen', Yo);                      // Kabelschlitz, oben offen
+  rechteck(oben, M.zungenSchlitz[0], M.zungenSchlitz[1], M.zungenSchlitz[2], M.zungenSchlitz[3], 'ausschnitt', Yo);
+  // Servo
+  rechteck(oben, M.lasche[0], M.lasche[1], M.servo[2], M.servo[3], 'lasche', Yo);
+  rechteck(oben, M.servo[0], M.servo[1], M.servo[2], M.servo[3], 'servo', Yo);
+  rechteck(oben, -41.5, -35.4, 3.16, 12.16, 'tunnel', Yo);                            // Kabelkanal unter der Lasche
+  el('path', { d: 'M' + X(-35.2) + ' ' + Yo(7.66) + ' H' + X(-52.5), 'class': 'leiter', 'stroke-width': 2.4, stroke: 'var(--leise)' }, oben); // das Kabel
+  text(oben, X(-20), Yo(5.4), 'Servo MG90S', 'beschrift', 'middle').setAttribute('style', 'fill:#fff');
+  // Stiftbahn
+  (function () {
+    var a = -M.schwenk * Math.PI / 180, b = M.schwenk * Math.PI / 180;
+    var p1 = [X(M.achse[0] + M.r * Math.sin(a)), Yo(M.achse[1] + M.r * Math.cos(a))];
+    var p2 = [X(M.achse[0] + M.r * Math.sin(b)), Yo(M.achse[1] + M.r * Math.cos(b))];
+    el('path', { d: 'M' + p1 + ' A' + M.r * K + ' ' + M.r * K + ' 0 0 1 ' + p2, 'class': 'bahn' }, oben);
+  })();
+  // bewegliche Teile
+  var oRiegel = el('g', {}, oben);
+  var oRiegelForm = el('polygon', { 'class': 'riegel' }, oRiegel);
+  var oSchlitz = el('rect', { 'class': 'schlitz' }, oRiegel);
+  var oRiegelText = text(oRiegel, 0, Yo(M.zungeY) + 4, 'Riegel', 'beschrift', 'middle');
+  el('rect', { x: X(M.zunge[0]), y: Yo(M.zunge[3]), width: 6 * K, height: 24 * K, 'class': 'zunge' }, oben);
+  var oArm = el('polygon', { 'class': 'horn' }, oben);
+  el('circle', { cx: X(M.achse[0]), cy: Yo(M.achse[1]), r: 3.5 * K, 'class': 'horn' }, oben);
+  el('circle', { cx: X(M.achse[0]), cy: Yo(M.achse[1]), r: 1.2 * K, 'class': 'stift' }, oben);
+  var oStift = el('circle', { r: 1.9 * K, 'class': 'stift' }, oben);
+  // Beschriftungen
+  text(oben, X(6), Yo(39.4), 'Zunge – hängt am Deckel', 'beschrift');
+  leiter(oben, X(5.6), Yo(39.6), X(2.4), Yo(34.6));
+  text(oben, X(-47), Yo(33.6), 'Rinne – oben offen', 'klein');
+  text(oben, X(11.5), Yo(24), 'Tunnel mit Decke', 'klein');
+  leiter(oben, X(11.3), Yo(23.4), X(7.5), Yo(23.4));
+  text(oben, X(-52), Yo(-3) + 18, 'Servohorn mit Stift', 'beschrift');
+  leiter(oben, X(-45), Yo(-3) + 6, X(-31.5), Yo(5.5));
+  text(oben, X(-53.4), Yo(15.4), 'Kabel', 'klein');
+  text(oben, X(-53.4), Yo(15.4) + 13, 'nach links', 'klein');
+  text(oben, X(-12.6), Yo(7.66) + 4, 'Lasche', 'klein');
+  text(oben, X(-6), Yo(-3) + 18, 'gepunktet: Stiftbahn, r = 16 mm, ±23,4°', 'klein');
+  // Massstab
+  el('line', { x1: X(-52), y1: 392, x2: X(-42), y2: 392, 'class': 'mass' }, oben);
+  text(oben, X(-41), 396, '10 mm', 'klein');
+
+  /* ---------- Schnitt ---------- */
+  var s = document.getElementById('schnitt');
+  el('rect', { x: 0, y: 0, width: 640, height: 460, 'class': 'papier' }, s);
+  rechteck(s, X0, 26, -3, 0, 'wand', Zs);                                    // Boden
+  text(s, X(-53), Zs(-1.4) + 4, 'Boden', 'klein');
+  // Block mit Aussparungen (als Flaechen gezeichnet)
+  rechteck(s, M.blockL, 26, 0, M.blockOben, 'blockflaeche', Zs);
+  rechteck(s, M.blockL - 1, M.tunnelBis, M.bohrungZ[0], M.bohrungZ[1], 'offen', Zs);    // Bohrung
+  rechteck(s, M.blockL - 1, M.rinneBis, M.riegelZ, M.blockOben, 'offen', Zs);           // Rinne oben offen
+  rechteck(s, M.zungenSchlitz[0], M.zungenSchlitz[1], M.zungenSchlitz[4], M.blockOben, 'offen', Zs); // Zungenschlitz
+  rechteck(s, M.freigang[0], M.freigang[1], M.freigang[2], M.freigang[3], 'offen', Zs);  // Freigang fuer den Stift
+  text(s, X(-47), Zs(37), 'Rinne – oben offen', 'klein');
+  text(s, X(-7.5), Zs(35.4), 'Decke', 'klein');
+  text(s, X(-30), Zs(20.4) + 12, 'Freigang', 'klein', 'middle');
+  // Deckel und Zunge
+  var sDeckel = el('g', {}, s);
+  rechteck(sDeckel, -20, 26, M.deckelU, M.deckelU + 3, 'zunge-voll', Zs);
+  var zungeForm = el('path', { 'class': 'zunge-voll', 'fill-rule': 'evenodd',
+    d: 'M' + X(-3) + ' ' + Zs(45) + ' H' + X(3) + ' V' + Zs(15 + 2.4) + ' L' + X(3 - 1.2) + ' ' + Zs(15) + ' H' + X(-3 + 1.2) + ' L' + X(-3) + ' ' + Zs(17.4) + ' Z' +
+       ' M' + X(-3) + ' ' + Zs(M.lochZ[1]) + ' H' + X(3) + ' V' + Zs(M.lochZ[0]) + ' H' + X(-3) + ' Z' }, sDeckel);
+  text(s, X(4.5), Zs(46.2), 'Deckel', 'beschrift');
+  text(s, X(4.5), Zs(19), 'Zunge', 'beschrift');
+  // Servo davor (gestrichelt)
+  rechteck(s, M.servo[0], M.servo[1], M.servoUnten, M.servoOben, 'servo-hinten', Zs);
+  rechteck(s, M.lasche[0], M.lasche[1], M.laschenZ[0], M.laschenZ[1], 'servo-hinten', Zs);
+  text(s, X(-24), Zs(9), 'Servo', 'beschrift', 'middle').setAttribute('style', 'fill:var(--servo)');
+  text(s, X(-24), Zs(9) + 15, 'steht davor', 'klein', 'middle');
+  el('rect', { x: X(-31.6), y: Zs(M.armZ[0]), width: 3.2 * K, height: (M.armZ[0] - M.servoOben) * K, 'class': 'horn', opacity: .35 }, s);
+  // bewegliche Teile
+  var sRiegel = el('g', {}, s);
+  var sRiegelForm = el('path', { 'class': 'riegel', 'fill-rule': 'evenodd' }, sRiegel);
+  var sArm = el('rect', { 'class': 'horn', y: Zs(M.armZ[1]), height: 2 * K }, s);
+  var sStift = el('rect', { 'class': 'stift', y: Zs(35.2), height: 12 * K, width: 2 * K }, s);
+  var sKopf = el('rect', { 'class': 'stift', y: Zs(36.8), height: 1.6 * K, width: 3.8 * K }, s);
+  text(s, X(-46), Zs(41.2) + 4, 'Hornarm, 1,2 mm über dem Riegel', 'klein');
+  // Kraftweg (nur zu)
+  var kraft = el('g', {}, s);
+  pfeil(kraft, X(0), Zs(48.4), X(0), Zs(53.4));
+  text(kraft, X(1.4), Zs(50.6), 'Zug am Deckel', 'kraft-text');
+  pfeil(kraft, X(-5.8), Zs(31), X(-5.8), Zs(34.6));
+  pfeil(kraft, X(5.2), Zs(31), X(5.2), Zs(34.6));
+  text(kraft, X(8), Zs(36.4), 'Riegel stützt sich', 'kraft-text');
+  text(kraft, X(8), Zs(36.4) + 14, 'an der Decke ab', 'kraft-text');
+  // Massstab
+  el('line', { x1: X(-52), y1: 452, x2: X(-42), y2: 452, 'class': 'mass' }, s);
+  text(s, X(-41), 456, '10 mm', 'klein');
+
+  /* ---------- Bewegung ---------- */
+  var regler = document.getElementById('winkel');
+  function zahl(v, n) { return (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(n).replace('.', ','); }
+
+  function setze(theta) {
+    var w = theta * Math.PI / 180;
+    var px = M.achse[0] + M.r * Math.sin(w), py = M.achse[1] + M.r * Math.cos(w);
+    var spitze = px + M.spitzeZuStift, ende = spitze - M.riegelL;
+    var y1 = M.zungeY - M.riegelB / 2, y2 = M.zungeY + M.riegelB / 2, f = 1.5;
+    // Draufsicht: Riegel mit Fase an der Spitze
+    oRiegelForm.setAttribute('points', [
+      [X(ende), Yo(y1)], [X(spitze - f), Yo(y1)], [X(spitze), Yo(y1 + f)],
+      [X(spitze), Yo(y2 - f)], [X(spitze - f), Yo(y2)], [X(ende), Yo(y2)]].map(String).join(' '));
+    oSchlitz.setAttribute('x', X(px - M.schlitzX / 2));
+    oSchlitz.setAttribute('y', Yo(M.zungeY + M.schlitzY / 2));
+    oSchlitz.setAttribute('width', M.schlitzX * K);
+    oSchlitz.setAttribute('height', M.schlitzY * K);
+    oRiegelText.setAttribute('x', X(spitze - 13.5));
+    // Hornarm: 5 mm breit, bis zur Spitze
+    var ux = Math.sin(w), uy = Math.cos(w), nx = uy, ny = -ux, b = 2.5, L = M.hornArm;
+    var ax = M.achse[0], ay = M.achse[1];
+    oArm.setAttribute('points', [
+      [ax + nx * b, ay + ny * b], [ax + ux * L + nx * b * .8, ay + uy * L + ny * b * .8],
+      [ax + ux * L - nx * b * .8, ay + uy * L - ny * b * .8], [ax - nx * b, ay - ny * b]]
+      .map(function (p) { return X(p[0]) + ',' + Yo(p[1]); }).join(' '));
+    oStift.setAttribute('cx', X(px)); oStift.setAttribute('cy', Yo(py));
+    // Schnitt: Riegel mit Querschlitz und Fase
+    var z1 = M.riegelZ - M.riegelH / 2, z2 = M.riegelZ + M.riegelH / 2;
+    sRiegelForm.setAttribute('d',
+      'M' + X(ende) + ' ' + Zs(z1) + ' H' + X(spitze - f) + ' L' + X(spitze) + ' ' + Zs(z1 + f) +
+      ' V' + Zs(z2 - f) + ' L' + X(spitze - f) + ' ' + Zs(z2) + ' H' + X(ende) + ' Z' +
+      ' M' + X(px - M.schlitzX / 2) + ' ' + Zs(z1) + ' H' + X(px + M.schlitzX / 2) + ' V' + Zs(z2) + ' H' + X(px - M.schlitzX / 2) + ' Z');
+    sArm.setAttribute('x', X(Math.min(M.achse[0], px) - 1.6));
+    sArm.setAttribute('width', (Math.abs(px - M.achse[0]) + 3.2) * K);
+    sStift.setAttribute('x', X(px - 1));
+    sKopf.setAttribute('x', X(px - 1.9));
+    // Anzeige
+    var zustand, cls;
+    if (spitze > M.zunge[1] + 0.5) { zustand = 'verriegelt'; cls = 'zu'; }
+    else if (spitze < M.zunge[0] - 1.5) { zustand = 'offen'; cls = 'auf'; }
+    else { zustand = 'Spitze in der Zunge'; cls = 'halb'; }
+    document.getElementById('w-winkel').textContent = zahl(theta, 1) + '°';
+    document.getElementById('w-spitze').textContent = zahl(spitze, 1) + ' mm';
+    document.getElementById('w-quer').textContent = zahl(py - M.zungeY, 1) + ' mm';
+    var z = document.getElementById('w-zustand');
+    z.textContent = zustand; z.className = 'zustand ' + cls;
+    kraft.style.display = cls === 'zu' ? '' : 'none';
+  }
+
+  regler.addEventListener('input', function () { halt(); setze(Number(regler.value)); });
+
+  var laeuft = null;
+  function fahre(ziel) {
+    halt();
+    var start = Number(regler.value), t0 = performance.now(), dauer = Math.abs(ziel - start) / 46.8 * 1400;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || dauer < 1) {
+      regler.value = ziel; setze(ziel); return;
+    }
+    function schritt(t) {
+      var a = Math.min(1, (t - t0) / dauer), e = a < .5 ? 2 * a * a : 1 - Math.pow(-2 * a + 2, 2) / 2;
+      var v = start + (ziel - start) * e;
+      regler.value = v; setze(v);
+      if (a < 1) laeuft = requestAnimationFrame(schritt); else laeuft = null;
+    }
+    laeuft = requestAnimationFrame(schritt);
+  }
+  var spiel = document.getElementById('k-spiel'), spielUhr = null;
+  function halt() {
+    if (laeuft) { cancelAnimationFrame(laeuft); laeuft = null; }
+    if (spielUhr) { clearInterval(spielUhr); spielUhr = null; spiel.setAttribute('aria-pressed', 'false'); spiel.textContent = 'Abspielen'; }
+  }
+  document.getElementById('k-auf').addEventListener('click', function () { fahre(-M.schwenk); });
+  document.getElementById('k-zu').addEventListener('click', function () { fahre(M.schwenk); });
+  spiel.addEventListener('click', function () {
+    if (spielUhr) { halt(); return; }
+    var richtung = Number(regler.value) > 0 ? -1 : 1;
+    function hin() {
+      var ziel = richtung * M.schwenk; richtung = -richtung;
+      var merk = spielUhr; spielUhr = null; fahre(ziel); spielUhr = merk;
+    }
+    spielUhr = setInterval(hin, 2400);
+    spiel.setAttribute('aria-pressed', 'true'); spiel.textContent = 'Anhalten';
+    hin();
+  });
+
+  setze(Number(regler.value));
+})();
+</script>

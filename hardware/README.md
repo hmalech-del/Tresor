@@ -349,8 +349,8 @@ Hub reicht. Genau das lässt sich an keinem Bildschirm prüfen.
 
 **Stufe 1 – ohne Strom.** Horn vorbereiten wie unter *Zusammenbau*, Schritt 1
 (äußerstes Loch auf 1,6 mm, M2-Schraube von oben eindrehen). Servo von oben in
-die Tasche, das Kabel in den Schlitz an der Wellenseite, Laschen auf ihre
-Stufe. Riegel in die Bohrung, Querschlitz unter die Stelle, wo der Stift
+die Tasche, das Kabel samt Stecker unten durch den Kabelkanal nach links
+hinaus, Laschen auf ihre Stufe. Riegel in die Bohrung, Querschlitz unter die Stelle, wo der Stift
 hinkommt. Dann das Horn aufstecken (noch nicht festschrauben), sodass der
 Stift in den Querschlitz fällt. Zunge mit der Schulter auf den Block setzen.
 Das Horn **sanft** von Hand drehen, jeweils nur gut 20° aus der Mitte –
@@ -410,14 +410,18 @@ und das Servo nie gegen einen Riegel fährt, der noch nicht richtig liegt.
 2. **USB-Kabel** von außen durch das 12-mm-Loch in der rechten Wand schieben –
    der Stecker passt hindurch – und einstecken. Es liegt in einer Flucht mit
    der Buchse; 28 mm Platz zwischen Platine und Wand reichen für den Stecker.
-3. **Servo einsetzen.** Von oben in die Tasche vorn im Block, das Kabel in den
-   Schlitz an der Wellenseite (links). Die Laschen liegen auf ihrer Stufe; mit
-   den beiden beiliegenden Blechschrauben festschrauben (vorgebohrt).
-4. **Servokabel zur Platine.** Aus dem Schlitz nach oben, über die
-   Blockoberkante oder links am Block vorbei (12 mm Platz) nach hinten. Mit
+3. **Servo einsetzen.** Das Kabel kommt an der Wellenseite (links) unten aus
+   dem Servo. Zuerst den Stecker in die Tasche hängen und flach durch den
+   Kabelkanal am Taschenboden nach links schieben – nach 6 mm unter der
+   Laschenstufe kommt er im offenen Schlitz heraus und tritt am linken
+   Blockende aus. Dann das Servo von oben einsetzen; die Laschen liegen auf
+   ihrer Stufe. Mit den beiden beiliegenden Blechschrauben festschrauben
+   (vorgebohrt).
+4. **Servokabel zur Platine.** Vom linken Blockende an der linken Wand entlang
+   nach hinten (12 mm Platz zwischen Block und Wand). Mit
    männlich/weiblichen Dupont-Litzen an die Platine, Elko dazu – siehe
-   *Verdrahtung*. Zwischen Blockoberkante und Deckel bleiben 6 mm; dort darf
-   das Kabel liegen, nur nicht über dem Zungenschlitz in der Mitte.
+   *Verdrahtung*. Nicht über den Block legen: Über dem Zungenschlitz in der
+   Mitte und dem Hornarm hat ein Kabel nichts zu suchen.
 5. **Testprogramm aufspielen** (`servotest/`, über dasselbe USB-Kabel am
    Rechner) und `m` senden: Das Servo steht in der Mitte.
 

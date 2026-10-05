@@ -110,6 +110,23 @@ ueber_z = min(servo_oben, riegel_z + riegel_h / 2) - max(servo_oben - servo_z, r
 pruefe("Servorumpf bleibt aus der Riegelbahn", ueber_y < 0 or ueber_z < 0,
        f"frei: {-max(ueber_y, ueber_z):.1f} mm" if (ueber_y < 0 or ueber_z < 0) else
        f"SCHNEIDET: {ueber_y:.1f} mm quer, {ueber_z:.1f} mm hoch - das Servo passt nicht neben den Riegel")
+# Die Laschenschrauben brauchen Material um ihr Vorbohrloch. Im ersten
+# Entwurf lag der Kabelschlitz genau darunter - die linke Schraube haette ins
+# Leere gegriffen, und das Kabel waere gegen die Lasche gelaufen.
+servo_unten = servo_oben - servo_z
+servo_mitte_x = servo_achse_x - p("servo_achse_versatz") + servo_x / 2
+flansch_x, flansch_z = p("servo_flansch_x"), p("servo_flansch_z")
+loch_abstand = p("servo_loch_abstand")
+kanal_h = p("kabel_kanal_h")
+schlitz_bis = servo_mitte_x - flansch_x / 2 - s_servo - 1
+loch_links = servo_mitte_x - loch_abstand / 2
+pruefe("Laschenschraube links hat Material", schlitz_bis < loch_links - 2.5,
+       f"Kabelschlitz endet bei {schlitz_bis:+.1f}, Schraubloch bei {loch_links:+.1f}")
+pruefe("Kabelkanal bleibt unter der Vorbohrung",
+       servo_unten + kanal_h < servo_unten + flansch_z - 6 - 2,
+       f"Kanal bis {servo_unten + kanal_h:.1f}, Vorbohrung ab {servo_unten + flansch_z - 6:.1f} ueber dem Boden")
+pruefe("Kabel tritt auf Kanalhoehe aus", 4 < kanal_h - 0.5,
+       f"Kabel 4 mm ueber dem Rumpfboden, Kanal {kanal_h:.0f} mm hoch")
 pruefe("Zunge passt in die Blocktiefe",
        zunge_y + zunge_b / 2 + s_zunge < block_y - 1 and zunge_y - zunge_b / 2 - s_zunge > 1,
        f"Zunge {zunge_y - zunge_b/2:.1f} bis {zunge_y + zunge_b/2:.1f} in {block_y} mm")

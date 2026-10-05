@@ -19,7 +19,7 @@ Gehäuse; Hornlöcher 3,5–16 mm, 7 Stück, 1 mm). Vorher schnitt der Rumpf die
 Riegelbahn (Achse nur 7,7 mm neben der Riegelmitte). Jetzt: Stift im
 äußersten Loch (r = 16), Schwenk ±23,4°, Achse 15,3 mm neben dem Riegel,
 Zunge 23 mm tief (vorher 20), M2-Stift statt M3, Hornfreiraum als Fächer,
-Kabelschlitz an der Wellenseite, Einlegerinne links der Zunge (vorher hätte sich der Riegel nie einsetzen lassen: Tunnel ab Blockende, nur 12 mm Platz), Prüfstück in voller Blockhöhe
+Kabelkanal unten an der Wellenseite nach links aus dem Block (nicht nach oben: dort liegt die Lasche mit Schraubloch – ein erster Entwurf hatte das falsch), Einlegerinne links der Zunge (vorher hätte sich der Riegel nie einsetzen lassen: Tunnel ab Blockende, nur 12 mm Platz), Prüfstück in voller Blockhöhe
 (61×85×39 mm). Der Nutzer muss alles neu drucken; noch nicht gedruckt. Die große Kiste ist noch nicht gedruckt,
 **Firmware gibt es keine**. Alles über die Mechanik hinaus ist ungetestet –
 das in Antworten nicht verschweigen.
@@ -63,8 +63,8 @@ Tabelle "Befund → Stellschraube" steht in der README.
 ## Zusammenbau in der fertigen Kiste (README "Zusammenbau")
 
 Elektronik zuerst: Platine auf Sockel, USB durch rechte Wand, Servo in die
-Tasche (Kabel in den Schlitz), Kabel über die Blockoberkante oder links vorbei
-nach hinten, Testprogramm `m`. Dann Mechanik: Horn mit M2-Stift, Riegel in die
+Tasche (Stecker zuerst durch den Kabelkanal nach links), Kabel an der linken
+Wand entlang nach hinten, Testprogramm `m`. Dann Mechanik: Horn mit M2-Stift, Riegel in die
 Rinne (Spitze in Mitte des Zungenschlitzes), Horn aufstecken (Stift in den
 Querschlitz), Wellenschräubchen, erst von Hand, dann `z`/`a`/`d`, Deckel.
 

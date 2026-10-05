@@ -189,6 +189,10 @@ servo_achse_y = zunge_y - (stift_radius * (1 + cos(schwenk)) / 2);
 servo_oben    = riegel_z + riegel_h / 2 + horn_luft - horn_unterseite;
 servo_unten   = servo_oben - servo_z;
 servo_mitte_x = servo_achse_x - servo_achse_versatz + servo_x / 2;
+kabel_kanal_b = 9;
+kabel_kanal_h = 6;
+/* Bis hierher (x) ist der Kabelkanal nach oben offen - 1 mm vor der Laschenstufe. */
+kabel_schlitz_bis = servo_mitte_x - servo_flansch_x / 2 - spiel_servo - 1;
 
 /* Die Bohrung ist unten knapp und oben weit.
  *
@@ -300,11 +304,22 @@ module koerper() {
       translate([servo_mitte_x + s * servo_loch_abstand/2, wand + servo_achse_y,
                  boden + servo_unten + servo_flansch_z - 6])
         cylinder(d = 1.6, h = 7);
-    /* Das Kabel kommt an der Wellenseite heraus, 4 mm ueber dem Boden. Ein
-     * Schlitz an dieser Stirnseite fuehrt es nach oben. */
-    translate([servo_achse_x - servo_achse_versatz - spiel_servo - 3,
-               wand + servo_achse_y - 2.5, boden + servo_unten])
-      cube([3.1, 5, innen_z]);
+    /* Das Kabel kommt an der Wellenseite heraus, 4 mm ueber dem Rumpfboden.
+     * Nach oben kann es dort nicht: Genau darueber liegt die Lasche mit ihrem
+     * Schraubloch. Ein erster Entwurf hatte dort einen senkrechten Schlitz -
+     * das Kabel waere gegen die Lasche gelaufen, und die Schraube haette ins
+     * Leere gegriffen.
+     *
+     * Deshalb laeuft es unten waagerecht aus dem Block: ein Kanal auf
+     * Kabelhoehe, unter der Laschenstufe ein kurzes Stueck geschlossen,
+     * links davon nach oben offen, damit man das Kabel samt Stecker einlegen
+     * kann. Es tritt am linken Blockende aus, wo zwischen Block und Wand Platz
+     * ist. 9 mm breit und 6 mm hoch: Der dreipolige Stecker (etwa 8 x 2,6 mm)
+     * passt flach hindurch. */
+    translate([-block_b/2 - 1, wand + servo_achse_y - kabel_kanal_b/2, boden + servo_unten])
+      cube([block_b/2 + 1 + servo_achse_x - servo_achse_versatz - spiel_servo + 0.1, kabel_kanal_b, kabel_kanal_h]);
+    translate([-block_b/2 - 1, wand + servo_achse_y - kabel_kanal_b/2, boden + servo_unten])
+      cube([kabel_schlitz_bis - (-block_b/2 - 1), kabel_kanal_b, innen_z]);
 
     /* Freiraum fuer den Hornarm: ein Faecher, nicht ein Kreis. Der Arm ist
      * 18 mm lang und schwenkt nur +-23,4 Grad zum Riegel hin; ein voller
@@ -459,7 +474,7 @@ module pruefstueck() {
   /* Ausschnitt des Blocks um Servo, Zunge und Riegelbohrung, auf null
    * gesetzt - ein Ausschnitt behaelt sonst seine urspruengliche Hoehe und
    * schwebt im Slicer ueber der Platte. Er enthaelt die ganze Servotasche
-   * mit Laschenauflage und Kabelschlitz: Klone streuen, und das merkt man
+   * mit Laschenauflage und Kabelkanal: Klone streuen, und das merkt man
    * lieber am Pruefstueck als an der fertigen Kiste. */
   translate([0, 0, -schnitt_z])
     intersection() {
