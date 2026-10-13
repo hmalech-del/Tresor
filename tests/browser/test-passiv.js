@@ -80,7 +80,7 @@ const gespeichert = seite => seite.evaluate(() => JSON.parse(localStorage.getIte
     e.nachFreigabe = spaet.every(x => x.zeit < zielFrueh);
     e.wurfSumme = L.PASSIV.wurf.reduce((a, b) => a + b, 0);
     const g = Object.fromEntries(L.PASSIV.arten);
-    e.symmetrisch = g.nachlass === g.aufschlag;
+    e.symmetrisch = g.nachlass === g.aufschlag + g.stillstand;
     // Mittelwert ueber viele Ereignisse ohne Rand: nahe null
     const k2 = L.passivKonfiguration({ minSekunden: 1000, maxSekunden: 1e7 }, { modus: 'aus' }, { dichte: 'mittel', haerte: 1 });
     const t2 = await L.erstellen({ art: 'zahl', teile: ['1'], konfig: k2 });
@@ -89,8 +89,11 @@ const gespeichert = seite => seite.evaluate(() => JSON.parse(localStorage.getIte
     for (let i = 0; i < 6000; i++) {
       const x = L.passivEreignis(t2, Date.now());
       if (x.art === 'wurf') summe += L.passivWuerfeln(t2, 1 + (i % 6)).sekunden;
-      else summe += x.sekunden;
+      else summe += x.sekunden;            // Stillstand: die geplante Dauer
       n++;
+      // jedes Ereignis von derselben Stelle aus, weit weg vom Rand - sonst
+      // kappt der Rahmen, und das Mittel misst den Rand statt der Ereignisse
+      t2.freigabe.konto.zielSek = 5e6; t2.freigabe.frost = null;
     }
     e.mittel = summe / n / t2.freigabe.passiv.einheit;
     return e;
@@ -108,7 +111,7 @@ const gespeichert = seite => seite.evaluate(() => JSON.parse(localStorage.getIte
   pruefe('am Deckel: kein Aufschlag ueber den Rahmen', r.deckel.s === 0 && r.deckel.ziel === 3000, JSON.stringify(r.deckel));
   pruefe('Nachholen: der Reihe nach, alle vor jetzt', r.nachgeholt.n >= 6 && r.nachgeholt.alleVorher && r.nachgeholt.geordnet && r.nachgeholt.naechstesDanach, JSON.stringify(r.nachgeholt));
   pruefe('nach der Freigabe kommt nichts mehr', r.nachFreigabe, '');
-  pruefe('fair: Wurf im Mittel null, Nachlass = Aufschlag', r.wurfSumme === 0 && r.symmetrisch, '');
+  pruefe('fair: Wurf im Mittel null, Nachlass = Aufschlag + Stillstand', r.wurfSumme === 0 && r.symmetrisch, '');
   pruefe('fair: 6000 Ereignisse, Mittel nahe null', Math.abs(r.mittel) < 0.05, r.mittel.toFixed(3) + ' Einheiten');
   await s0.context().close();
 

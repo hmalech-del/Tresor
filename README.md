@@ -922,10 +922,12 @@ die Anweisung von woanders und der Game Master reichte sie nur weiter:
 | Eingang | Häufigkeit | Wirkung |
 |---|---|---|
 | Nachlass | 3/11 | früher, um ½ bis 1½ Einheiten |
-| Aufschlag | 3/11 | später, um ½ bis 1½ Einheiten |
+| Aufschlag | 2/11 | später, um ½ bis 1½ Einheiten |
+| Stillstand | 1/11 | die Uhr steht, ½ bis 1½ Einheiten lang – wie lange, sagt sie nicht |
 | Angebot | 3/11 | ein Wurf, freiwillig: 6 −2, 5 −1, 3/4 nichts, 2 +1, 1 +2 Einheiten |
 | Münzwurf | 1/11 | Kopf früher, Zahl später, je 1 Einheit |
 | Kontrolle | 1/11 | nichts – „Ich habe nachgesehen." |
+| Verdoppelt | +1 | nur **drakonisch**: Die Restzeit verdoppelt sich (dann 1/12, die übrigen 11/12) |
 
 **Fair:** Jeder Eingang ist im Mittel null, auch der Wurf. Die Uhr startet
 irgendwo in der Mitte des Rahmens (35–65 %) und wandert von da aus; über den
@@ -933,8 +935,13 @@ Rahmen hinaus geht sie nie – „spätestens" ist eine Zusage, das Netz hält s
 Ein Angebot gilt bis zum nächsten Eingang; man kann es ausschlagen oder
 verpassen, beides kostet nichts.
 
-Drei Einstellungen:
+Die Einstellungen:
 
+* **Eigentlich offen nach** – wo die Uhr startet. Ohne Angabe irgendwo in der
+  Mitte des Rahmens. Mit Angabe genau dort, und die Schritte richten sich nach
+  dem Weg vom unteren Rand bis dahin (doppelt genommen, wie bei der Mitte),
+  nicht nach der Höchstzeit. So geht „eigentlich 30 Minuten, höchstens 3 Tage":
+  Die Eingänge spielen um die halbe Stunde, die drei Tage sind nur die Wand.
 * **Wie oft** – selten, gelegentlich, oft: etwa 6, 12 oder 24 Eingänge über die
   Laufzeit. Die Abstände sind gezogen (0,4- bis 1,6-mal der mittlere Abstand,
   mindestens eine Minute).
@@ -943,9 +950,31 @@ Drei Einstellungen:
   Hälfte (hart) der Spanne, egal wie oft.
 * **Die Uhr zeigen** – an: Countdown und Beträge. Aus: `· · ·`, und ein
   Eingang sagt nur „Früher." oder „Später."
+* **Drakonisch** – zusätzlich kann ein Eingang die **Restzeit verdoppeln**,
+  etwa jeder zwölfte. Das ist gewollt unfair: Aus 30 Minuten können über
+  einige Verdopplungen Tage werden, bis zur Höchstzeit. Damit es dann nicht
+  Hunderte Eingänge hagelt, wächst ihr Abstand mit der Uhr mit.
 
 Beispiel: Rahmen 2 bis 6 Stunden, gelegentlich, mild. Einheit
 4 h × 0,22 ÷ √12 ≈ 15 Minuten, ein Eingang etwa alle 20 Minuten.
+
+Beispiel: frühestens 10 Minuten, eigentlich 30, höchstens 3 Tage,
+gelegentlich, mild. Einheit 2 × 20 min × 0,22 ÷ √12 ≈ 2½ Minuten, ein Eingang
+etwa alle 2 Minuten – solange es bei der halben Stunde bleibt.
+
+### Freeze: die Uhr steht
+
+Steht die Uhr, rückt die Freigabe Sekunde für Sekunde mit nach hinten. Die
+Anzeige bleibt stehen (❄, blau), „Die Uhr steht." Zwei Quellen:
+
+* der Passiv-Eingang **Stillstand** – er endet von selbst, wann, steht nirgends;
+* **Home Assistant**: ein Schalter `input_boolean.tresor_freeze` – an heißt,
+  die Uhr steht (siehe *Von außen*).
+
+Gilt beides, steht sie, bis beides vorbei ist. Gebucht wird beim Nachziehen,
+nicht im Takt einer Uhr – war die App zu, stimmt es trotzdem. Während des
+Freezes geht der Tresor nicht auf; die **Höchstzeit gilt trotzdem**: Am Deckel
+wirkt der Freeze nicht mehr, und die Uhr läuft ab.
 
 Eingänge treten zu ihrer Zeit ein, auch bei geschlossener App: Beim nächsten
 Öffnen werden die verpassten der Reihe nach nachgeholt – aber nur die, die vor
@@ -1047,6 +1076,20 @@ actions:
       value: "{{ (states('input_number.tresor_minuten') | float(0)) - 10 }}"
 ```
 
+**Freeze von außen:** Gibt es außerdem einen Helfer *Schalter*
+`tresor_freeze` (`input_boolean.tresor_freeze`, in der App einstellbar), steht
+die Uhr, solange er an ist – auch wenn die App zu ist, denn gezählt wird ab
+dem Zeitpunkt, an dem er in Home Assistant umgelegt wurde. Das ist erlaubt,
+auch unter der Einbahnstraße: Ein Freeze gibt nur Zeit dazu. Etwa: Die Uhr
+steht, solange das Handy nicht im Heim-WLAN ist.
+
+Damit ein vergessener Schalter nicht bis zur Höchstzeit festhält, gilt beim
+Verriegeln ein Höchstmaß **je Freeze** (15 min, 1 h – Vorgabe –, 4 h, 1 Tag
+oder ohne Grenze). Danach läuft die Uhr wieder, auch wenn der Schalter an
+bleibt; erst aus und wieder an ist ein neuer Freeze. Wie lange er sonst
+dauert, entscheidet Home Assistant – „an, 20 Minuten warten, aus" ist eine
+Automation mit drei Schritten.
+
 Bluetooth-Beacons kommen über eine Integration wie *Bermuda* oder *iBeacon
 Tracker* als Sensor herein und lösen genauso über einen Zustands-Trigger aus.
 Die Zahl **nicht zurücksetzen**, solange ein Tresor läuft: Ein Sprung von 250
@@ -1079,7 +1122,8 @@ Administrator. Die ID ist das Geheimnis, also lang und zufällig wählen.
 
 | Feld | Inhalt |
 |---|---|
-| `art` | `verriegelt`, `gutschrift`, `strafe`, `wurf`, `kapitulation`, `stein`, `nachlass`, `aufschlag`, `muenze`, `extern`, `angebot`, `freigabe`, `test` |
+| `art` | `verriegelt`, `gutschrift`, `strafe`, `wurf`, `kapitulation`, `stein`, `nachlass`, `aufschlag`, `muenze`, `verdoppelt`, `frost`, `extern`, `angebot`, `freigabe`, `test` |
+| `frost` | bei `art=frost`: `an` (Uhr steht) oder `aus` (läuft wieder; `sekunden` = wie viel dazukam) |
 | `richtung` | `frueher`, `spaeter`, `gleich`, `abgewiesen` (bei Bewegungen) |
 | `sekunden` | gebuchte Sekunden, negativ = früher |
 | `grund` | bei `extern` der Grund aus Home Assistant |

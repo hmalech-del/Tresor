@@ -859,7 +859,10 @@
   function freigabeErreicht(tresor) {
     var f = tresor.freigabe;
     if (!f) return false;
-    return !!f.z || Date.now() >= freigabeZiel(tresor).zeit;
+    if (f.z) return true;
+    frostNachziehen(tresor);
+    if (frostAktiv(tresor)) return false;
+    return Date.now() >= freigabeZiel(tresor).zeit;
   }
 
   /* Den Zeitschluessel beim Netz abholen. Einmal geholt, bleibt er gespeichert -
@@ -1296,6 +1299,103 @@
     return !!(konfig && konfig.blind) && zufallsAnteil() < STEIN.abrutschen;
   }
 
+  /* ---------- Freeze: die Uhr steht ----------
+   *
+   * Solange er gilt, kommt jede Sekunde eine Sekunde dazu - die Freigabe
+   * rueckt im Gleichschritt mit der Zeit nach hinten. Gebucht wird beim
+   * Nachziehen (frostNachziehen), nicht im Takt einer Uhr: So stimmt es auch,
+   * wenn die App zwischendurch zu war. Zwei Quellen: Home Assistant (ein
+   * Schalter, an bis aus) und der Passiv-Eingang "Stillstand" (bis zu einer
+   * Zeit, die niemand sieht). Es reicht, wenn eine gilt.
+   *
+   * Die Hoechstzeit gilt trotzdem: Am Deckel wirkt der Freeze nicht mehr,
+   * und die Uhr laeuft wieder ab. Die Freigabe ist waehrend des Freezes
+   * gesperrt, sonst koennte die naechstgelegene Sprosse kurz vor dem Ende
+   * schon hinter "jetzt" liegen.
+   *
+   * Von aussen gilt ausserdem ein Hoechstmass je Freeze (konfig.frostMax,
+   * Sekunden, 0 = keins): Ein vergessener Schalter haelt dann nicht bis zur
+   * Hoechstzeit fest. Danach laeuft die Uhr, auch wenn er an bleibt.
+   *
+   * f.frost = { beginn, stand (bis wann gebucht), summe, extern, externBis,
+   *             bis, amDeckel } */
+  function frostExternBis(x, jetzt) {
+    if (!x.extern) return 0;
+    return x.externBis ? Math.min(jetzt, x.externBis) : jetzt;
+  }
+
+  function frostAktiv(tresor, jetzt) {
+    var x = tresor.freigabe && tresor.freigabe.frost;
+    if (!x || x.amDeckel) return false;
+    jetzt = jetzt || Date.now();
+    return (x.extern && (!x.externBis || x.externBis > jetzt)) || (x.bis || 0) > jetzt;
+  }
+
+  function frostLaeuftNach(x) {
+    return (x.extern && (!x.externBis || x.externBis > x.stand)) || (x.bis || 0) > x.stand;
+  }
+
+  function frostSchliessen(tresor) {
+    var f = tresor.freigabe, x = f.frost;
+    bewegungMerken(tresor, 'frost', f.konto.zielSek - x.summe, '',
+      { an: false, dauer: Math.round((x.stand - x.beginn) / 1000) });
+    f.frost = null;
+  }
+
+  function frostNachziehen(tresor, jetzt) {
+    var f = tresor.freigabe, x = f && f.frost;
+    if (!x || f.z) return false;
+    jetzt = jetzt || Date.now();
+    var ende = Math.max(frostExternBis(x, jetzt), Math.min(jetzt, x.bis || 0));
+    if (ende > x.stand && !x.amDeckel) {
+      var konto = freigabeKonto(tresor);
+      var vorher = f.konto.zielSek;
+      var zug = konto.verschieben((ende - x.stand) / 1000);
+      f.konto = konto.stand();
+      x.summe += f.konto.zielSek - vorher;
+      if (zug.amDeckel) x.amDeckel = true;
+    }
+    if (ende > x.stand) x.stand = ende;
+    if (!frostLaeuftNach(x)) frostSchliessen(tresor);
+    return true;
+  }
+
+  function frostStarten(tresor, quelle, zeit, bisMs) {
+    var f = tresor.freigabe;
+    if (!f || f.z) return null;
+    zeit = Math.max(zeit || Date.now(), f.start);
+    frostNachziehen(tresor, zeit);
+    var x = f.frost;
+    if (!x) {
+      x = f.frost = { beginn: zeit, stand: zeit, summe: 0, extern: false, bis: 0 };
+      bewegungMerken(tresor, 'frost', f.konto.zielSek, '', { an: true });
+    }
+    if (quelle === 'extern') {
+      var max = (tresor.konfig || {}).frostMax || 0;
+      x.extern = true;
+      x.externBis = max ? zeit + max * 1000 : 0;
+      f.frostExternSeit = zeit;
+    } else x.bis = Math.max(x.bis || 0, bisMs || 0);
+    return x;
+  }
+
+  function frostExternAus(tresor, zeit) {
+    var f = tresor.freigabe, x = f && f.frost;
+    if (!x || !x.extern) return;
+    frostNachziehen(tresor, Math.max(zeit || Date.now(), x.stand));
+    if (!f.frost) return;
+    x.extern = false;
+    if (!frostLaeuftNach(x)) frostSchliessen(tresor);
+  }
+
+  /* Was die Uhr zeigt, solange sie steht: der Rest bis zur exakten
+   * Wunschzeit, nicht bis zur Sprosse - der bleibt so wirklich stehen. */
+  function frostRest(tresor) {
+    var f = tresor.freigabe;
+    if (!frostAktiv(tresor)) return null;
+    return Math.max(0, f.start / 1000 + f.konto.zielSek - f.frost.stand / 1000);
+  }
+
   /* ---------- Spielart Passiv ----------
    *
    * Keine Pruefungen, keine Fragmente, kein Stein. Der Spieler setzt einen
@@ -1329,7 +1429,12 @@
     dichte: { selten: 6, mittel: 12, oft: 24 },
     wucht: [0, 0.22, 0.4],                       // -, mild, hart
     abstandMin: 60,
-    arten: [['nachlass', 3], ['aufschlag', 3], ['wurf', 3], ['muenze', 1], ['stille', 1]],
+    /* Stillstand ist ein Aufschlag, der sich als stehende Uhr zeigt - er
+     * zaehlt deshalb auf die Seite des Aufschlags: 3 Nachlass gegen 2 + 1. */
+    arten: [['nachlass', 3], ['aufschlag', 2], ['stillstand', 1], ['wurf', 3], ['muenze', 1], ['stille', 1]],
+    /* Drakonisch: dazu, mit diesem Gewicht, die Verdopplung der Restzeit.
+     * Bewusst ohne Gegenstueck - sie ist nicht fair, sie ist gewaehlt. */
+    verdoppeln: 1,
     wurf: [0, 2, 1, 0, 0, -1, -2],               // Einheiten je Augenzahl (Index 1-6)
     protokoll: 40
   };
@@ -1355,13 +1460,20 @@
     k.passiv = {
       dichte: PASSIV.dichte[wahl.dichte] ? wahl.dichte : 'mittel',
       haerte: util.grenze(wahl.haerte || 1, 1, 2),
-      uhr: wahl.uhr !== false
+      uhr: wahl.uhr !== false,
+      /* Eigentlich offen nach: Startpunkt der Uhr. 0 = irgendwo in der Mitte. */
+      gedacht: Math.max(0, Number(wahl.gedacht) || 0),
+      drakonisch: !!wahl.drakonisch
     };
     return k;
   }
 
-  function passivAbstand(p) {
-    return Math.round(p.abstand * (0.4 + zufallsAnteil() * 1.2) * 1000);
+  /* Der Abstand waechst mit der Uhr: Ist aus einer halben Stunde ein Tag
+   * geworden, kaemen sonst Hunderte Eingaenge. Er schrumpft nie unter den
+   * beim Verriegeln bemessenen. */
+  function passivAbstand(p, f) {
+    var faktor = f && p.startSek ? Math.max(1, f.konto.zielSek / p.startSek) : 1;
+    return Math.round(p.abstand * faktor * (0.4 + zufallsAnteil() * 1.2) * 1000);
   }
 
   function passivAnlegen(freigabe, konfig) {
@@ -1369,11 +1481,18 @@
     var n = PASSIV.dichte[wahl.dichte] || PASSIV.dichte.mittel;
     var unten = freigabe.rahmen[0], oben = freigabe.rahmen[1];
     var spanne = oben - unten;
-    var startSek = Math.round(unten + spanne * (0.35 + zufallsAnteil() * 0.3));
+    /* Mit "eigentlich offen nach" startet die Uhr dort, und die Schritte
+     * richten sich nach dem Weg von unten bis dahin (doppelt genommen, wie
+     * bei der Mitte) - nicht nach der Hoechstzeit. Sonst waeren bei einer
+     * halben Stunde, die drei Tage werden darf, schon die Schritte Stunden. */
+    var gedacht = wahl.gedacht ? util.grenze(wahl.gedacht, unten, oben) : 0;
+    var startSek = gedacht || Math.round(unten + spanne * (0.35 + zufallsAnteil() * 0.3));
+    var basis = gedacht ? (2 * (gedacht - unten) || gedacht) : spanne;
     freigabe.konto = { zielSek: startSek };
     var p = {
-      einheit: Math.round(spanne * PASSIV.wucht[wahl.haerte] / Math.sqrt(n)),
+      einheit: Math.round(basis * PASSIV.wucht[wahl.haerte] / Math.sqrt(n)),
       abstand: Math.max(PASSIV.abstandMin, startSek / (n + 1)),
+      startSek: startSek,
       naechstes: 0,
       nr: 0,
       angebot: null,
@@ -1383,12 +1502,14 @@
     return p;
   }
 
-  function passivZiehen() {
-    var summe = PASSIV.arten.reduce(function (s, a) { return s + a[1]; }, 0);
+  function passivZiehen(konfig) {
+    var arten = PASSIV.arten.slice();
+    if (konfig && konfig.passiv && konfig.passiv.drakonisch) arten.push(['verdoppelt', PASSIV.verdoppeln]);
+    var summe = arten.reduce(function (s, a) { return s + a[1]; }, 0);
     var r = zufallsAnteil() * summe;
-    for (var i = 0; i < PASSIV.arten.length; i++) {
-      r -= PASSIV.arten[i][1];
-      if (r < 0) return PASSIV.arten[i][0];
+    for (var i = 0; i < arten.length; i++) {
+      r -= arten[i][1];
+      if (r < 0) return arten[i][0];
     }
     return 'stille';
   }
@@ -1414,7 +1535,7 @@
       p.protokoll.forEach(function (e) { if (e.nr === p.angebot.nr) { e.offen = false; e.verfallen = true; } });
       p.angebot = null;
     }
-    art = art || passivZiehen();
+    art = art || passivZiehen(tresor.konfig);
     p.nr++;
     var e = { nr: p.nr, zeit: zeit, art: art, sekunden: 0 };
     var u = p.einheit * (0.5 + zufallsAnteil());
@@ -1426,6 +1547,15 @@
     } else if (art === 'wurf') {
       e.offen = true;
       p.angebot = { nr: e.nr, zeit: zeit };
+    } else if (art === 'stillstand') {
+      /* Die Uhr steht so lange, wie ein Aufschlag wiegen wuerde. */
+      e.sekunden = Math.round(u);
+      e.bis = zeit + e.sekunden * 1000;
+      frostStarten(tresor, 'passiv', zeit, e.bis);
+    } else if (art === 'verdoppelt') {
+      var f = tresor.freigabe;
+      var rest = Math.max(0, f.start / 1000 + f.konto.zielSek - zeit / 1000);
+      Object.assign(e, passivBuchen(tresor, rest, art));
     }
     e.neueZeit = freigabeZiel(tresor).zeit;
     passivEintragen(p, e);
@@ -1440,10 +1570,12 @@
     jetzt = jetzt || Date.now();
     var neu = [];
     for (var schutz = 0; schutz < 1000 && p.naechstes <= jetzt; schutz++) {
-      if (p.naechstes >= freigabeZiel(tresor).zeit) break;
+      frostNachziehen(tresor, p.naechstes);
+      if (p.naechstes >= freigabeZiel(tresor).zeit && !frostAktiv(tresor, p.naechstes)) break;
       neu.push(passivEreignis(tresor, p.naechstes));
-      p.naechstes += passivAbstand(p);
+      p.naechstes += passivAbstand(p, f);
     }
+    frostNachziehen(tresor, jetzt);
     return neu;
   }
 
@@ -1513,6 +1645,24 @@
       passivEintragen(f.passiv, Object.assign({ nr: f.passiv.nr }, e));
     }
     return e;
+  }
+
+  /* Freeze von Home Assistant: nur mit Erlaubnis beim Verriegeln. Erlaubt
+   * auch unter der Einbahnstrasse - er gibt nur Zeit dazu. zeit ist, wann
+   * der Schalter dort umgelegt wurde; so zaehlt auch, was bei
+   * geschlossener App geschah. */
+  function externFrost(tresor, an, zeit) {
+    var f = tresor.freigabe;
+    if (!f || !f.extern || f.z) return false;
+    var x = f.frost;
+    /* Derselbe Schalterstand nach einem neuen Verbinden ist kein neuer
+     * Freeze - sonst zaehlte ein ausgeschoepfter doppelt. */
+    if (an && !(x && x.extern) && f.frostExternSeit !== Math.max(zeit || 0, f.start)) {
+      frostStarten(tresor, 'extern', zeit);
+      return true;
+    }
+    if (!an && x && x.extern) { frostExternAus(tresor, zeit); return true; }
+    return false;
   }
 
   /* Notausgang ueber das Netz: erst den Zeitschluessel holen, dann wie immer. */
@@ -1646,6 +1796,11 @@
     passivWuerfeln: passivWuerfeln,
     passivAblehnen: passivAblehnen,
     externBuchen: externBuchen,
+    externFrost: externFrost,
+    frostAktiv: frostAktiv,
+    frostNachziehen: frostNachziehen,
+    frostStarten: frostStarten,
+    frostRest: frostRest,
     neueBewegungen: function (tresor, seit) {
       var f = tresor && tresor.freigabe;
       return ((f && f.bewegungen) || []).filter(function (b) { return b.nr > (seit || 0); });

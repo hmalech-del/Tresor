@@ -27,7 +27,8 @@
   'use strict';
   var T = global.Tresor || (global.Tresor = {});
   var SCHLUESSEL = 'tresor.ha';
-  var STANDARD = { url: '', token: '', zahl: 'input_number.tresor_minuten', grund: 'input_text.tresor_grund', rueck: '' };
+  var STANDARD = { url: '', token: '', zahl: 'input_number.tresor_minuten', grund: 'input_text.tresor_grund', rueck: '',
+    frost: 'input_boolean.tresor_freeze' };
 
   function einstellungen() {
     try {
@@ -61,9 +62,10 @@
    *   beiStatus(status, text)      - 'verbinde' | 'verbunden' | 'getrennt' | 'fehler'
    *
    * Ein abgewiesenes Token versucht es nicht endlos weiter. */
-  function Verbindung(e, beiStand, beiStatus) {
+  function Verbindung(e, beiStand, beiStatus, beiFrost) {
     this.e = e;
     this.beiStand = beiStand;
+    this.beiFrost = beiFrost || function () {};
     this.beiStatus = beiStatus || function () {};
     this.ws = null;
     this.warten = 5000;
@@ -107,6 +109,7 @@
         self.warten = 5000;
         var ids = [self.e.zahl];
         if (self.e.grund) ids.push(self.e.grund);
+        if (self.e.frost) ids.push(self.e.frost);
         ws.send(JSON.stringify({ id: 1, type: 'subscribe_entities', entity_ids: ids }));
       } else if (m.type === 'result' && m.id === 1 && !m.success) {
         self.melde('fehler', 'Abo abgelehnt: ' + ((m.error && m.error.message) || 'unbekannt'));
@@ -138,6 +141,12 @@
     var quelle = ev.a || ev.c || {};
     var g = stand(quelle[e.grund]);
     if (g) self.grund = g.s;
+    /* Freeze: ein Schalter, "on" heisst, die Uhr steht. Fehlt er in Home
+     * Assistant, gibt es eben keinen. */
+    var fr = e.frost ? stand(quelle[e.frost]) : null;
+    if (fr && (fr.s === 'on' || fr.s === 'off')) {
+      self.beiFrost(fr.s === 'on', fr.lc ? Math.round(fr.lc * 1000) : Date.now());
+    }
     var z = stand(quelle[e.zahl]);
     if (ev.a && !ev.a[e.zahl]) {
       self.melde('fehler', e.zahl + ' gibt es in Home Assistant nicht.');

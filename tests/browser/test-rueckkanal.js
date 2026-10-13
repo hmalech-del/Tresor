@@ -174,7 +174,7 @@ const warteAuf = async (ha, pruef, ms = 8000) => {
   await s2.evaluate(() => { const L = Tresor.tresorLogik; L.PASSIV.abstandMin = 1; L.PASSIV.arten = [['wurf', 1]]; });
   await ziffern(s2);
   await s2.click('#spielart-passiv');
-  await rahmen(s2, ['#passiv-min', '#passiv-max'], [600, 1200]);
+  await rahmen(s2, ['#passiv-min', '#passiv-max'], [60, 120]);   // Abstand ~4 s, das erste Angebot kommt bald
   await s2.selectOption('#passiv-dichte', 'oft');
   await s2.click('#passiv-uhr');
   await s2.click('#verriegeln');

@@ -147,6 +147,20 @@ die Uhr bewegen, müssen über `zeitkontoVerschieben(t, sek, art)` gehen oder
 Formular) und merkt in `tresor.rueck`, was draußen ist. Ohne sichtbare Uhr
 keine Beträge/Zeiten nach draußen (`rueckDunkel`). Test: `test-rueckkanal.js`.
 
+**Freeze** (`freigabe.frost`, `frostStarten`/`frostNachziehen`/`frostRest`):
+die Uhr steht = Konto wächst im Gleichschritt mit der Zeit. Gebucht beim
+Nachziehen (globaler 1-s-Takt in `app.js`, `freigabeErreicht`, `passivSchritt`),
+gemeldet als Bewegung `frost` an/aus. Quellen: Passiv-Eingang `stillstand`
+(bis `bis`) und HA-Schalter `input_boolean.tresor_freeze` (`externFrost`).
+Freigabe gesperrt, solange er wirkt; am Deckel wirkt er nicht mehr. Von
+außen höchstens `konfig.frostMax` s je Freeze (`externBis`;
+`frostExternSeit` verhindert, dass derselbe Schalterstand nach Neuverbinden
+neu zählt).
+**Passiv „eigentlich offen nach“** (`passiv.gedacht`): Start dort, Einheit
+aus `2 × (gedacht − unten)`. **Drakonisch** (`passiv.drakonisch`): Eingang
+`verdoppelt` verdoppelt die Restzeit, Gewicht `PASSIV.verdoppeln`; Abstand
+der Eingänge wächst mit `zielSek / startSek`. Test: `test-frost.js`.
+
 **Willkür** = `konfig.blind` (in der Oberfläche "Willkür", früher "Meine
 Regeln"). Die App zieht Regeln selbst, zeigt **keine Beträge, keine
 Freigabe-Uhr, keine Gesamtzahl** – nur, wann die nächste Prüfung kommt. In

@@ -826,3 +826,6 @@ select, input[type=file] {
 .ha-status.ist-verbunden::before { color: var(--gruen); }
 .ha-status.ist-fehler::before { color: var(--rot); }
 .extern-zeile { text-align: center; margin: 6px 0 0; color: var(--neon-hell, var(--neon)); font-size: .92em; }
+/* Freeze: die Uhr steht */
+.countdown.ist-gefroren { color: var(--blau); text-shadow: 0 0 14px rgba(120, 170, 255, .45); }
+.countdown.ist-gefroren::before { content: '❄ '; font-size: .6em; vertical-align: middle; }

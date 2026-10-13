@@ -71,7 +71,8 @@
    * geschah, und nichts doppelt. Gesendet wird der Reihe nach; schlaegt es
    * fehl, ruht der Kanal eine Minute. */
   var RUECK_TEXT = { gutschrift: 'gutschrift', strafe: 'verschoben', kapitulation: 'kapitulation', stein: 'stein',
-    nachlass: 'nachlass', aufschlag: 'aufschlag', muenze: 'muenze', angebot: 'angebot', verriegelt: 'verriegelt' };
+    nachlass: 'nachlass', aufschlag: 'aufschlag', muenze: 'muenze', angebot: 'angebot', verriegelt: 'verriegelt',
+    verdoppelt: 'verdoppelt' };
 
   /* "12 min" liest eine Sprachausgabe schlecht - also ausgeschrieben. */
   function sprechDauer(sek) {
@@ -95,7 +96,10 @@
       if (b.grund) d.grund = b.grund;
       if (!dunkel) d.sekunden = b.sekunden;
       var kat = RUECK_TEXT[art] || (b.sekunden < 0 ? 'nachlass' : b.sekunden > 0 ? 'aufschlag' : 'stille');
-      satz = b.abgewiesen ? T.stimme.sag('abgewiesen') : T.stimme.sag(kat) + ' ' + (!b.sekunden ? 'Keine Änderung.'
+      if (art === 'frost') d.frost = b.an ? 'an' : 'aus';
+      satz = b.abgewiesen ? T.stimme.sag('abgewiesen')
+        : art === 'frost' && b.an ? T.stimme.sag('frost')
+        : T.stimme.sag(art === 'frost' ? 'tauwetter' : kat) + ' ' + (!b.sekunden ? 'Keine Änderung.'
         : dunkel ? (b.sekunden < 0 ? 'Früher.' : 'Später.')
         : sprechDauer(b.sekunden) + (b.sekunden < 0 ? ' früher.' : ' später.'));
       if (b.grund) satz = b.grund + '. ' + satz;
@@ -438,6 +442,7 @@
     if (externGewaehlt()) {
       k.extern = true;
       if ($('#extern-richtung').value === 'dazu') k.externNurDazu = true;
+      k.frostMax = Number($('#extern-frost-max').value) || 0;
     }
     return k;
   }
@@ -447,7 +452,8 @@
       return T.tresorLogik.passivKonfiguration(
         { minSekunden: Number($('#passiv-min').value), maxSekunden: Number($('#passiv-max').value) },
         { modus: 'aus', sekunden: 0, minSekunden: 0, maxSekunden: 0 },
-        { dichte: $('#passiv-dichte').value, haerte: Number($('#passiv-haerte').value), uhr: $('#passiv-uhr').checked });
+        { dichte: $('#passiv-dichte').value, haerte: Number($('#passiv-haerte').value), uhr: $('#passiv-uhr').checked,
+          gedacht: Number($('#passiv-gedacht').value), drakonisch: $('#passiv-drakonisch').checked });
     }
     var notausgang = {
       modus: $('#notausgang-modus').value,
@@ -710,7 +716,11 @@
       if (!tresor || !tresor.freigabe || !tresor.freigabe.extern) return;
       T.tresorLogik.externBuchen(tresor, wert, grund, zeit);
       sichern(true);
-    }, haStatusSetzen);
+    }, haStatusSetzen, function (an, zeit) {
+      var tresor = zustand.tresor;
+      if (!tresor || !tresor.freigabe || !tresor.freigabe.extern) return;
+      if (T.tresorLogik.externFrost(tresor, an, zeit)) sichern(true);
+    });
   }
 
   function haStatusSetzen(status, text) {
@@ -755,13 +765,14 @@
     function lesen() {
       return { url: $('#ha-url').value.trim(), token: $('#ha-token').value.trim(),
         zahl: $('#ha-zahl').value.trim() || T.homeassistant.STANDARD.zahl, grund: $('#ha-grund').value.trim(),
-        rueck: $('#ha-rueck').value.trim() };
+        rueck: $('#ha-rueck').value.trim(), frost: $('#ha-frost').value.trim() };
     }
     var kasten = el('div', { class: 'ha-felder' }, [
       feld('ha-url', 'Adresse von Home Assistant', e.url, { type: 'url', placeholder: 'https://…' }),
       feld('ha-token', 'Langlebiges Zugangstoken', e.token, { type: 'password', placeholder: 'Profil → Sicherheit' }),
       feld('ha-zahl', 'Zahl (Minuten)', e.zahl, { type: 'text' }),
       feld('ha-grund', 'Grund (optional)', e.grund, { type: 'text' }),
+      feld('ha-frost', 'Freeze-Schalter (optional)', e.frost, { type: 'text' }),
       el('button', { class: 'knopf', type: 'button', id: 'ha-pruefen', text: 'Verbindung prüfen', onclick: async function () {
         var neu = lesen();
         T.homeassistant.einstellungenSichern(neu);
@@ -1131,6 +1142,11 @@
         el('select', { id: 'passiv-min' }, tresorzeitOptionen(3600))
       ]),
       el('div', { class: 'feld' }, [
+        el('label', { for: 'passiv-gedacht', text: 'Eigentlich offen nach' }),
+        el('select', { id: 'passiv-gedacht' }, [el('option', { value: '0', selected: 'selected' }, 'irgendwo in der Mitte')]
+          .concat(tresorzeitOptionen(-1)))
+      ]),
+      el('div', { class: 'feld' }, [
         el('label', { for: 'passiv-max', text: 'Spätestens offen nach' }),
         el('select', { id: 'passiv-max' }, tresorzeitOptionen(10800))
       ]),
@@ -1153,6 +1169,10 @@
         el('input', { type: 'checkbox', id: 'passiv-uhr', checked: 'checked' }),
         el('span', { text: 'Die Uhr zeigen' })
       ]),
+      el('label', { class: 'schalterzeile' }, [
+        el('input', { type: 'checkbox', id: 'passiv-drakonisch' }),
+        el('span', { text: 'Drakonisch – ich darf die Restzeit verdoppeln' })
+      ]),
       el('p', { class: 'flaut klein', id: 'passiv-hinweis', text: '' })
     ]);
 
@@ -1172,6 +1192,14 @@
         el('select', { id: 'extern-richtung' }, [
           el('option', { value: 'beide' }, 'Zeit geben und nehmen'),
           el('option', { value: 'dazu' }, 'nur Zeit dazugeben – Einbahnstraße')
+        ]),
+        el('label', { for: 'extern-frost-max', text: 'Freeze von außen höchstens' }),
+        el('select', { id: 'extern-frost-max' }, [
+          el('option', { value: '900' }, '15 min je Freeze'),
+          el('option', { value: '3600', selected: 'selected' }, '1 h je Freeze'),
+          el('option', { value: '14400' }, '4 h je Freeze'),
+          el('option', { value: '86400' }, '1 Tag je Freeze'),
+          el('option', { value: '0' }, 'ohne Grenze – bis zur Höchstzeit')
         ]),
         el('p', { class: 'flaut klein', text:
           'Einbahnstraße: Ein Nachlass von außen wird vermerkt und abgewiesen. Dein eigenes Home Assistant kann dich dann '
@@ -1412,7 +1440,7 @@
     }
     $('#spielart-pruefungen').addEventListener('click', function () { spielartAnwenden('pruefungen'); });
     $('#spielart-passiv').addEventListener('click', function () { spielartAnwenden('passiv'); });
-    ['#passiv-min', '#passiv-max', '#passiv-dichte', '#passiv-haerte', '#passiv-uhr'].forEach(function (feld) {
+    ['#passiv-min', '#passiv-gedacht', '#passiv-max', '#passiv-dichte', '#passiv-haerte', '#passiv-uhr', '#passiv-drakonisch'].forEach(function (feld) {
       $(feld).addEventListener('change', function () { schaetzungAktualisieren(); pruefeBereit(); });
     });
 
@@ -1429,17 +1457,25 @@
     var tz = konfig.tresorzeit, wahl = konfig.passiv;
     var P = T.tresorLogik.PASSIV;
     var n = P.dichte[wahl.dichte];
-    var spanne = tz.maxSekunden - tz.minSekunden;
-    var einheit = spanne * P.wucht[wahl.haerte] / Math.sqrt(n);
-    var mitte = (tz.minSekunden + tz.maxSekunden) / 2;
+    var unten = tz.minSekunden, oben = tz.maxSekunden, spanne = oben - unten;
+    /* Dieselbe Rechnung wie passivAnlegen in tresor.js. */
+    var gedacht = wahl.gedacht ? util.grenze(wahl.gedacht, unten, oben) : 0;
+    var start = gedacht || (unten + oben) / 2;
+    var basis = gedacht ? (2 * (gedacht - unten) || gedacht) : spanne;
+    var einheit = basis * P.wucht[wahl.haerte] / Math.sqrt(n);
     $('#passiv-hinweis').textContent = (spanne <= 0
-      ? 'Kein Spielraum: Er geht nach genau ' + nachDauer(tz.minSekunden) + ' auf, was ich auch melde.'
-      : 'Nie vor ' + util.dauer(tz.minSekunden) + ', nie nach ' + util.dauer(tz.maxSekunden) + '. Die Uhr startet irgendwo in der Mitte. '
-        + 'Etwa alle ' + util.dauer(Math.max(P.abstandMin, mitte / (n + 1))) + ' melde ich mich; ein Schritt ist meist um '
-        + util.dauer(Math.max(1, Math.round(einheit))) + '. Im Mittel gleicht sich alles aus.')
+      ? 'Kein Spielraum: Er geht nach genau ' + nachDauer(unten) + ' auf, was ich auch melde.'
+      : 'Nie vor ' + util.dauer(unten) + ', nie nach ' + util.dauer(oben) + '. '
+        + (gedacht ? 'Die Uhr startet bei ' + util.dauer(gedacht) + (wahl.gedacht !== gedacht ? ' (in den Rahmen gerückt)' : '') + '. '
+          : 'Die Uhr startet irgendwo in der Mitte. ')
+        + 'Etwa alle ' + util.dauer(Math.max(P.abstandMin, start / (n + 1))) + ' melde ich mich; ein Schritt ist meist um '
+        + util.dauer(Math.max(1, Math.round(einheit))) + '. Im Mittel gleicht sich alles aus'
+        + (wahl.drakonisch ? ' - bis auf die Verdopplung: Sie kommt etwa jedes '
+          + Math.round(P.arten.reduce(function (s, x) { return s + x[1]; }, P.verdoppeln) / P.verdoppeln)
+          + '. Mal und verdoppelt, was übrig ist. Gerecht ist das nicht.' : '.'))
       + (wahl.uhr ? '' : ' Ohne Uhr erfährst du nur, in welche Richtung es ging - nicht, wie weit.');
     $('#abschluss-warnung').textContent = 'Ab hier öffnet ihn nur noch das Netz - frühestens nach '
-      + nachDauer(tz.minSekunden) + ', spätestens nach ' + nachDauer(tz.maxSekunden)
+      + nachDauer(unten) + ', spätestens nach ' + nachDauer(oben)
       + '. Einen Notausgang gibt es nicht: Der Rahmen ist die Zusage. Zum Öffnen braucht es Internet. '
       + 'Löschen des Tresors löscht das Geheimnis.';
   }
@@ -2766,10 +2802,19 @@
       /* Unter Willkuer keine Uhr: Sie waere die eine Zahl, aus der sich alles
        * ablesen liesse. Was eine Buchung bewegt hat, steht im Kasten - wohin
        * es fuehrt, nicht. */
+      var steht = T.tresorLogik.frostRest(tresor);
+      anzeige.classList.toggle('ist-gefroren', steht !== null);
+      if (steht !== null) rest = steht;
       if (dunkel && !uhrSichtbar()) {
         anzeige.textContent = rest > 0 ? '· · ·' : 'Die Zeit ist um.';
         anzeige.classList.remove('ist-lang');
-        wann.textContent = rest > 0 ? 'Wie lange noch, sage ich nicht.' : 'Hol dir, was dir zusteht.';
+        wann.textContent = steht !== null ? 'Die Uhr steht.' : rest > 0 ? 'Wie lange noch, sage ich nicht.' : 'Hol dir, was dir zusteht.';
+        return;
+      }
+      if (steht !== null) {
+        anzeige.textContent = restUhr(rest);
+        anzeige.classList.toggle('ist-lang', rest >= 86400);
+        wann.textContent = 'Die Uhr steht.';
         return;
       }
       anzeige.textContent = rest > 0 ? restUhr(rest) : 'Die Zeit ist um.';
@@ -2812,6 +2857,9 @@
       /* Wann die naechste Pruefung kommt, muss man wissen - sonst kann man
        * nicht puenktlich sein. Wann der Tresor aufgeht, unter Willkuer nicht. */
       var verborgen = alleAbgelegt && !uhrSichtbar();
+      var steht = alleAbgelegt ? T.tresorLogik.frostRest(tresor) : null;
+      anzeige.classList.toggle('ist-gefroren', steht !== null);
+      if (steht !== null) rest = steht;
       anzeige.textContent = verborgen ? '· · ·' : restUhr(rest);
       anzeige.classList.toggle('ist-lang', rest >= 86400 && !verborgen);
     };
@@ -3091,13 +3139,14 @@
    * fragt jede Sekunde nach und zeichnet neu, wenn etwas eingetroffen ist -
    * hier gibt es keine Pruefung, die dabei weggerissen wuerde. */
   var PASSIV_TITEL = { nachlass: 'Nachlass', aufschlag: 'Aufschlag', muenze: 'Münzwurf',
-    stille: 'Kontrolle', wurf: 'Angebot', extern: 'Von außen' };
+    stille: 'Kontrolle', wurf: 'Angebot', extern: 'Von außen', stillstand: 'Stillstand', verdoppelt: 'Verdoppelt' };
 
   /* Was ein Ereignis bewegt hat, in Worten. Ohne Uhr nur die Richtung. */
   function passivWirkung(tresor, e) {
     var uhr = tresor.konfig.passiv.uhr;
     if (e.art === 'extern') return externText(e, !uhr);
     if (e.art === 'stille') return 'Keine Änderung.';
+    if (e.art === 'stillstand') return 'Die Uhr steht.';
     if (e.art === 'wurf' && e.offen) return 'Offen.';
     if (e.art === 'wurf' && e.verfallen) return 'Verfallen - nicht gewürfelt.';
     if (e.art === 'wurf' && e.abgelehnt) return 'Ausgeschlagen.';
@@ -3226,9 +3275,18 @@
         }
       }
       var rest = (T.tresorLogik.freigabeZiel(tresor).zeit - Date.now()) / 1000;
+      var steht = T.tresorLogik.frostRest(tresor);
+      anzeige.classList.toggle('ist-gefroren', steht !== null);
+      if (steht !== null) rest = steht;
       if (!uhr) {
         anzeige.textContent = rest > 0 ? '· · ·' : 'Die Zeit ist um.';
-        wann.textContent = rest > 0 ? 'Wann, sage ich nicht. Irgendwo im Rahmen.' : '';
+        wann.textContent = steht !== null ? 'Die Uhr steht.' : rest > 0 ? 'Wann, sage ich nicht. Irgendwo im Rahmen.' : '';
+        return;
+      }
+      if (steht !== null) {
+        anzeige.textContent = restUhr(rest);
+        anzeige.classList.toggle('ist-lang', rest >= 86400);
+        wann.textContent = 'Die Uhr steht.';
         return;
       }
       anzeige.textContent = rest > 0 ? restUhr(rest) : 'Die Zeit ist um.';
@@ -3388,6 +3446,12 @@
     } else {
       zeichneEinrichten();
     }
+
+    /* Der Freeze bucht beim Nachziehen - jede Sekunde, egal welche Ansicht. */
+    setInterval(function () {
+      var t = zustand.tresor;
+      if (t && t.freigabe && t.freigabe.frost && T.tresorLogik.frostNachziehen(t)) sichern();
+    }, 1000);
 
     document.addEventListener('visibilitychange', function () {
       if (document.hidden) sichern(true);

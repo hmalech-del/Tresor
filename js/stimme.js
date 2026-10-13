@@ -142,6 +142,27 @@
       'Kontrolle. Nichts zu melden.',
       'Ich sehe dich. Weiter.'
     ],
+    /* Freeze: die Uhr steht */
+    stillstand: [
+      'Die Uhr steht. Wie lange, sage ich nicht.',
+      'Angehalten. Die Zeit läuft - deine nicht.',
+      'Stillstand. Du wartest auf das Warten.'
+    ],
+    frost: [
+      'Die Uhr steht.',
+      'Angehalten. Von draußen.',
+      'Eingefroren. Bis auf Weiteres.'
+    ],
+    tauwetter: [
+      'Die Uhr läuft wieder.',
+      'Weiter. Die stehende Zeit hängt hinten dran.'
+    ],
+    /* Drakonisch: Restzeit verdoppelt */
+    verdoppelt: [
+      'Verdoppelt. Was übrig war, gibt es jetzt zweimal.',
+      'Doppelt so lang. Beschwer dich nicht, du hast es so gewollt.',
+      'Drakonisch, wie bestellt.'
+    ],
     /* Einbahnstrasse: Nachlass von aussen abgewiesen */
     abgewiesen: [
       'Nachlass von außen? Nicht bei mir.',
