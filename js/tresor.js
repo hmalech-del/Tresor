@@ -513,6 +513,7 @@
         z: null
       };
       if (passivModus(konfig)) freigabe.passiv = passivAnlegen(freigabe, konfig);
+      if (konfig.extern) freigabe.extern = { basis: null, letzte: null, summe: 0 };
       tresorzeit = null;
     }
 
@@ -1444,6 +1445,43 @@
     return true;
   }
 
+  /* ---------- Von aussen (Home Assistant) ----------
+   *
+   * Home Assistant meldet den Stand einer Zahl (Minuten). Der erste Stand nach
+   * dem Verriegeln ist der Nullpunkt; jeder weitere bewegt die Uhr um den
+   * Unterschied - mehr heisst spaeter, weniger frueher. So kommt auch nach,
+   * was geschah, waehrend die App zu war.
+   *
+   * zeit ist, wann sich die Zahl in Home Assistant geaendert hat. Lag das nach
+   * der Freigabe, war die Zeit schon um: Dann wird nur der Nullpunkt
+   * nachgezogen, gebucht wird nichts. Bewegt wird nur am Netz und nur
+   * innerhalb der Leiter - Home Assistant oeffnet nichts. */
+  function externBuchen(tresor, wert, grund, zeit) {
+    var f = tresor.freigabe, x = f && f.extern;
+    if (!x || f.z || typeof wert !== 'number' || !isFinite(wert)) return null;
+    zeit = zeit || Date.now();
+    if (x.basis === null || x.basis === undefined) { x.basis = wert; return null; }
+    var minuten = Math.round((wert - x.basis) * 1000) / 1000;
+    x.basis = wert;
+    if (!minuten) return null;
+    if (zeit >= freigabeZiel(tresor).zeit) return null;
+    var vorher = f.konto.zielSek;
+    var zug = zeitkontoVerschieben(tresor, Math.round(minuten * 60));
+    var e = {
+      art: 'extern', zeit: zeit, minuten: minuten, grund: String(grund || '').slice(0, 80),
+      sekunden: Math.round(f.konto.zielSek - vorher),
+      amBoden: !!(zug && zug.amBoden), amDeckel: !!(zug && zug.amDeckel),
+      neueZeit: freigabeZiel(tresor).zeit
+    };
+    x.summe = (x.summe || 0) + e.sekunden;
+    x.letzte = e;
+    if (f.passiv) {
+      f.passiv.nr++;
+      passivEintragen(f.passiv, Object.assign({ nr: f.passiv.nr }, e));
+    }
+    return e;
+  }
+
   /* Notausgang ueber das Netz: erst den Zeitschluessel holen, dann wie immer. */
   async function notausgangUeberNetz(tresor, passMat) {
     var exit = tresor.notausgang;
@@ -1574,6 +1612,7 @@
     passivSchritt: passivSchritt,
     passivWuerfeln: passivWuerfeln,
     passivAblehnen: passivAblehnen,
+    externBuchen: externBuchen,
     STEIN: STEIN,
     steinArt: steinArt,
     steinBissen: steinBissen,

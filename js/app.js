@@ -336,7 +336,17 @@
       + 'und der kostet ein Vielfaches.';
   }
 
+  function externGewaehlt() {
+    return zeitschlossArt() === 'drand' && !!$('#extern-aktiv') && $('#extern-aktiv').checked;
+  }
+
   function konfigurationLesen() {
+    var k = konfigurationRoh();
+    if (externGewaehlt()) k.extern = true;
+    return k;
+  }
+
+  function konfigurationRoh() {
     if (passivGewaehlt()) {
       return T.tresorLogik.passivKonfiguration(
         { minSekunden: Number($('#passiv-min').value), maxSekunden: Number($('#passiv-max').value) },
@@ -465,6 +475,7 @@
   function schaetzungAktualisieren() {
     var anzeige = $('#schaetzung');
     if (!anzeige) return;
+    if ($('#externkarte')) $('#externkarte').classList.toggle('versteckt', zeitschlossArt() !== 'drand');
 
     if (passivGewaehlt()) {
       passivHinweis();
@@ -583,8 +594,102 @@
           : '');
   }
 
+  /* ---------------- Home Assistant ----------------
+   * Die Verbindung lebt neben den Ansichten - ein Neuzeichnen trennt sie nicht.
+   * Sie steht, solange ein Tresor am Netz offen ist, der Eingaenge von aussen
+   * erlaubt, und wird neu aufgebaut, wenn sich die Zugangsdaten aendern. */
+  function haGewuenscht() {
+    var t = zustand.tresor, f = t && t.freigabe;
+    return !!(f && f.extern && !f.z && (t.konfig || {}).extern && !T.tresorLogik.alleOffen(t));
+  }
+
+  function haVerbindungPflegen(neuAufbauen) {
+    var soll = haGewuenscht();
+    if (zustand.ha && (!soll || neuAufbauen)) { zustand.ha.schliessen(); zustand.ha = null; }
+    if (!soll || zustand.ha) return;
+    var e = T.homeassistant.einstellungen();
+    if (!e.url || !e.token) { haStatusSetzen('fehler', 'Noch nicht eingerichtet - unter Verwaltung.'); return; }
+    zustand.ha = new T.homeassistant.Verbindung(e, function (wert, grund, zeit) {
+      var tresor = zustand.tresor;
+      if (!tresor || !tresor.freigabe || !tresor.freigabe.extern) return;
+      T.tresorLogik.externBuchen(tresor, wert, grund, zeit);
+      sichern(true);
+    }, haStatusSetzen);
+  }
+
+  function haStatusSetzen(status, text) {
+    zustand.haStatus = { status: status, text: text };
+    util.$$('.ha-status').forEach(function (zeile) { haStatusMalen(zeile); });
+  }
+
+  function haStatusMalen(zeile) {
+    var st = zustand.haStatus || { status: 'getrennt', text: '' };
+    zeile.textContent = 'Home Assistant: ' + (st.status === 'verbunden' ? 'verbunden.' : st.text || st.status);
+    zeile.classList.toggle('ist-verbunden', st.status === 'verbunden');
+    zeile.classList.toggle('ist-fehler', st.status === 'fehler');
+  }
+
+  function haStatusZeile(tresor) {
+    if (!(tresor.konfig || {}).extern || !tresor.freigabe || !tresor.freigabe.extern) return null;
+    var zeile = el('p', { class: 'flaut klein ha-status', text: '' });
+    haStatusMalen(zeile);
+    return zeile;
+  }
+
+  /* Was zuletzt von aussen kam, in einer Zeile. Unter Willkuer bzw. ohne Uhr
+   * nur die Richtung. */
+  function externText(e, nurRichtung) {
+    var was = !e.sekunden ? (e.amBoden ? 'früher geht es nicht' : e.amDeckel ? 'später geht es nicht' : 'keine Änderung')
+      : nurRichtung ? (e.sekunden < 0 ? 'früher' : 'später')
+      : (e.sekunden < 0 ? '−' + util.dauer(-e.sekunden) : '+' + util.dauer(e.sekunden));
+    return (e.grund ? e.grund + ': ' : '') + was + '.';
+  }
+
+  /* Die Zugangsdaten - Geraeteeinstellung, nicht Teil des Tresors. */
+  function haFelder() {
+    var e = T.homeassistant.einstellungen();
+    var meldung = el('p', { class: 'aufgabe-meldung', id: 'ha-meldung', role: 'status', text: '' });
+    function feld(id, text, wert, attr) {
+      return el('div', { class: 'feld' }, [
+        el('label', { for: id, text: text }),
+        el('input', Object.assign({ id: id, class: 'antwortfeld', value: wert, autocomplete: 'off', spellcheck: 'false' }, attr || {}))
+      ]);
+    }
+    function lesen() {
+      return { url: $('#ha-url').value.trim(), token: $('#ha-token').value.trim(),
+        zahl: $('#ha-zahl').value.trim() || T.homeassistant.STANDARD.zahl, grund: $('#ha-grund').value.trim() };
+    }
+    var kasten = el('div', { class: 'ha-felder' }, [
+      feld('ha-url', 'Adresse von Home Assistant', e.url, { type: 'url', placeholder: 'https://…' }),
+      feld('ha-token', 'Langlebiges Zugangstoken', e.token, { type: 'password', placeholder: 'Profil → Sicherheit' }),
+      feld('ha-zahl', 'Zahl (Minuten)', e.zahl, { type: 'text' }),
+      feld('ha-grund', 'Grund (optional)', e.grund, { type: 'text' }),
+      el('button', { class: 'knopf', type: 'button', id: 'ha-pruefen', text: 'Verbindung prüfen', onclick: async function () {
+        var neu = lesen();
+        T.homeassistant.einstellungenSichern(neu);
+        meldung.className = 'aufgabe-meldung';
+        meldung.textContent = 'Verbinde ...';
+        var r = await T.homeassistant.pruefen(neu);
+        meldung.className = 'aufgabe-meldung ' + (r.ok ? 'ist-gut' : 'ist-fehler');
+        meldung.textContent = r.ok ? 'Verbunden. ' + neu.zahl + ' steht auf ' + r.wert + (r.grund ? ' (' + r.grund + ')' : '') + '.' : r.text;
+        if (zustand.tresor) haVerbindungPflegen(true);
+      } }),
+      meldung,
+      el('p', { class: 'flaut klein', text:
+        'Das Token liegt nur in diesem Browser - nicht im Tresor, nicht in einer Sicherung. Es öffnet dein ganzes Home Assistant; '
+        + 'leg dafür am besten einen eigenen Benutzer an. Die Seite läuft über https, Home Assistant muss deshalb auch über https '
+        + 'erreichbar sein. Einrichtung in Home Assistant: siehe README, Abschnitt „Von außen".' })
+    ]);
+    kasten.addEventListener('change', function () {
+      T.homeassistant.einstellungenSichern(lesen());
+      if (zustand.tresor) haVerbindungPflegen(true);
+    });
+    return kasten;
+  }
+
   function zeichneEinrichten() {
     aufraeumen();
+    haVerbindungPflegen();
     var wurzel = util.leeren($('#buehne'));
     var dimensionen = T.herausforderungen.dimensionen;
 
@@ -938,6 +1043,20 @@
       el('p', { class: 'flaut klein', id: 'passiv-hinweis', text: '' })
     ]);
 
+    /* Nur am Netz gibt es eine Uhr, die sich von aussen schieben laesst. */
+    var externTeil = el('section', { class: 'karte versteckt', id: 'externkarte' }, [
+      el('h2', { text: 'Von außen' }),
+      el('label', { class: 'schalterzeile' }, [
+        el('input', { type: 'checkbox', id: 'extern-aktiv' }),
+        el('span', { text: 'Home Assistant darf die Zeit bewegen' })
+      ]),
+      el('p', { class: 'flaut klein', text:
+        'Eine Zahl in Home Assistant: Steigt sie, kommt Zeit dazu, fällt sie, geht Zeit weg - je Einheit eine Minute. '
+        + 'Was sie bewegt, regelst du dort: ein Webhook, eine NFC-Marke, ein Beacon, eine Tür. Öffnen kann Home Assistant '
+        + 'den Tresor nicht. Was passiert, während die App zu ist, wird beim nächsten Öffnen nachgeholt.' }),
+      el('div', { id: 'extern-felder', class: 'versteckt' }, [haFelder()])
+    ]);
+
     wurzel.appendChild(geheimTeil);
     wurzel.appendChild(spielartTeil);
     wurzel.appendChild(passivTeil);
@@ -945,6 +1064,7 @@
     wurzel.appendChild(dimensionTeil);
     wurzel.appendChild(stationTeil);
     wurzel.appendChild(zeitTeil);
+    wurzel.appendChild(externTeil);
     wurzel.appendChild(feinTeil);
     wurzel.appendChild(abschluss);
 
@@ -1133,6 +1253,9 @@
       feld.addEventListener('input', pruefeBereit);
     });
     $('#verriegeln').addEventListener('click', verriegeln);
+    $('#extern-aktiv').addEventListener('change', function () {
+      $('#extern-felder').classList.toggle('versteckt', !this.checked);
+    });
 
     function spielartAnwenden(welche) {
       zustand.spielart = welche;
@@ -1495,6 +1618,7 @@
   function zeichneTresor() {
     aufraeumen();
     var tresor = zustand.tresor;
+    haVerbindungPflegen();
 
     // Läuft eine tresorweite Höchstzeit ab - auch bei geschlossener App?
     if (T.tresorLogik.fristAbgelaufen(tresor)) {
@@ -1651,6 +1775,9 @@
       el('button', { class: 'knopf gefahr', type: 'button', text: 'Tresor löschen', onclick: tresorLoeschen })
     ]));
 
+    if ((tresor.konfig || {}).extern && tresor.freigabe && !fertig) {
+      lade.appendChild(el('section', { class: 'karte' }, [el('h2', { text: 'Home Assistant' }), haFelder()]));
+    }
     lade.appendChild(sicherungsKarte());
     var verlauf = verlaufKarte();
     if (verlauf) lade.appendChild(verlauf);
@@ -2478,10 +2605,20 @@
       'Das Netz hält ihn, nicht dieses Gerät. Der Bildschirm darf aus sein, die App geschlossen. '
       + 'Jede gelöste Prüfung holt Zeit zurück, jeder Fehler schiebt die Freigabe weg. '
       + 'Ist die Zeit um, geht er auf - fertig oder nicht.' }));
+    /* Von aussen: ohne Neuzeichnen, die Uhr laeuft ohnehin jede Sekunde. */
+    var externZeile = el('p', { class: 'extern-zeile versteckt', text: '' });
+    karte.appendChild(externZeile);
+    var haZeile = haStatusZeile(tresor);
+    if (haZeile) karte.appendChild(haZeile);
 
     function takt(ausUhr) {
       var ziel = T.tresorLogik.freigabeZiel(tresor);
       var rest = (ziel.zeit - Date.now()) / 1000;
+      var letzte = f.extern && f.extern.letzte;
+      if (letzte) {
+        externZeile.classList.remove('versteckt');
+        externZeile.textContent = 'Von außen, ' + kurzeZeit(letzte.zeit) + ': ' + externText(letzte, dunkel && !uhrSichtbar());
+      }
       /* Die Zeit ist um: Jetzt entscheidet sie - auch mitten in einer
        * Pruefung. Das ist der eine Fall, in dem diese Karte neu zeichnet;
        * starteAktuelles holt dann den Schluessel. Nur aus der laufenden Uhr,
@@ -2823,11 +2960,12 @@
    * fragt jede Sekunde nach und zeichnet neu, wenn etwas eingetroffen ist -
    * hier gibt es keine Pruefung, die dabei weggerissen wuerde. */
   var PASSIV_TITEL = { nachlass: 'Nachlass', aufschlag: 'Aufschlag', muenze: 'Münzwurf',
-    stille: 'Kontrolle', wurf: 'Angebot', extern: 'Eingang' };
+    stille: 'Kontrolle', wurf: 'Angebot', extern: 'Von außen' };
 
   /* Was ein Ereignis bewegt hat, in Worten. Ohne Uhr nur die Richtung. */
   function passivWirkung(tresor, e) {
     var uhr = tresor.konfig.passiv.uhr;
+    if (e.art === 'extern') return externText(e, !uhr);
     if (e.art === 'stille') return 'Keine Änderung.';
     if (e.art === 'wurf' && e.offen) return 'Offen.';
     if (e.art === 'wurf' && e.verfallen) return 'Verfallen - nicht gewürfelt.';
@@ -2867,7 +3005,8 @@
       var gut = letzte.sekunden < 0, schlecht = letzte.sekunden > 0;
       var kasten = el('div', { class: schlecht ? 'strafkasten' : 'gutkasten' }, [
         el('p', { class: 'aufgabe-titel', text: neu.length > 1 ? neu.length + ' Eingänge' : 'Eingang · ' + PASSIV_TITEL[letzte.art] }),
-        el('p', { class: 'wachterwort', text: letzte.art === 'wurf' ? T.stimme.sag(gut ? 'nachlass' : schlecht ? 'aufschlag' : 'stille')
+        el('p', { class: 'wachterwort', text: letzte.art === 'wurf' || letzte.art === 'extern'
+          ? T.stimme.sag(gut ? 'nachlass' : schlecht ? 'aufschlag' : 'stille')
           : T.stimme.sag(letzte.art) })
       ]);
       neu.slice(0, 5).forEach(function (e) {
@@ -2923,6 +3062,10 @@
       'Das Netz hält ihn, nicht dieses Gerät. Ab und zu melde ich mich - auch wenn die App zu ist; '
       + 'was du verpasst, steht beim nächsten Öffnen hier. Ist die Zeit um, geht er auf.' }));
 
+    var haZeile = haStatusZeile(tresor);
+    if (haZeile) karte.appendChild(haZeile);
+    var nrBeimZeichnen = p.nr;
+
     if (p.protokoll.length) {
       var liste = el('ol', { class: 'passiv-protokoll' }, p.protokoll.map(function (e) {
         return el('li', {}, [
@@ -2942,7 +3085,8 @@
       if (ausUhr === true && zustand.passivWurf !== true && !zustand.abholen) {
         var eingetroffen = zustand.passivWurf ? [] : T.tresorLogik.passivSchritt(tresor);
         var um = T.tresorLogik.freigabeErreicht(tresor);
-        if (eingetroffen.length || um) {
+        /* Auch, was von aussen kam (externBuchen zaehlt p.nr mit). */
+        if (eingetroffen.length || um || (!zustand.passivWurf && p.nr !== nrBeimZeichnen)) {
           sichern(true);
           clearInterval(zustand.freigabeUhr);
           zustand.freigabeUhr = null;
@@ -3114,7 +3258,10 @@
       zeichneEinrichten();
     }
 
-    document.addEventListener('visibilitychange', function () { if (document.hidden) sichern(true); });
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) sichern(true);
+      else if (zustand.ha) zustand.ha.anstossen();
+    });
 
     // Erinnerungen laufen unabhängig von der gerade sichtbaren Ansicht
     setInterval(function () {

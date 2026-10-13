@@ -956,6 +956,102 @@ Technisch ist Passiv ein Tresor am Netz mit einem einzigen Fragment und ohne
 Aufgaben; die Leiter des Zeitkontos endet am oberen Rahmen statt am
 Zehnfachen. Stellschrauben in `PASSIV` (`js/tresor.js`).
 
+## Von außen: Home Assistant
+
+Am Netz – mit Prüfungen, unter Willkür oder passiv – darf auf Wunsch
+**Home Assistant** die Uhr bewegen. Der Schalter „Home Assistant darf die Zeit
+bewegen" steht in der Karte **Von außen** und gilt ab dem Verriegeln; die
+Zugangsdaten lassen sich später unter *Verwaltung* ändern.
+
+Die App hört auf **eine Zahl**, einen Helfer `input_number.tresor_minuten`.
+Steigt sie, kommt Zeit dazu; fällt sie, geht Zeit weg – je Einheit eine Minute.
+Dazu, wenn es ihn gibt, ein `input_text.tresor_grund`, der in der App neben dem
+Betrag steht („Tür offen: +10 min."). Was die Zahl bewegt, regelst du in Home
+Assistant: ein Webhook, eine NFC-Marke, ein Bluetooth-Beacon, ein
+Türkontakt, ein Zeitplan. So wird aus dem Tresor ein Escape-Room-Baustein.
+
+**Warum eine Zahl und keine Ereignisse:** Die App ist nicht immer offen. Der
+erste Stand nach dem Verriegeln ist der Nullpunkt; jeder weitere zählt als
+Unterschied dazu. Was geschah, während die App zu war, kommt beim nächsten
+Verbinden als ein Eingang nach. Ein Stand, der erst nach der Freigabe kam,
+bucht nichts mehr.
+
+**Was Home Assistant nicht kann:** den Tresor öffnen. Es schiebt nur die Uhr,
+und nur innerhalb der Leiter – am Netz zwischen unterem Rahmen und Deckel,
+passiv innerhalb des Rahmens. Den Zeitschlüssel gibt allein das Netz frei.
+
+Angezeigt wird es am Netz als Zeile in der Freigabe-Karte (ohne die laufende
+Prüfung neu zu zeichnen), passiv als Eingang „Von außen" im Protokoll. Ohne
+Uhr – Willkür ohne Uhr, Passiv ohne Uhr – nur die Richtung. Darunter ein
+Punkt: verbunden, getrennt (die App versucht es nach 5 s, 10 s, … bis 5 min
+erneut, sofort, wenn die Seite wieder sichtbar wird) oder Fehler.
+
+### In Home Assistant einrichten
+
+1. **Helfer anlegen** (Einstellungen → Geräte & Dienste → Helfer):
+   *Zahl* `tresor_minuten`, Minimum −100000, Maximum 100000, Schritt 1,
+   Anzeige als Eingabefeld. Optional *Text* `tresor_grund`.
+2. **Zugangstoken** (Profil → Sicherheit → Langlebige Zugangstoken). Am besten
+   für einen eigenen Benutzer ohne Administratorrechte – das Token öffnet
+   sonst das ganze Haus. Es liegt nur im Browser (`tresor.ha`), nicht im
+   Tresor und nicht in einer Sicherung.
+3. **Von außen erreichbar über https** – Nabu Casa oder ein eigenes
+   Zertifikat. Die App läuft über https; eine `http://`-Adresse im Heimnetz
+   blockiert der Browser als gemischten Inhalt. Die App spricht die
+   WebSocket-API (`wss://…/api/websocket`, Abo `subscribe_entities`).
+   Meldet der Browser trotzdem einen CORS-Fehler, die Seite in
+   `http: cors_allowed_origins` eintragen.
+4. In der App: Adresse, Token, „Verbindung prüfen" – die App zeigt den
+   aktuellen Stand der Zahl.
+
+Ein Webhook, der Minuten und Grund mitbringt:
+
+```yaml
+alias: Tresor per Webhook
+triggers:
+  - trigger: webhook
+    webhook_id: tresor-ein-langes-zufaelliges-wort
+    allowed_methods: [POST]
+    local_only: false
+actions:
+  # erst der Grund, dann die Zahl - so kommt beides in einem Eingang an
+  - action: input_text.set_value
+    target: { entity_id: input_text.tresor_grund }
+    data: { value: "{{ trigger.json.grund | default('Webhook') }}" }
+  - action: input_number.set_value
+    target: { entity_id: input_number.tresor_minuten }
+    data:
+      value: "{{ (states('input_number.tresor_minuten') | float(0)) + (trigger.json.minuten | float(0)) }}"
+```
+
+```bash
+curl -X POST -H 'Content-Type: application/json' \
+  -d '{"minuten": 15, "grund": "Zu spät"}' \
+  https://dein-home-assistant/api/webhook/tresor-ein-langes-zufaelliges-wort
+```
+
+Eine NFC-Marke, die zehn Minuten erlässt:
+
+```yaml
+alias: Tresor NFC Küche
+triggers:
+  - trigger: tag
+    tag_id: kueche
+actions:
+  - action: input_text.set_value
+    target: { entity_id: input_text.tresor_grund }
+    data: { value: "NFC Küche" }
+  - action: input_number.set_value
+    target: { entity_id: input_number.tresor_minuten }
+    data:
+      value: "{{ (states('input_number.tresor_minuten') | float(0)) - 10 }}"
+```
+
+Bluetooth-Beacons kommen über eine Integration wie *Bermuda* oder *iBeacon
+Tracker* als Sensor herein und lösen genauso über einen Zustands-Trigger aus.
+Die Zahl **nicht zurücksetzen**, solange ein Tresor läuft: Ein Sprung von 250
+auf 0 wären 250 Minuten früher.
+
 ## Willkür
 
 Der harte Modus. Er hieß zuerst „Blindgang" – ein schlechtes Wort, weil es auf
@@ -1274,6 +1370,7 @@ unverändert.
 | `js/erinnerung.js` | Anlässe für Benachrichtigungen, Erlaubnis, Versand |
 | `js/probe.js` | Probelauf: jede Prüfung einzeln, ohne Folgen |
 | `hardware/` | Tresorbox: druckbare Kiste mit Servoverschluss (noch ohne Firmware) |
+| `js/homeassistant.js` | Von außen: WebSocket zu Home Assistant, Zugangsdaten getrennt vom Tresor |
 | `js/app.js` | Oberfläche und Ablauf |
 | `tests/` | `test-zeitkonto.js` (Node), `browser/` (Playwright, gefälschte drand-Kette): `tests/browser/alle.sh` |
 | `.claude/skills/` | Kontext für Claude-Sitzungen: `tresor-app`, `tresorbox` |

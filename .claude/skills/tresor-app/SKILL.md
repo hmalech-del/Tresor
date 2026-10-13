@@ -42,6 +42,7 @@ gebündelten `js/vendor/tlock.min.js`. Push auf `main` deployt über
 | `js/aufgaben-*.js` | Aufgaben je Dimension (Glück, Logik, Rätsel, Konzentration, Sensor, Ort/NFC) |
 | `js/stimme.js` | Alle Sätze des Game Masters, nach Anlass (`sag('stein')`) |
 | `js/speicher.js`, `js/sicherung.js` | `localStorage` (`tresor.v1`), Verlauf, Export/Import |
+| `js/homeassistant.js` | Von außen: WebSocket zu Home Assistant (Zahl in Minuten) |
 | `js/erinnerung.js`, `js/probe.js`, `js/foto.js` | Benachrichtigungen, Probelauf, Ziffern aus Foto |
 
 Skript-Reihenfolge steht in `index.html`; jede Datei hängt sich an
@@ -125,6 +126,17 @@ Mittel null; `passivSchritt` holt verpasste der Reihe nach nach. Oberfläche:
 Stein-Karte und Fahrplan); `zustand.passivWurf` hält Neuzeichnen während des
 Wurfs an. Test: `test-passiv.js`. Hier docken später Eingänge von außen an
 (Home Assistant, Art `extern`).
+
+**Von außen** = `konfig.extern` (am Netz, Schalter beim Verriegeln):
+`js/homeassistant.js` verbindet per WebSocket (`subscribe_entities`) mit Home
+Assistant und liefert den Stand von `input_number.tresor_minuten` (+ optional
+`input_text.tresor_grund`). `externBuchen` in `tresor.js`: erster Stand =
+Nullpunkt (`freigabe.extern.basis`), danach Unterschied × 60 s aufs Konto;
+Änderungen nach der Freigabe buchen nichts. Zugangsdaten in `localStorage`
+`tresor.ha`, **nie** im Tresor/in Sicherungen. Verbindung in `zustand.ha`,
+gepflegt von `haVerbindungPflegen()` (überlebt Neuzeichnen). Test:
+`test-homeassistant.js` fälscht HA mit `page.routeWebSocket`. Ein echtes HA
+gibt es in der Sandbox nicht – das offen sagen.
 
 **Willkür** = `konfig.blind` (in der Oberfläche "Willkür", früher "Meine
 Regeln"). Die App zieht Regeln selbst, zeigt **keine Beträge, keine

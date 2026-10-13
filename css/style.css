@@ -816,3 +816,13 @@ select, input[type=file] {
 .passiv-eingaenge summary { cursor: pointer; color: var(--flaut); }
 .passiv-protokoll { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-direction: column; gap: 4px; font-size: .92em; }
 .passiv-protokoll .flaut { font-variant-numeric: tabular-nums; }
+
+/* Von aussen: Home Assistant */
+.ha-felder { display: flex; flex-direction: column; gap: 8px; }
+.ha-felder .antwortfeld { width: 100%; box-sizing: border-box; font-size: 15px; }
+.ha-felder .knopf { align-self: flex-start; }
+.ha-status { text-align: center; margin: 6px 0 0; }
+.ha-status::before { content: '● '; color: var(--flaut); }
+.ha-status.ist-verbunden::before { color: var(--gruen); }
+.ha-status.ist-fehler::before { color: var(--rot); }
+.extern-zeile { text-align: center; margin: 6px 0 0; color: var(--neon-hell, var(--neon)); font-size: .92em; }
