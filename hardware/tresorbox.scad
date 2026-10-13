@@ -63,10 +63,11 @@ rand_h  = 4;                 // wie tief der Deckelrand in die Kiste faellt
  * trifft. Der Deckelrand haelt bloss Staub ab und ist deshalb absichtlich
  * weit - waeren beide stramm, wuerden sie gegeneinander arbeiten, und der
  * Deckel klemmte, sobald der Druck ein Zehntel daneben liegt. */
-spiel_riegel = 0.35;         // Gleitsitz: Riegel in seiner Bohrung
+spiel_riegel = 0.45;         // Gleitsitz: Riegel in seiner Bohrung (13. 10.: 0,35 lief am
+                             // ersten Pruefstueck etwas schwer)
 spiel_decke  = 0.8;          // zusaetzlich oben - die Bohrungsdecke ist eine
                              // Bruecke und haengt beim Drucken durch
-spiel_zunge  = 0.5;          // Steckfall: Zunge in ihren Schlitz (fuehrend)
+spiel_zunge  = 0.6;          // Steckfall: Zunge in ihren Schlitz (fuehrend; vorher 0,5)
 /* Das Loch in der Zunge braucht in den beiden Achsen verschieden viel.
  *
  * Quer (Y) stapeln sich zwei Lagefehler: Der Riegel darf in seiner Bohrung
@@ -77,10 +78,10 @@ spiel_zunge  = 0.5;          // Steckfall: Zunge in ihren Schlitz (fuehrend)
  * Hoch (Z) stapelt sich nichts: Der Riegel liegt auf dem Boden seiner
  * Bohrung, der Deckel sitzt auf den Waenden. Beides ist bestimmt. Hier waere
  * viel Spiel sogar schaedlich, denn genau darum wackelt der Deckel spaeter. */
-spiel_loch_y = 1.0;          // Riegel durch das Loch der Zunge, quer
-spiel_loch_z = 0.5;          // ... und hoch
+spiel_loch_y = 1.1;          // Riegel durch das Loch der Zunge, quer (>= Riegel- + Zungenspiel)
+spiel_loch_z = 0.6;          // ... und hoch (mehr als der Gleitsitz)
 spiel_loch   = spiel_loch_z; // Rueckfall
-spiel_rand   = 0.8;          // Deckelrand - bewusst lose
+spiel_rand   = 0.9;          // Deckelrand - bewusst lose, weiter als die Zunge
 spiel_servo  = 0.5;          // Servotasche; gehalten wird es von den Schrauben
 spiel        = spiel_riegel; // Rueckfall fuer alte Formeln
 
@@ -402,6 +403,12 @@ module riegel() {
       cube([3, riegel_b + 2, 3], center = true);
     translate([riegel_l/2, 0, 0]) rotate([45, 0, 0])
       cube([3, 3, riegel_h + 2], center = true);
+    /* Fase an den unteren Laengskanten: Die erste Schicht wird beim Drucken
+     * breitgequetscht ("Elefantenfuss"), und genau diese Kante reibt in der
+     * Bohrung. 0,6 mm nehmen sie weg. */
+    for (sy = [-1, 1])
+      translate([0, sy * riegel_b / 2, -riegel_h / 2]) rotate([45, 0, 0])
+        cube([riegel_l + 2, 0.85, 0.85], center = true);
   }
 }
 

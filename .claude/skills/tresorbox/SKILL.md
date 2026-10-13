@@ -32,7 +32,9 @@ das in Antworten nicht verschweigen.
 | `pruefung.py` | rechnet die kritischen Beziehungen nach (Riegel durch Zunge und wieder frei, Stift/Schlitz in beiden Endlagen, Servo in der Wand, Platinensockel, Kabelloch, Nutzraum, STL-Aktualität, Zahl getrennter Teile je STL – das Prüfstück muss drei haben; einmal war die Zunge mit dem Block verschmolzen; Abstand Spitze→Querschlitz am kurzen Riegel gleich dem langen – er war einmal am falschen Ende gekürzt) |
 | `kurbelschleife.py` → `.svg` | Zeichnung des Getriebes aus denselben Parametern |
 | `kollision.scad` | Kollisionsfälle (Rumpf, Laschen, Arm, Stift gegen Körper/Riegel, beide Endlagen) und `fall="ansicht"` für `servo-sitz.png`; `pruefung.py` rendert sie (`--schnell` überspringt) |
-| `servotest/servotest.ino` | Arduino-Testprogramm (ESP32Servo): Mitte/zu/auf (±23°), nachstellen, 20er-Dauertest, fährt langsam und macht `detach`. **Nicht die Firmware**, hier nie kompiliert (keine Toolchain erreichbar) |
+| `ansicht.scad` | Gesamtbilder `gesamt-offen.png` / `gesamt-zu.png` (Servo, Platine, Kabel, Elko, Deckel) |
+| `TESTANLEITUNG.md` | Servotest am Prüfstück Schritt für Schritt (IDE, Verdrahtung, Ablauf, Fehlerbilder, was zurückmelden) |
+| `servotest/servotest.ino` | Arduino-Testprogramm (ESP32Servo): Mitte/zu/auf (±23°), Zahl+Enter = Winkel (begrenzt ±31°), nachstellen, 20er-Dauertest, fährt langsam und macht `detach`. **Nicht die Firmware**, hier nie kompiliert (keine Toolchain erreichbar) |
 | `*.stl`, `*.png` | fertige Druckdateien und Vorschaubilder |
 | `README.md` | Nutzer-Doku: Funktionsweise, Einkaufszettel, Drucken, Zusammenbau, Verdrahtung, Toleranzen |
 
@@ -50,12 +52,15 @@ verriegelt steht die Spitze 3,5 mm hinter der Zunge, offen 3,2 mm davor. Das
 Servo steht ganz neben dem Riegel (Achse 15,3 mm von der Riegelmitte), der
 Hornarm greift 1,2 mm über dem Riegel hinüber. Nur zwei Endlagen, kein Gelenk.
 
+**Deckel:** Stülpdeckel, gerade aufgesetzt, kein Scharnier (Zunge fällt
+senkrecht; mit Scharnier liefe sie auf einem Bogen).
+
 ## Toleranzen – getrennt nach Aufgabe
 
-`spiel_riegel 0.35` (Gleitsitz), `spiel_decke 0.8` (Bohrungsdecke ist eine
-Brücke und sackt), `spiel_zunge 0.5` (**führendes** Merkmal), `spiel_loch_y 1.0`
-(quer stapeln sich Riegel- und Zungenspiel), `spiel_loch_z 0.5`,
-`spiel_rand 0.8` (Deckelrand bewusst lose), `spiel_servo 0.5`. Grundsatz: nur
+`spiel_riegel 0.45` (Gleitsitz; 0,35 lief am ersten Druck etwas schwer, 13. 10.), `spiel_decke 0.8` (Bohrungsdecke ist eine
+Brücke und sackt), `spiel_zunge 0.6` (**führendes** Merkmal), `spiel_loch_y 1.1`
+(quer stapeln sich Riegel- und Zungenspiel), `spiel_loch_z 0.6`,
+`spiel_rand 0.9` (Deckelrand bewusst lose), `spiel_servo 0.5`. Grundsatz: nur
 ein Merkmal führt, alle anderen sind lose. Das **Prüfstück** (61 × 85 × 39 mm, volle Blockhöhe mit ganzer Servotasche; drei getrennte Teile; die kurze Zunge hat eine Schulter, die sie auf Deckelhöhe hält, und steht beim Druck auf ihr;
 ~1 h) testet genau diese Passungen, gebaut aus denselben Modulen; die
 Tabelle "Befund → Stellschraube" steht in der README.

@@ -28,6 +28,24 @@ Schlitz, dazu kurzer Riegel und kurze Zunge mit Schulter. 25 Minuten Druck.*
 Tasche, der Hornarm greift über den Riegel (gelb), der Stift steckt in dessen
 Querschlitz.*
 
+## Die ganze Kiste
+
+![Tresorbox offen](gesamt-offen.png)
+
+*Deckel abgehoben (er schwebt hinter der Kiste, die Zunge hängt darunter).
+Vorn im Block das Servo mit Hornarm und der Riegel (gelb), dahinter die
+Platine mit USB-Stecker zur rechten Wand, links das Servokabel an der Wand
+entlang, daneben der Elko.*
+
+![Tresorbox zu](gesamt-zu.png)
+
+**Der Deckel wird gerade aufgesetzt – ein Stülpdeckel, kein Klappdeckel.** Die
+Zunge fällt senkrecht in ihren Schlitz; ein Rand rundum hält Staub ab und
+führt grob, die Zunge führt genau. Mit einem Scharnier liefe die Zunge auf
+einem Bogen in den Schlitz und stieße an – das ginge nur mit gebogener Zunge
+und deutlich mehr Spiel. Die Bilder entstehen mit
+`xvfb-run -a openscad -D 'ansicht="offen"' -o … ansicht.scad`.
+
 ## Wie sie hält
 
 Am Deckel hängt eine Zunge nach unten – ein flaches Blatt **quer** zur
@@ -335,11 +353,20 @@ Loch gleiten.
 
 | Befund | Stellschraube |
 |---|---|
-| Riegel klemmt | `spiel_riegel` von 0,35 auf 0,45 |
-| Riegel klappert hörbar | `spiel_riegel` auf 0,25 |
-| Riegel hakt in der Mitte | `spiel_decke` auf 1,0 – die Brücke sackt durch |
-| Zunge geht schwer in den Schlitz | `spiel_zunge` auf 0,65 |
+| Riegel klemmt | `spiel_riegel` um 0,1 erhöhen (seit 13. 10. steht es auf 0,45) |
+| Riegel klappert hörbar | `spiel_riegel` um 0,1 senken |
+| Riegel hakt im Tunnel an der Zunge | `spiel_decke` auf 1,0 – die Brücke sackt durch |
+| Zunge geht schwer in den Schlitz | `spiel_zunge` um 0,1 erhöhen (steht auf 0,6) |
 | Riegel trifft das Loch nicht | `spiel_loch_y` auf 1,3 |
+
+Nach jeder Änderung `pruefung.py`: Wer das Spiel von Riegel oder Zunge
+erhöht, muss oft auch `spiel_loch_y` (mindestens die Summe beider) und
+`spiel_rand` (mehr als die Zunge) nachziehen – die Prüfung sagt es.
+
+**Bevor du neu druckst:** Leicht schwergängig ist oft nur die unterste
+Schicht – sie wird breitgequetscht und reibt. Die Unterkanten des Riegels mit
+einem Cutter oder feinem Schleifpapier brechen und die Gleitflächen mit
+Bleistift schwärzen (Graphit schmiert); das reicht häufig schon.
 
 ### Dann mit Servo
 
@@ -364,6 +391,9 @@ weiter läuft der Stift aus seinem Schlitz und klemmt:
 Klemmt es, hier aufhören, nicht mit Kraft weiterdrehen: Das Getriebe ist
 das Erste, was bricht.
 
+**Schritt für Schritt, mit Arduino-IDE-Einrichtung, Verdrahtung und
+Fehlerbildern: [TESTANLEITUNG.md](TESTANLEITUNG.md).** Hier die Kurzfassung.
+
 **Stufe 2 – mit Strom.** ESP32 und Servo verdrahten wie unten beschrieben,
 dann `servotest/servotest.ino` mit der Arduino-IDE aufspielen (Board
 „ESP32 Dev Module", Bibliothek „ESP32Servo"). Im seriellen Monitor
@@ -375,6 +405,7 @@ dann `servotest/servotest.ino` mit der Arduino-IDE aufspielen (Board
 | `z` / `a` | zu / auf, je 23° aus der Mitte |
 | `+` / `-` | ein Grad nachstellen, falls eine Endlage nicht ganz reicht |
 | `d` | 20 Zyklen zu und auf – der Dauertest |
+| Zahl + Enter | genau diesen Winkel anfahren (59 bis 121, weiter liefe der Stift aus dem Schlitz) |
 
 Das Programm fährt langsam und schaltet das Servo nach jeder Fahrt ab. Fährt
 `z` auf statt zu, steht die Drehrichtung andersherum: `RICHTUNG` im Programm
