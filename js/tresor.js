@@ -1665,6 +1665,110 @@
     return false;
   }
 
+  /* ---------- Marken (NFC und QR) ----------
+   *
+   * Beim Verriegeln festgelegt: Name, Wirkung, Minuten, einmal oder
+   * wiederholt (dann mit Sperre). Gespeichert wird statt des Codes nur sein
+   * Pruefwert (SHA-256). Wirkungen:
+   *
+   *   nachlass   Minuten frueher       aufschlag  Minuten spaeter
+   *   frost      die Uhr steht so viele Minuten
+   *   wurf       ein Wurf um je diese Minuten: 6 -2, 5 -1, 3/4 nichts,
+   *              2 +1, 1 +2 - im Mittel null, wie bei Passiv
+   *
+   * Nur am Netz: Ohne Zeitkonto gibt es keine Uhr zu schieben. */
+  var MARKEN_WIRKUNGEN = ['nachlass', 'aufschlag', 'frost', 'wurf'];
+
+  async function markenVorbereiten(liste) {
+    var aus = [];
+    for (var i = 0; i < (liste || []).length; i++) {
+      var m = liste[i];
+      if (!m || !m.code || MARKEN_WIRKUNGEN.indexOf(m.wirkung) === -1) continue;
+      aus.push({
+        name: String(m.name || ('Marke ' + (i + 1))).slice(0, 40),
+        wirkung: m.wirkung,
+        minuten: Math.max(1, Math.round(Number(m.minuten) || 0)),
+        mehrfach: !!m.mehrfach,
+        sperreMin: m.mehrfach ? Math.max(0, Math.round(Number(m.sperreMin) || 0)) : 0,
+        pruef: await T.krypto.pruefwert('tresor-marke:' + m.code)
+      });
+    }
+    return aus;
+  }
+
+  function markeStand(tresor, marke) {
+    tresor.markenStand = tresor.markenStand || {};
+    return tresor.markenStand[marke.pruef] || (tresor.markenStand[marke.pruef] = { benutzt: 0, zuletzt: 0 });
+  }
+
+  /* Was eine Marke gerade kann: 'bereit', 'verbraucht' oder 'gesperrt'. */
+  function markeLage(tresor, marke, jetzt) {
+    var st = markeStand(tresor, marke);
+    if (st.wurfOffen) return { lage: 'wurf' };
+    if (!marke.mehrfach && st.benutzt) return { lage: 'verbraucht' };
+    var bis = st.zuletzt + marke.sperreMin * 60000;
+    if (st.benutzt && bis > (jetzt || Date.now())) return { lage: 'gesperrt', bis: bis };
+    return { lage: 'bereit' };
+  }
+
+  function markeEintragen(tresor, marke, e) {
+    var f = tresor.freigabe;
+    if (f.passiv) {
+      f.passiv.nr++;
+      passivEintragen(f.passiv, Object.assign({ nr: f.passiv.nr, art: 'marke', grund: marke.name }, e));
+    }
+  }
+
+  /* Einen gescannten Code einloesen. */
+  async function markeEinloesen(tresor, code, jetzt) {
+    jetzt = jetzt || Date.now();
+    var f = tresor.freigabe;
+    var liste = (tresor.konfig || {}).marken || [];
+    if (!code) return { fehler: 'leer' };
+    var pruef = await T.krypto.pruefwert('tresor-marke:' + code);
+    var marke = null;
+    liste.forEach(function (m) { if (m.pruef === pruef) marke = m; });
+    if (!marke) return { fehler: 'fremd' };
+    if (!f || f.z || alleOffen(tresor)) return { fehler: 'offen', marke: marke };
+    var lage = markeLage(tresor, marke, jetzt);
+    if (lage.lage === 'verbraucht' || lage.lage === 'gesperrt') return { fehler: lage.lage, bis: lage.bis, marke: marke };
+    var st = markeStand(tresor, marke);
+    if (lage.lage === 'wurf') return { marke: marke, wurf: true };
+    st.benutzt++;
+    st.zuletzt = jetzt;
+    var e = { marke: marke, wirkung: marke.wirkung, zeit: jetzt };
+    var vorher = f.konto.zielSek;
+    if (marke.wirkung === 'nachlass' || marke.wirkung === 'aufschlag') {
+      var zug = zeitkontoVerschieben(tresor, (marke.wirkung === 'nachlass' ? -1 : 1) * marke.minuten * 60, 'marke', marke.name);
+      e.sekunden = Math.round(f.konto.zielSek - vorher);
+      e.amBoden = !!(zug && zug.amBoden);
+      e.amDeckel = !!(zug && zug.amDeckel);
+    } else if (marke.wirkung === 'frost') {
+      frostStarten(tresor, 'marke', jetzt, jetzt + marke.minuten * 60000);
+      e.sekunden = marke.minuten * 60;
+    } else {
+      /* Der Wurf gilt ab dem Scan als genommen: Wer neu laedt, um einem
+       * schlechten Wurf zu entgehen, findet ihn wieder vor. */
+      st.wurfOffen = true;
+      e.wurf = true;
+      return e;
+    }
+    markeEintragen(tresor, marke, { sekunden: e.sekunden, wirkung: marke.wirkung, zeit: jetzt });
+    return e;
+  }
+
+  /* Den offenen Wurf einer Marke werfen. */
+  function markeWuerfeln(tresor, marke, augen) {
+    var f = tresor.freigabe, st = markeStand(tresor, marke);
+    if (!st.wurfOffen || !f || f.z) return null;
+    st.wurfOffen = false;
+    var vorher = f.konto.zielSek;
+    zeitkontoVerschieben(tresor, (PASSIV.wurf[augen] || 0) * marke.minuten * 60, 'marke', marke.name);
+    var e = { marke: marke, wirkung: 'wurf', augen: augen, sekunden: Math.round(f.konto.zielSek - vorher), zeit: Date.now() };
+    markeEintragen(tresor, marke, { sekunden: e.sekunden, wirkung: 'wurf', augen: augen, zeit: e.zeit });
+    return e;
+  }
+
   /* Notausgang ueber das Netz: erst den Zeitschluessel holen, dann wie immer. */
   async function notausgangUeberNetz(tresor, passMat) {
     var exit = tresor.notausgang;
@@ -1796,6 +1900,11 @@
     passivWuerfeln: passivWuerfeln,
     passivAblehnen: passivAblehnen,
     externBuchen: externBuchen,
+    MARKEN_WIRKUNGEN: MARKEN_WIRKUNGEN,
+    markenVorbereiten: markenVorbereiten,
+    markeLage: markeLage,
+    markeEinloesen: markeEinloesen,
+    markeWuerfeln: markeWuerfeln,
     externFrost: externFrost,
     frostAktiv: frostAktiv,
     frostNachziehen: frostNachziehen,

@@ -43,6 +43,7 @@ gebündelten `js/vendor/tlock.min.js`. Push auf `main` deployt über
 | `js/stimme.js` | Alle Sätze des Game Masters, nach Anlass (`sag('stein')`) |
 | `js/speicher.js`, `js/sicherung.js` | `localStorage` (`tresor.v1`), Verlauf, Export/Import |
 | `js/homeassistant.js` | Von außen: WebSocket zu Home Assistant (Zahl in Minuten) |
+| `js/marken.js` | Marken: NFC/QR-Links mit Code, QR als SVG, Scannen |
 | `js/erinnerung.js`, `js/probe.js`, `js/foto.js` | Benachrichtigungen, Probelauf, Ziffern aus Foto |
 
 Skript-Reihenfolge steht in `index.html`; jede Datei hängt sich an
@@ -160,6 +161,15 @@ neu zählt).
 aus `2 × (gedacht − unten)`. **Drakonisch** (`passiv.drakonisch`): Eingang
 `verdoppelt` verdoppelt die Restzeit, Gewicht `PASSIV.verdoppeln`; Abstand
 der Eingänge wächst mit `zielSek / startSek`. Test: `test-frost.js`.
+
+**Marken** (`konfig.marken`, `js/marken.js`): Link `#marke=<code>` als QR
+(eigenes SVG aus `js/vendor/qrcode.js`) oder NFC-URL-Satz. Im Tresor nur
+`pruef = SHA-256('tresor-marke:' + code)`; Zustand in `tresor.markenStand`
+(benutzt, zuletzt, wurfOffen). `markeEinloesen`/`markeWuerfeln` in
+`tresor.js`; `start()` liest den Code aus `location.hash` (und `hashchange`)
+und nimmt ihn sofort heraus. `markenKarte` zeichnet nur sich neu. Test:
+`test-marken.js` (Link-Weg; Web NFC und BarcodeDetector gibt es headless
+nicht – auf dem Handy des Nutzers ungetestet, das offen sagen).
 
 **Willkür** = `konfig.blind` (in der Oberfläche "Willkür", früher "Meine
 Regeln"). Die App zieht Regeln selbst, zeigt **keine Beträge, keine

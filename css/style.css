@@ -829,3 +829,17 @@ select, input[type=file] {
 /* Freeze: die Uhr steht */
 .countdown.ist-gefroren { color: var(--blau); text-shadow: 0 0 14px rgba(120, 170, 255, .45); }
 .countdown.ist-gefroren::before { content: '❄ '; font-size: .6em; vertical-align: middle; }
+
+/* Marken: NFC und QR */
+.marken-liste-einrichten { display: flex; flex-direction: column; gap: 12px; margin: 10px 0; }
+.marken-zeile { display: grid; grid-template-columns: 104px 1fr; gap: 10px; align-items: start;
+  border: 1px solid var(--rand); border-radius: 10px; padding: 10px; }
+.marken-qr svg { width: 104px; height: 104px; display: block; border-radius: 6px; }
+.marken-felder { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.marken-felder .antwortfeld { width: 100%; box-sizing: border-box; font-size: 15px; }
+.marken-reihe { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.antwortfeld.kurz { width: 80px !important; flex: 0 0 80px; min-width: 0; }
+.marken-liste { list-style: none; padding: 0; margin: 6px 0 10px; display: flex; flex-direction: column; gap: 4px; }
+.marken-liste li { display: flex; justify-content: space-between; gap: 10px; }
+.marken-video { width: 100%; max-height: 260px; object-fit: cover; border-radius: 10px; margin-top: 8px; }
+.knopf.klein { font-size: 13px; padding: 6px 12px; }

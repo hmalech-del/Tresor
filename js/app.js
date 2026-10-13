@@ -9,6 +9,7 @@
     konfig: null,
     art: 'zahl',
     spielart: 'pruefungen',        // 'pruefungen' oder 'passiv'
+    marken: [],                    // beim Einrichten: Marken mit Code, bis zum Verriegeln
     geheimnis: '',
     bild: null,
     laenge: 5,
@@ -167,6 +168,7 @@
     if (zustand.freigabeUhr) { clearInterval(zustand.freigabeUhr); zustand.freigabeUhr = null; }
     if (zustand.steinUhr) { clearInterval(zustand.steinUhr); zustand.steinUhr = null; }
     zustand.passivWurf = false;
+    if (zustand.markenStopp) { zustand.markenStopp(); zustand.markenStopp = null; }
     // Der Notausgang rechnet weiter - nur seine Anzeige verschwindet
     zustand.exitAnzeige = null;
     bildschirmWachHalten(false);
@@ -578,6 +580,7 @@
     var anzeige = $('#schaetzung');
     if (!anzeige) return;
     if ($('#externkarte')) $('#externkarte').classList.toggle('versteckt', zeitschlossArt() !== 'drand');
+    if ($('#markenkarte-einrichten')) $('#markenkarte-einrichten').classList.toggle('versteckt', zeitschlossArt() !== 'drand');
 
     if (passivGewaehlt()) {
       passivHinweis();
@@ -811,10 +814,194 @@
     return kasten;
   }
 
+  /* ---------------- Marken (NFC und QR) ---------------- */
+  var MARKE_WORT = { nachlass: 'Nachlass', aufschlag: 'Aufschlag', frost: 'Freeze', wurf: 'Wurf' };
+
+  function markeWirkungText(tresor, e) {
+    var dunkel = tresor && rueckDunkel(tresor);
+    if (e.wirkung === 'frost') return dunkel ? 'Die Uhr steht.' : 'Die Uhr steht ' + util.dauer(e.sekunden) + '.';
+    var vor = e.wirkung === 'wurf' && e.augen ? 'Gewürfelt: ' + e.augen + '. ' : '';
+    if (!e.sekunden) return vor + (e.amBoden ? 'Früher geht es nicht.' : e.amDeckel ? 'Später geht es nicht.' : 'Keine Änderung.');
+    if (dunkel) return vor + (e.sekunden < 0 ? 'Früher.' : 'Später.');
+    return vor + (e.sekunden < 0 ? '−' + util.dauer(-e.sekunden) : '+' + util.dauer(e.sekunden)) + '.';
+  }
+
+  /* Eine Zeile beim Einrichten: Name, Wirkung, Minuten, einmal/wiederholt,
+   * dazu der QR-Code und das Schreiben auf eine NFC-Marke. */
+  function markenZeile(m, neuZeichnen) {
+    var qr = el('div', { class: 'marken-qr', 'data-link': T.marken.link(m.code) });
+    qr.innerHTML = T.marken.qrSvg(T.marken.link(m.code), 3);
+    var meldung = el('p', { class: 'aufgabe-meldung', role: 'status', text: '' });
+    var sperre = el('input', { type: 'number', min: '0', step: '5', value: String(m.sperreMin), class: 'antwortfeld kurz',
+      oninput: function () { m.sperreMin = Number(this.value) || 0; } });
+    var sperreZeile = el('label', { class: 'nebenlabel' + (m.mehrfach ? '' : ' versteckt') }, ['Sperre danach (min) ', sperre]);
+    return el('div', { class: 'marken-zeile' }, [
+      qr,
+      el('div', { class: 'marken-felder' }, [
+        el('input', { type: 'text', class: 'antwortfeld', value: m.name, maxlength: '40', 'aria-label': 'Name',
+          oninput: function () { m.name = this.value; } }),
+        el('div', { class: 'marken-reihe' }, [
+          el('select', { 'aria-label': 'Wirkung', onchange: function () { m.wirkung = this.value; } },
+            T.tresorLogik.MARKEN_WIRKUNGEN.map(function (w) {
+              return el('option', { value: w, selected: w === m.wirkung ? 'selected' : null }, MARKE_WORT[w]);
+            })),
+          el('input', { type: 'number', min: '1', step: '1', value: String(m.minuten), class: 'antwortfeld kurz', 'aria-label': 'Minuten',
+            oninput: function () { m.minuten = Number(this.value) || 1; } }),
+          el('span', { class: 'flaut', text: 'min' })
+        ]),
+        el('select', { 'aria-label': 'Wie oft', onchange: function () {
+          m.mehrfach = this.value === 'mehrfach';
+          sperreZeile.classList.toggle('versteckt', !m.mehrfach);
+        } }, [
+          el('option', { value: 'einmal', selected: m.mehrfach ? null : 'selected' }, 'einmal'),
+          el('option', { value: 'mehrfach', selected: m.mehrfach ? 'selected' : null }, 'wiederholt')
+        ]),
+        sperreZeile,
+        el('div', { class: 'marken-reihe' }, [
+          T.nfc.moeglich() ? el('button', { class: 'knopf klein', type: 'button', text: 'Auf NFC schreiben', onclick: function () {
+            meldung.className = 'aufgabe-meldung ist-laeuft';
+            meldung.textContent = 'Marke ans Handy halten ...';
+            T.marken.nfcSchreiben(T.marken.link(m.code)).then(function () {
+              meldung.className = 'aufgabe-meldung ist-gut';
+              meldung.textContent = 'Geschrieben.';
+            }).catch(function (fehler) {
+              meldung.className = 'aufgabe-meldung ist-fehler';
+              meldung.textContent = 'Nicht geschrieben: ' + fehler.message;
+            });
+          } }) : null,
+          el('button', { class: 'knopf klein flach', type: 'button', text: 'Entfernen', onclick: function () {
+            zustand.marken.splice(zustand.marken.indexOf(m), 1);
+            neuZeichnen();
+          } })
+        ]),
+        meldung
+      ])
+    ]);
+  }
+
+  /* Ein Blatt zum Ausdrucken: je Marke QR-Code und Name, sonst nichts -
+   * was sie bewirkt, steht nicht drauf. */
+  function markenDrucken() {
+    var fenster = global.open('', '_blank');
+    if (!fenster) return false;
+    var karten = zustand.marken.map(function (m) {
+      return '<figure>' + T.marken.qrSvg(T.marken.link(m.code), 5) + '<figcaption>'
+        + String(m.name).replace(/[<>&]/g, '') + '</figcaption></figure>';
+    }).join('');
+    fenster.document.write('<!doctype html><meta charset="utf-8"><title>Tresor-Marken</title><style>'
+      + 'body{font-family:sans-serif;display:flex;flex-wrap:wrap;gap:12mm;padding:10mm}'
+      + 'figure{margin:0;text-align:center;border:1px dashed #999;padding:4mm;break-inside:avoid}'
+      + 'svg{width:45mm;height:45mm}figcaption{margin-top:2mm;font-size:12pt}</style>' + karten
+      + '<script>setTimeout(function(){print()},300)<\/script>');
+    fenster.document.close();
+    return true;
+  }
+
+  /* Marken einloesen - aus der Adresse, aus Web NFC oder vom Kamera-Scan. */
+  async function markeVerarbeiten(code) {
+    var tresor = zustand.tresor;
+    if (!tresor) { zustand.markeMeldung = { text: 'Kein Tresor läuft - diese Marke wirkt nur auf ihren eigenen.', schlecht: true }; return; }
+    var r = await T.tresorLogik.markeEinloesen(tresor, code);
+    sichern(true);
+    var name = r.marke ? '„' + r.marke.name + '“' : '';
+    zustand.markeMeldung = r.fehler
+      ? { schlecht: true, text: r.fehler === 'fremd' ? 'Diese Marke gehört nicht zu diesem Tresor.'
+          : r.fehler === 'verbraucht' ? name + ' ist verbraucht.'
+          : r.fehler === 'gesperrt' ? name + ' ist gesperrt bis ' + util.zeitpunkt(r.bis) + '.'
+          : r.fehler === 'offen' ? 'Der Tresor ist schon offen.' : 'Das war keine Marke.' }
+      : r.wurf ? { text: name + ': Ein Wurf. Jetzt.' }
+      : { text: name + ': ' + markeWirkungText(tresor, r), schlecht: r.sekunden > 0 };
+  }
+
+  function markeMeldungZeigen(karte) {
+    if (!zustand.markeMeldung) return;
+    var m = zustand.markeMeldung;
+    karte.appendChild(el('p', { class: 'aufgabe-meldung ' + (m.schlecht ? 'ist-fehler' : 'ist-gut'), role: 'status', text: m.text }));
+    zustand.markeMeldung = null;
+  }
+
+  /* Die Karte im laufenden Tresor: was es gibt, was verbraucht ist, und
+   * die Knoepfe zum Lesen und Scannen. Zeichnet sich selbst neu - nicht den
+   * ganzen Tresor, sonst risse ein Scan die laufende Pruefung weg. */
+  function markenKarte(tresor) {
+    var liste = (tresor.konfig || {}).marken || [];
+    var karte = el('section', { class: 'karte marken-karte', id: 'markenkarte' }, [el('h2', { text: 'Marken' })]);
+    function neu() { aufhoeren(); var frisch = markenKarte(tresor); karte.replaceWith(frisch); }
+    function aufhoeren() { if (zustand.markenStopp) { zustand.markenStopp(); zustand.markenStopp = null; } }
+    var stopp = { set: function (f) { aufhoeren(); zustand.markenStopp = f; } };
+    markeMeldungZeigen(karte);
+    /* Ein offener Wurf zuerst - er ist mit dem Scan genommen. */
+    liste.forEach(function (m) {
+      var st = (tresor.markenStand || {})[m.pruef];
+      if (!st || !st.wurfOffen) return;
+      var kasten = el('div', { class: 'gutkasten' }, [el('p', { class: 'aufgabe-titel', text: '„' + m.name + '“: Wurf' })]);
+      karte.appendChild(kasten);
+      T.herausforderungen.werkzeug.wuerfel(kasten, function (gewonnen, streckung, augen) {
+        var e = T.tresorLogik.markeWuerfeln(tresor, m, augen);
+        sichern(true);
+        if (e) kasten.querySelector('.wuerfelbox .flaut').textContent = markeWirkungText(tresor, e);
+        kasten.appendChild(el('button', { class: 'knopf', type: 'button', text: 'Weiter', onclick: neu }));
+      }, {
+        regel: rueckDunkel(tresor) ? '6 und 5: früher. 3 und 4: nichts. 2 und 1: später.'
+          : '6: −' + util.dauer(2 * m.minuten * 60) + '. 5: −' + util.dauer(m.minuten * 60) + '. 3 und 4: nichts. 2: +'
+            + util.dauer(m.minuten * 60) + '. 1: +' + util.dauer(2 * m.minuten * 60) + '.',
+        ergebnis: function (augen) { var w = T.tresorLogik.PASSIV.wurf[augen]; return w < 0 ? 'Früher.' : w > 0 ? 'Später.' : 'Nichts.'; }
+      });
+    });
+    karte.appendChild(el('ul', { class: 'marken-liste' }, liste.map(function (m) {
+      var lage = T.tresorLogik.markeLage(tresor, m);
+      return el('li', {}, [
+        el('span', { text: m.name }),
+        el('span', { class: 'flaut', text: lage.lage === 'verbraucht' ? 'verbraucht'
+          : lage.lage === 'gesperrt' ? 'gesperrt bis ' + util.zeitpunkt(lage.bis).replace(' Uhr', '')
+          : lage.lage === 'wurf' ? 'Wurf offen' : m.mehrfach ? 'bereit' : 'einmal' })
+      ]);
+    })));
+    var buehne = el('div', { class: 'marken-buehne' });
+    var meldung = el('p', { class: 'aufgabe-meldung', role: 'status', text: '' });
+    var knoepfe = el('div', { class: 'marken-reihe' });
+    if (T.nfc.moeglich()) {
+      knoepfe.appendChild(el('button', { class: 'knopf', type: 'button', text: 'NFC lesen', onclick: function () {
+        aufhoeren();
+        meldung.className = 'aufgabe-meldung ist-laeuft';
+        meldung.textContent = 'Marke ans Handy halten ...';
+        stopp.set(T.marken.nfcLauschen(async function (code) {
+          if (!code) { meldung.textContent = 'Keine Tresor-Marke.'; return; }
+          aufhoeren();
+          await markeVerarbeiten(code);
+          neu();
+        }, function (fehler) { meldung.className = 'aufgabe-meldung ist-fehler'; meldung.textContent = fehler.message; }));
+      } }));
+    }
+    if (T.marken.qrScanMoeglich()) {
+      knoepfe.appendChild(el('button', { class: 'knopf', type: 'button', text: 'QR scannen', onclick: function () {
+        aufhoeren();
+        meldung.className = 'aufgabe-meldung ist-laeuft';
+        meldung.textContent = 'Kamera auf den Code richten ...';
+        stopp.set(T.marken.qrScannen(buehne, async function (code) {
+          zustand.markenStopp = null;
+          await markeVerarbeiten(code);
+          neu();
+        }, function (fehler) { meldung.className = 'aufgabe-meldung ist-fehler'; meldung.textContent = 'Kamera: ' + fehler.message; }));
+      } }));
+    }
+    karte.appendChild(knoepfe);
+    karte.appendChild(buehne);
+    karte.appendChild(meldung);
+    karte.appendChild(el('p', { class: 'flaut klein', text:
+      'Oder einfach scannen bzw. antippen: Die Kamera-App oder Android öffnen die Marke direkt hier.' }));
+    return karte;
+  }
+
   function zeichneEinrichten() {
     aufraeumen();
     haVerbindungPflegen();
     var wurzel = util.leeren($('#buehne'));
+    if (zustand.markeMeldung) {
+      var hinweisKarte = el('section', { class: 'karte' });
+      markeMeldungZeigen(hinweisKarte);
+      wurzel.appendChild(hinweisKarte);
+    }
     var dimensionen = T.herausforderungen.dimensionen;
 
     var geheimTeil = el('section', { class: 'karte' }, [
@@ -1217,8 +1404,33 @@
     wurzel.appendChild(blindTeil);
     wurzel.appendChild(dimensionTeil);
     wurzel.appendChild(stationTeil);
+    /* Marken: nur am Netz, wie "Von aussen". */
+    var markenListe = el('div', { class: 'marken-liste-einrichten' });
+    function markenZeichnen() {
+      util.leeren(markenListe);
+      zustand.marken.forEach(function (m) { markenListe.appendChild(markenZeile(m, markenZeichnen)); });
+      $('#marken-drucken').classList.toggle('versteckt', !zustand.marken.length);
+    }
+    var markenTeil = el('section', { class: 'karte versteckt', id: 'markenkarte-einrichten' }, [
+      el('h2', { text: 'Marken: NFC und QR' }),
+      el('p', { class: 'flaut klein', text:
+        'Karten zum Verstecken: Wer eine findet und scannt - mit der Kamera-App oder durch Antippen der NFC-Marke -, '
+        + 'löst aus, was sie tut: Nachlass, Aufschlag, Freeze oder einen Wurf. Einmal oder wiederholt mit Sperre. '
+        + 'Nach dem Verriegeln liegt der Code nur noch auf der Marke: erst drucken oder schreiben.' }),
+      markenListe,
+      el('div', { class: 'marken-reihe' }, [
+        el('button', { class: 'knopf', type: 'button', text: 'Marke hinzufügen', onclick: function () {
+          zustand.marken.push({ code: T.marken.neuerCode(), name: 'Marke ' + (zustand.marken.length + 1),
+            wirkung: 'nachlass', minuten: 10, mehrfach: false, sperreMin: 60 });
+          markenZeichnen();
+        } }),
+        el('button', { class: 'knopf versteckt', type: 'button', id: 'marken-drucken', text: 'Alle drucken', onclick: markenDrucken })
+      ])
+    ]);
+
     wurzel.appendChild(zeitTeil);
     wurzel.appendChild(externTeil);
+    wurzel.appendChild(markenTeil);
     wurzel.appendChild(feinTeil);
     wurzel.appendChild(abschluss);
 
@@ -1407,6 +1619,7 @@
       feld.addEventListener('input', pruefeBereit);
     });
     $('#verriegeln').addEventListener('click', verriegeln);
+    markenZeichnen();
     $('#extern-aktiv').addEventListener('change', function () {
       $('#extern-felder').classList.toggle('versteckt', !this.checked);
     });
@@ -1658,6 +1871,9 @@
 
   async function verriegeln() {
     var konfig = konfigurationLesen();
+    if (T.tresorLogik.drandModus(konfig) && zustand.marken.length) {
+      konfig.marken = await T.tresorLogik.markenVorbereiten(zustand.marken);
+    }
     // vor dem Leeren der Bühne auslesen - danach gibt es die Felder nicht mehr
     var passphrase = konfig.mitPassphrase ? $('#passphrase').value : '';
     var art = zustand.art;
@@ -1691,6 +1907,7 @@
       });
       T.ortAufgaben.vorratLeeren();
       zustand.stationen = [];
+      zustand.marken = [];
       zustand.geheimnis = '';
       zustand.bild = null;
       teile = null;
@@ -1839,10 +2056,12 @@
       wurzel.appendChild(passphraseKarte());
     } else if (passiv) {
       wurzel.appendChild(passivKarte(tresor));
+      if (((tresor.konfig || {}).marken || []).length && tresor.freigabe) wurzel.appendChild(markenKarte(tresor));
     } else {
       var aufgabenKarte = el('section', { class: 'karte aufgabenkarte', id: 'aufgabenkarte' });
       wurzel.appendChild(aufgabenKarte);
       starteAktuelles(aufgabenKarte);
+      if (((tresor.konfig || {}).marken || []).length && tresor.freigabe) wurzel.appendChild(markenKarte(tresor));
       var steinK = steinKarte(tresor);
       if (steinK) wurzel.appendChild(steinK);
       else zustand.stein = null;
@@ -3139,12 +3358,13 @@
    * fragt jede Sekunde nach und zeichnet neu, wenn etwas eingetroffen ist -
    * hier gibt es keine Pruefung, die dabei weggerissen wuerde. */
   var PASSIV_TITEL = { nachlass: 'Nachlass', aufschlag: 'Aufschlag', muenze: 'Münzwurf',
-    stille: 'Kontrolle', wurf: 'Angebot', extern: 'Von außen', stillstand: 'Stillstand', verdoppelt: 'Verdoppelt' };
+    stille: 'Kontrolle', wurf: 'Angebot', extern: 'Von außen', stillstand: 'Stillstand', verdoppelt: 'Verdoppelt', marke: 'Marke' };
 
   /* Was ein Ereignis bewegt hat, in Worten. Ohne Uhr nur die Richtung. */
   function passivWirkung(tresor, e) {
     var uhr = tresor.konfig.passiv.uhr;
     if (e.art === 'extern') return externText(e, !uhr);
+    if (e.art === 'marke') return e.grund + ': ' + markeWirkungText(tresor, e);
     if (e.art === 'stille') return 'Keine Änderung.';
     if (e.art === 'stillstand') return 'Die Uhr steht.';
     if (e.art === 'wurf' && e.offen) return 'Offen.';
@@ -3185,7 +3405,7 @@
       var gut = letzte.sekunden < 0, schlecht = letzte.sekunden > 0;
       var kasten = el('div', { class: schlecht ? 'strafkasten' : 'gutkasten' }, [
         el('p', { class: 'aufgabe-titel', text: neu.length > 1 ? neu.length + ' Eingänge' : 'Eingang · ' + PASSIV_TITEL[letzte.art] }),
-        el('p', { class: 'wachterwort', text: letzte.art === 'wurf' || letzte.art === 'extern'
+        el('p', { class: 'wachterwort', text: letzte.art === 'wurf' || letzte.art === 'extern' || letzte.art === 'marke'
           ? T.stimme.sag(gut ? 'nachlass' : schlecht ? 'aufschlag' : 'stille')
           : T.stimme.sag(letzte.art) })
       ]);
@@ -3435,15 +3655,27 @@
       return;
     }
     zustand.konfig = T.tresorLogik.standardKonfiguration();
+    /* Eine Marke hat die App geoeffnet: Code merken, sofort aus der Adresse
+     * nehmen (sonst loeste ein Neuladen sie noch einmal aus), einloesen. */
+    var adressCode = T.marken.codeAus(global.location.hash);
+    if (adressCode) global.history.replaceState(null, '', global.location.pathname + global.location.search);
+    global.addEventListener('hashchange', function () {
+      var code = T.marken.codeAus(global.location.hash);
+      if (!code) return;
+      global.history.replaceState(null, '', global.location.pathname + global.location.search);
+      markeVerarbeiten(code).then(function () { if (zustand.tresor) zeichneTresor(); else zeichneEinrichten(); });
+    });
     var gespeichert = T.speicher.laden();
     if (gespeichert && gespeichert.fragmente) {
       zustand.tresor = gespeichert;
       zustand.laenge = gespeichert.laenge;
-      zeichneTresor();
+      if (adressCode) markeVerarbeiten(adressCode).then(zeichneTresor);
+      else zeichneTresor();
       // Lief der Notausgang beim letzten Mal, nimmt er den Faden wieder auf
       var exit = gespeichert.notausgang;
       if (exit && exit.mitlaufen && !exit.benutzt && exit.art !== 'wartezeit') notausgangStarten();
     } else {
+      if (adressCode) zustand.markeMeldung = { schlecht: true, text: 'Kein Tresor läuft - diese Marke wirkt nur auf ihren eigenen.' };
       zeichneEinrichten();
     }
 

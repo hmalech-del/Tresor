@@ -1122,7 +1122,7 @@ Administrator. Die ID ist das Geheimnis, also lang und zufällig wählen.
 
 | Feld | Inhalt |
 |---|---|
-| `art` | `verriegelt`, `gutschrift`, `strafe`, `wurf`, `kapitulation`, `stein`, `nachlass`, `aufschlag`, `muenze`, `verdoppelt`, `frost`, `extern`, `angebot`, `freigabe`, `test` |
+| `art` | `verriegelt`, `gutschrift`, `strafe`, `wurf`, `kapitulation`, `stein`, `nachlass`, `aufschlag`, `muenze`, `verdoppelt`, `frost`, `extern`, `marke`, `angebot`, `freigabe`, `test` |
 | `frost` | bei `art=frost`: `an` (Uhr steht) oder `aus` (läuft wieder; `sekunden` = wie viel dazukam) |
 | `richtung` | `frueher`, `spaeter`, `gleich`, `abgewiesen` (bei Bewegungen) |
 | `sekunden` | gebuchte Sekunden, negativ = früher |
@@ -1170,6 +1170,49 @@ actions:
         target: { entity_id: input_datetime.tresor_freigabe }
         data: { timestamp: "{{ trigger.data.freigabe_ts | int }}" }
 ```
+
+## Marken: NFC und QR
+
+Karten zum Verstecken – ohne Home Assistant, ohne Server. Am Netz (mit
+Prüfungen, Willkür oder passiv) lassen sich beim Einrichten **Marken**
+anlegen: Name, Wirkung, Minuten, einmal oder wiederholt (mit Sperre).
+
+| Wirkung | was passiert |
+|---|---|
+| Nachlass | die Freigabe rückt um die Minuten nach vorn |
+| Aufschlag | … nach hinten |
+| Freeze | die Uhr steht so viele Minuten (siehe *Freeze*) |
+| Wurf | ein Wurf um je diese Minuten: 6 −2, 5 −1, 3/4 nichts, 2 +1, 1 +2 – im Mittel null |
+
+**Wie eine Marke funktioniert:** Sie ist ein Link mit einem geheimen Code,
+`…/index.html#marke=<24 Zeichen>`. Zu jeder Marke zeigt die Einrichtung den
+QR-Code; **„Alle drucken"** gibt ein Blatt mit QR-Code und Name aus – was eine
+Marke tut, steht nicht drauf. **„Auf NFC schreiben"** legt den Link auf eine
+NFC-Marke (Chrome auf Android). Scannt man den QR-Code mit der Kamera-App oder
+tippt die NFC-Marke an, öffnet das Handy den Link, und die App löst die Marke
+ein. Läuft die App schon, gibt es dort auch **„NFC lesen"** und **„QR
+scannen"** (Kamera, wo der Browser QR-Codes erkennt). Der Code verschwindet
+sofort aus der Adresszeile – Neuladen löst nichts doppelt aus.
+
+**Was im Tresor liegt:** nur ein Prüfwert jedes Codes (SHA-256), nicht der
+Code. Wer den Speicher liest, kann keine Marke nachmachen; nach dem
+Verriegeln lassen sich die Codes auch nicht mehr anzeigen. Also **vor dem
+Verriegeln** drucken oder schreiben.
+
+**Einmal oder wiederholt:** Eine einmalige Marke ist danach verbraucht. Eine
+wiederholte ist nach jedem Einlösen für die eingestellte Sperre gesperrt
+(„gesperrt bis 14:32"). Ein **Wurf** gilt ab dem Scan als genommen: Wer neu
+lädt, um einem schlechten Wurf zu entgehen, findet ihn wieder vor.
+
+Eingelöst zeigt sich eine Marke in der Karte *Marken* (am Netz, ohne die
+laufende Prüfung zu stören) bzw. passiv als Eingang „Marke" im Protokoll. Ohne
+sichtbare Uhr nur die Richtung. Der Rückkanal meldet sie als `art=marke` mit
+dem Namen als `grund`.
+
+Wichtig für den Link-Weg: Die Kamera-App öffnet ihn im Standardbrowser. Der
+Tresor liegt im Speicher des Browsers, in dem er angelegt wurde – also
+denselben als Standard nehmen (oder die App als Verknüpfung auf dem
+Startbildschirm nutzen und in der App scannen).
 
 ## Willkür
 
@@ -1490,6 +1533,7 @@ unverändert.
 | `js/probe.js` | Probelauf: jede Prüfung einzeln, ohne Folgen |
 | `hardware/` | Tresorbox: druckbare Kiste mit Servoverschluss (noch ohne Firmware) |
 | `js/homeassistant.js` | Von außen: WebSocket zu Home Assistant, Zugangsdaten getrennt vom Tresor |
+| `js/marken.js`, `js/vendor/qrcode.js` | Marken: Codes, Links, QR als SVG (qrcode-generator 1.4.4, MIT), NFC schreiben/lesen, Kamera-Scan |
 | `js/app.js` | Oberfläche und Ablauf |
 | `tests/` | `test-zeitkonto.js` (Node), `browser/` (Playwright, gefälschte drand-Kette): `tests/browser/alle.sh` |
 | `.claude/skills/` | Kontext für Claude-Sitzungen: `tresor-app`, `tresorbox` |
