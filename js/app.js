@@ -102,12 +102,15 @@
       if (art === 'frost') d.frost = b.an ? 'an' : 'aus';
       if (art === 'posten') {
         d.posten = b.richtig ? 'richtig' : 'falsch';
-        d.stand = b.stand; d.laenge = b.laenge;
+        d.stand = b.stand;
+        if (b.laenge) d.laenge = b.laenge;
         if (!b.richtig) d.regel = b.regel;
+        if (b.hinweis) d.hinweis = b.hinweis;
       }
-      satz = art === 'posten' ? (b.richtig ? T.stimme.sag('postenRichtig') + ' ' + b.stand + ' von ' + b.laenge + '.'
+      satz = art === 'posten' ? (b.richtig ? T.stimme.sag('postenRichtig') + ' ' + (b.laenge ? b.stand + ' von ' + b.laenge + '.' : '')
           : T.stimme.sag('postenFalsch') + ' ' + ({ neustart: 'Zurück auf Anfang.', sperre: 'Gesperrt.',
-            strafe: 'Das kostet Zeit.', gnade: 'Diesmal kostet es nichts.' }[b.regel] || ''))
+            strafe: 'Das kostet Zeit.', gnade: 'Diesmal kostet es nichts.' }[b.regel] || '')
+            + (b.hinweis ? ' Ein Hinweis: ' + b.hinweis : ''))
         : art === 'kette' ? T.stimme.sag('ketteGeloest')
         : b.abgewiesen ? T.stimme.sag('abgewiesen')
         : art === 'frost' && b.an ? T.stimme.sag('frost')
@@ -283,7 +286,8 @@
       : /^\d+$/.test(zustand.geheimnis) && zustand.geheimnis.length === zustand.laenge;
     var passiv = spielartOhnePruefungen();
     var blind = !passiv && $('#blindgang') && $('#blindgang').checked;
-    var kettenOk = !escapeGewaehlt() || zustand.posten.length >= 3;
+    var koeder = escapeGewaehlt() && $('#escape-koeder').value === 'ja';
+    var kettenOk = !escapeGewaehlt() || zustand.posten.length >= (koeder ? 4 : 3);
     var dimensionen = passiv || blind ? ['ohne-wahl'] : aktiveDimensionen();
     var passAn = !passiv && $('#passphrase-aktiv') && $('#passphrase-aktiv').checked;
     var pass = passAn ? $('#passphrase').value : '';
@@ -303,7 +307,7 @@
       : !dimensionen.length ? 'Wähle mindestens eine Dimension.'
       : !passOk ? 'Die Passphrase ist noch nicht vollständig.'
       : !stationenOk ? 'Für die Dimension „Ort“ brauchst du mindestens zwei beschriebene Marken.'
-      : !kettenOk ? 'Die Kette braucht mindestens drei Posten.' : '';
+      : !kettenOk ? (koeder ? 'Mit Ködern braucht es mindestens vier Posten.' : 'Die Kette braucht mindestens drei Posten.') : '';
   }
 
   /* Technisches bleibt verfuegbar, aber zugeklappt: Der Game Master erklaert nicht,
@@ -467,7 +471,8 @@
 
   function konfigurationRoh() {
     if (escapeGewaehlt()) {
-      return T.tresorLogik.escapeKonfiguration({ minSekunden: Number($('#escape-min').value), maxSekunden: Number($('#escape-max').value) });
+      return T.tresorLogik.escapeKonfiguration({ minSekunden: Number($('#escape-min').value), maxSekunden: Number($('#escape-max').value) },
+        { koeder: $('#escape-koeder').value === 'ja' });
     }
     if (passivGewaehlt()) {
       return T.tresorLogik.passivKonfiguration(
@@ -1012,8 +1017,9 @@
     if (r.doppelt) return { text: name + ' hast du gerade erst gescannt.' };
     if (r.gesperrt) return { schlecht: true, text: 'Gesperrt bis ' + util.zeitpunkt(r.bis) + '. ' + name + ' zählt nicht.' };
     if (r.geloest) return { text: name + ' - ' + T.stimme.sag('ketteGeloest') };
-    if (r.richtig) return { text: name + ' - ' + T.stimme.sag('postenRichtig') + ' ' + r.stand + ' von ' + r.laenge + '.' };
-    return { schlecht: true, text: name + ' - ' + T.stimme.sag('postenFalsch') + ' '
+    if (r.richtig) return { text: name + ' - ' + T.stimme.sag('postenRichtig') + ' '
+      + (r.laenge ? r.stand + ' von ' + r.laenge + '.' : r.stand + '. Posten.') };
+    return { schlecht: true, hinweis: r.hinweis, text: name + ' - ' + T.stimme.sag('postenFalsch') + ' '
       + (r.regel === 'neustart' ? 'Zurück auf Anfang.'
         : r.regel === 'sperre' ? 'Gesperrt bis ' + util.zeitpunkt(r.bis) + '.'
         : r.regel === 'strafe' ? '+' + util.dauer(r.sekunden) + ' auf „frühestens“.'
@@ -1036,7 +1042,8 @@
     if (zustand.ketteMeldung) {
       var m = ketteMeldungText(zustand.ketteMeldung);
       karte.appendChild(el('div', { class: m.schlecht ? 'strafkasten' : 'gutkasten' }, [
-        el('p', { class: 'wachterwort', text: m.text })]));
+        el('p', { class: 'wachterwort', text: m.text }),
+        m.hinweis ? el('p', { class: 'aufgabe-hinweis escape-neuer-hinweis', text: 'Ein Hinweis: ' + m.hinweis }) : null]));
       zustand.ketteMeldung = null;
     }
     if (!k.geloest) {
@@ -1045,13 +1052,20 @@
       karte.appendChild(el('div', { class: 'escape-runde' }, [
         el('p', { class: 'aufgabe-titel', text: 'Runde ' + k.runde }),
         el('p', { class: 'wachterwort', text: regelText(tresor, k) }),
-        el('p', { class: 'aufgabe-hinweis', text: 'Posten ' + (k.stand + 1) + ' von ' + k.laenge + ' gesucht.'
+        el('p', { class: 'aufgabe-hinweis', text: 'Posten ' + (k.stand + 1) + (kd.verborgen ? '' : ' von ' + k.laenge) + ' gesucht.'
+          + (kd.verborgen ? ' Wie viele es sind, sage ich nicht.' : '')
           + (k.fehler ? ' Fehler bisher: ' + k.fehler + '.' : '') }),
         k.gefunden.length ? el('ol', { class: 'escape-gefunden' }, k.gefunden.map(function (i) {
           return el('li', { text: '✓ ' + kd.namen[i] });
         })) : null,
         gesperrt ? sperrZeile : null
       ]));
+      if ((k.hinweise || []).length) {
+        karte.appendChild(el('div', { class: 'escape-wissen' }, [
+          el('p', { class: 'aufgabe-titel', text: 'Was du weißt' }),
+          el('ul', {}, k.hinweise.map(function (h) { return el('li', { text: h }); }))
+        ]));
+      }
       scanKnoepfe(karte, zeichneTresor);
     }
     var haZeile = haStatusZeile(tresor);
@@ -1545,6 +1559,13 @@
         el('label', { for: 'escape-max', text: 'Sonst offen nach' }),
         el('select', { id: 'escape-max' }, tresorzeitOptionen(86400))
       ]),
+      el('div', { class: 'feld' }, [
+        el('label', { for: 'escape-koeder', text: 'Köder' }),
+        el('select', { id: 'escape-koeder' }, [
+          el('option', { value: 'nein' }, 'keine - alle Posten gehören zur Kette'),
+          el('option', { value: 'ja' }, 'ein paar - wie viele, sage ich nicht')
+        ])
+      ]),
       el('p', { class: 'flaut klein', text:
         'Leg Posten an und versteck sie - als QR-Code oder NFC-Marke. Die Reihenfolge ziehe ich beim Verriegeln, '
         + 'und ich verrate sie nie. Wo die Posten liegen, weißt du. In welcher Folge, nicht. Vor jeder Runde sage ich an, '
@@ -1824,7 +1845,7 @@
     $('#spielart-pruefungen').addEventListener('click', function () { spielartAnwenden('pruefungen'); });
     $('#spielart-passiv').addEventListener('click', function () { spielartAnwenden('passiv'); });
     $('#spielart-escape').addEventListener('click', function () { spielartAnwenden('escape'); });
-    ['#escape-min', '#escape-max'].forEach(function (feld) {
+    ['#escape-min', '#escape-max', '#escape-koeder'].forEach(function (feld) {
       $(feld).addEventListener('change', function () { schaetzungAktualisieren(); pruefeBereit(); });
     });
     postenZeichnen();
@@ -1872,8 +1893,12 @@
   function escapeHinweis() {
     if (!$('#escape-hinweis') || !escapeGewaehlt()) return;
     var konfig = konfigurationLesen(), tz = konfig.tresorzeit, E = T.tresorLogik.ESCAPE;
-    var n = zustand.posten.length;
-    $('#escape-hinweis').textContent = (n < 3 ? 'Mindestens drei Posten. ' : n + ' Posten - ' + fakultaetText(n) + ' mögliche Reihenfolgen. ')
+    var n = zustand.posten.length, koeder = konfig.escapeKoeder;
+    $('#escape-hinweis').textContent = (koeder
+        ? (n < 4 ? 'Mit Ködern mindestens vier Posten. ' : n + ' Posten, davon 1 bis ' + Math.max(1, Math.min(Math.floor(n / 3), n - 3))
+          + ' Köder - welche, sage ich nicht. Ein Köder ist ein Fehler wie jeder andere. ')
+        : (n < 3 ? 'Mindestens drei Posten. ' : n + ' Posten - ' + fakultaetText(n) + ' mögliche Reihenfolgen. '))
+      + 'Nach Fehlern gibt es manchmal einen Hinweis - lesbar erst, wenn du die Posten, über die er etwas sagt, schon gescannt hast. '
       + 'Gelöst ist er nach ' + util.dauer(tz.minSekunden) + ' offen, plus jede Zeitstrafe (je '
       + util.dauer((tz.maxSekunden - tz.minSekunden) * E.strafeAnteil) + '); sonst nach ' + util.dauer(tz.maxSekunden) + '. '
       + 'Eine Sperre kostet erst ' + E.sperreMin + ' min, dann jedes Mal das Doppelte, höchstens ' + util.dauer(E.sperreMax * 60) + '.';
@@ -2069,7 +2094,7 @@
     if (T.tresorLogik.drandModus(konfig) && zustand.marken.length) {
       konfig.marken = await T.tresorLogik.markenVorbereiten(zustand.marken);
     }
-    if (T.tresorLogik.escapeModus(konfig)) konfig.kette = await T.tresorLogik.ketteVorbereiten(zustand.posten);
+    if (T.tresorLogik.escapeModus(konfig)) konfig.kette = await T.tresorLogik.ketteVorbereiten(zustand.posten, konfig);
     // vor dem Leeren der Bühne auslesen - danach gibt es die Felder nicht mehr
     var passphrase = konfig.mitPassphrase ? $('#passphrase').value : '';
     var art = zustand.art;

@@ -1692,40 +1692,119 @@
    *
    * Fremde Codes zaehlen nicht - Herumsuchen ist kein Fehler. Gelöst ruckt
    * die Freigabe auf "fruehestens" plus die gesammelten Strafen; sonst gilt
-   * "spaetestens". Als Objekt, damit Tests es stauchen koennen. */
+   * "spaetestens". Als Objekt, damit Tests es stauchen koennen.
+   *
+   * Koeder: Auf Wunsch gehoeren nicht alle Posten zur Kette. Wie viele nicht,
+   * zieht die App (1 bis ein Drittel, die Kette bleibt mindestens drei lang)
+   * und sagt es nicht. Ein Koeder ist ein Fehler wie jeder andere.
+   *
+   * Hinweise: Nach einem Fehler gibt es ab und zu etwas Wahres, aber Vages -
+   * "Bad kommt vor Keller", "Flur liegt in der ersten Haelfte", "Weder Kueche
+   * noch Garten gehoeren zur Kette". Damit wird aus Raten ein Logikraetsel.
+   * Alle Hinweise entstehen beim Verriegeln, solange die Reihenfolge bekannt
+   * ist, und werden mit den Codes der Posten verschluesselt, ueber die sie
+   * etwas sagen. Lesbar ist ein Hinweis erst, wenn beide Posten schon einmal
+   * gescannt wurden; im Speicher steht nichts Lesbares. Das Wissen waechst
+   * mit dem Herumprobieren. */
   var ESCAPE = {
     regeln: [['neustart', 3], ['sperre', 3], ['strafe', 3], ['gnade', 1]],
     sperreMin: 5, sperreFaktor: 2, sperreMax: 120,
     strafeAnteil: 0.05,
+    hinweisChance: 2 / 3,                           // so oft bringt ein Fehler einen Hinweis
     doppelScan: 10                                  // s: dieselbe Marke gleich nochmal ist kein Fehler
   };
 
   function escapeModus(konfig) { return !!konfig && konfig.spielart === 'escape'; }
 
-  function escapeKonfiguration(rahmen) {
+  function escapeKonfiguration(rahmen, wahl) {
     var k = passivKonfiguration(rahmen, { modus: 'aus' }, {});
     delete k.passiv;
     k.spielart = 'escape';
+    k.escapeKoeder = !!(wahl && wahl.koeder);
     return k;
   }
 
+  function hinweisSchluessel(codes) {
+    return pruefwertText('tresor-hinweis:' + codes.slice().sort().join(':'));
+  }
+  function pruefwertText(t) { return T.krypto.pruefwert(t); }
+
+  function waehle(liste) { return liste[zufallsGanz(0, liste.length - 1)]; }
+
   /* Vor dem Verriegeln: Reihenfolge ziehen, Pruefwerte bilden. posten:
    * [{ code, name }]. Die Codes selbst kommen nicht in die Konfiguration. */
-  async function ketteVorbereiten(posten) {
+  async function ketteVorbereiten(posten, konfig) {
+    var n = posten.length;
     var reihe = posten.map(function (_, i) { return i; });
     for (var i = reihe.length - 1; i > 0; i--) {
       var j = zufallsGanz(0, i);
       var merk = reihe[i]; reihe[i] = reihe[j]; reihe[j] = merk;
     }
-    var kette = { namen: [], pruef: [], pos: [] };
-    for (var a = 0; a < posten.length; a++) {
+    /* Koeder: die letzten der gemischten Reihe fallen heraus. */
+    var koeder = (konfig && konfig.escapeKoeder && n >= 4) ? zufallsGanz(1, Math.max(1, Math.min(Math.floor(n / 3), n - 3))) : 0;
+    reihe = reihe.slice(0, n - koeder);
+    var kette = { namen: [], pruef: [], pos: [], verborgen: !!(konfig && konfig.escapeKoeder), hinweise: [] };
+    for (var a = 0; a < n; a++) {
       kette.namen.push(String(posten[a].name || ('Posten ' + (a + 1))).slice(0, 40));
       kette.pruef.push(await T.krypto.pruefwert('tresor-marke:' + posten[a].code));
     }
     for (var p = 0; p < reihe.length; p++) {
       kette.pos.push(await T.krypto.pruefwert('tresor-kette:' + p + ':' + posten[reihe[p]].code));
     }
+    /* Hinweise, solange die Reihenfolge noch bekannt ist. */
+    var stelle = posten.map(function (_, x) { return reihe.indexOf(x); });     // -1 = Koeder
+    var L = reihe.length;
+    function nm(x) { return '„' + kette.namen[x] + '“'; }
+    var texte = [];
+    for (var x = 0; x < n; x++) {
+      var px = stelle[x], wahr = [];
+      if (px !== 0) wahr.push(nm(x) + ' ist nicht der erste Posten.');
+      if (px !== L - 1) wahr.push(nm(x) + ' ist nicht der letzte.');
+      if (px >= 0 && L >= 4) wahr.push(nm(x) + (px < L / 2 ? ' liegt in der ersten Hälfte.' : ' liegt in der zweiten Hälfte.'));
+      texte.push({ a: x, b: null, text: waehle(wahr) });
+      for (var y = x + 1; y < n; y++) {
+        var py = stelle[y], t;
+        if (px >= 0 && py >= 0) {
+          var frueh = px < py ? x : y, spaet = px < py ? y : x;
+          t = Math.abs(px - py) === 1 ? nm(spaet) + ' kommt direkt nach ' + nm(frueh) + '.' : nm(frueh) + ' kommt vor ' + nm(spaet) + '.';
+        } else if (px < 0 && py < 0) {
+          t = 'Weder ' + nm(x) + ' noch ' + nm(y) + ' gehören zur Kette.';
+        } else {
+          t = nm(px < 0 ? x : y) + ' gehört nicht zur Kette - ' + nm(px < 0 ? y : x) + ' schon.';
+        }
+        texte.push({ a: x, b: y, text: t });
+      }
+    }
+    for (var h = 0; h < texte.length; h++) {
+      var codes = [posten[texte[h].a].code];
+      if (texte[h].b !== null) codes.push(posten[texte[h].b].code);
+      kette.hinweise.push({ a: texte[h].a, b: texte[h].b,
+        paket: await T.krypto.verschluesseln('hinweis:' + h, await hinweisSchluessel(codes), texte[h].text, null, null) });
+    }
     return kette;
+  }
+
+  /* Nach einem Fehler: ab und zu einen Hinweis, den die bekannten Codes
+   * entschluesseln - bevorzugt einen ueber den Posten, der gerade falsch war. */
+  async function hinweisZiehen(tresor, wIdx) {
+    var k = tresor.freigabe.kette, kd = tresor.konfig.kette;
+    if (!kd.hinweise || !kd.hinweise.length || zufallsAnteil() >= ESCAPE.hinweisChance) return null;
+    var gesehen = k.hinweiseGesehen || (k.hinweiseGesehen = []);
+    var moeglich = [];
+    kd.hinweise.forEach(function (h, i) {
+      if (gesehen.indexOf(i) !== -1 || !k.bekannt[h.a] || (h.b !== null && !k.bekannt[h.b])) return;
+      moeglich.push(i);
+    });
+    if (!moeglich.length) return null;
+    var bevorzugt = moeglich.filter(function (i) { return kd.hinweise[i].a === wIdx || kd.hinweise[i].b === wIdx; });
+    var i = waehle(bevorzugt.length ? bevorzugt : moeglich);
+    var h = kd.hinweise[i];
+    var codes = [k.bekannt[h.a]];
+    if (h.b !== null) codes.push(k.bekannt[h.b]);
+    var text = await T.krypto.entschluesseln('hinweis:' + i, await hinweisSchluessel(codes), h.paket, null, null);
+    gesehen.push(i);
+    (k.hinweise || (k.hinweise = [])).push(text);
+    return text;
   }
 
   function regelZiehen() {
@@ -1737,7 +1816,8 @@
 
   function ketteAnlegen(konfig) {
     return { laenge: ((konfig.kette || {}).pos || []).length, stand: 0, gefunden: [], runde: 1,
-      regel: regelZiehen(), sperren: 0, sperreBis: 0, strafeSek: 0, fehler: 0, geloest: false, letzter: null };
+      regel: regelZiehen(), sperren: 0, sperreBis: 0, strafeSek: 0, fehler: 0, geloest: false, letzter: null,
+      bekannt: {}, hinweise: [], hinweiseGesehen: [] };
   }
 
   /* Was die naechste Sperre kostet - fuer die Ansage. */
@@ -1764,20 +1844,25 @@
     if (k.geloest || f.z) return { schon: true, name: name };
     if (k.letzter && k.letzter.idx === idx && jetzt - k.letzter.zeit < ESCAPE.doppelScan * 1000) return { doppelt: true, name: name };
     if (k.sperreBis > jetzt) return { gesperrt: true, bis: k.sperreBis, name: name };
+    /* Gescannte Codes bleiben bekannt - sie stehen ohnehin auf den Marken,
+     * und mit ihnen werden Hinweise lesbar. */
+    k.bekannt = k.bekannt || {};
+    k.bekannt[idx] = code;
+    var verborgen = !!kd.verborgen;
     var richtig = kd.pos[k.stand] === await T.krypto.pruefwert('tresor-kette:' + k.stand + ':' + code);
     var vorher = f.konto.zielSek;
     if (richtig) {
       k.stand++;
       k.gefunden.push(idx);
       k.letzter = { idx: idx, zeit: jetzt };
-      bewegungMerken(tresor, 'posten', vorher, name, { richtig: true, stand: k.stand, laenge: k.laenge });
+      bewegungMerken(tresor, 'posten', vorher, name, { richtig: true, stand: k.stand, laenge: verborgen ? null : k.laenge });
       if (k.stand >= k.laenge) {
         k.geloest = true;
         var ziel = Math.min(f.rahmen[1], f.rahmen[0] + k.strafeSek);
         zeitkontoVerschieben(tresor, ziel - f.konto.zielSek, 'kette');
         return { richtig: true, geloest: true, name: name, stand: k.stand, laenge: k.laenge };
       }
-      return { richtig: true, name: name, stand: k.stand, laenge: k.laenge };
+      return { richtig: true, name: name, stand: k.stand, laenge: verborgen ? null : k.laenge };
     }
     /* Falsch: Die Runde ist vorbei, ihre Regel greift, die naechste wird gezogen. */
     var regel = k.regel, folge = { falsch: true, name: name, regel: regel, runde: k.runde };
@@ -1786,7 +1871,9 @@
     if (regel === 'neustart') { k.stand = 0; k.gefunden = []; }
     else if (regel === 'sperre') { folge.sekunden = ketteSperreSek(k); k.sperren++; k.sperreBis = jetzt + folge.sekunden * 1000; folge.bis = k.sperreBis; }
     else if (regel === 'strafe') { folge.sekunden = ketteStrafeSek(tresor); k.strafeSek += folge.sekunden; }
-    bewegungMerken(tresor, 'posten', vorher, name, { richtig: false, regel: regel, stand: k.stand, laenge: k.laenge });
+    folge.hinweis = await hinweisZiehen(tresor, idx);
+    bewegungMerken(tresor, 'posten', vorher, name, { richtig: false, regel: regel, stand: k.stand,
+      laenge: verborgen ? null : k.laenge, hinweis: folge.hinweis || '' });
     k.runde++;
     k.regel = regelZiehen();
     folge.stand = k.stand;

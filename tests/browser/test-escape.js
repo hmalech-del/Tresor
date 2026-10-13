@@ -14,7 +14,7 @@ async function neu(browser, fehler, regeln) {
   await seite.context().addInitScript(([info, regeln]) => {
     document.addEventListener('DOMContentLoaded', () => {
       Tresor.drand.testKette(info, r => window.scheinBeacon(r));
-      if (regeln) Tresor.tresorLogik.ESCAPE.regeln = regeln;
+      if (regeln) { Tresor.tresorLogik.ESCAPE.regeln = regeln; Tresor.tresorLogik.ESCAPE.hinweisChance = 1; }
     });
   }, [schein.info, regeln || null]);
   await seite.goto(ADRESSE);
@@ -69,6 +69,48 @@ const gespeichert = seite => seite.evaluate(() => JSON.parse(localStorage.getIte
     e.geloest = { geloest: letzte.geloest, ziel: fr.konto.zielSek };
     e.danach = (await L.ketteScan(t, folge[0].code, jetzt + 50 * 60000)).schon === true;
     e.bewegungen = L.neueBewegungen(t, 0).map(b => b.art + (b.art === 'posten' ? (b.richtig ? '+' : '-' + b.regel) : '')).join(' ');
+
+    // Koeder und Hinweise: sechs Posten, Hinweis nach jedem Fehler
+    L.ESCAPE.hinweisChance = 1;
+    const namen = ['Keller', 'Bad', 'Flur', 'Küche', 'Garten', 'Dach'];
+    const p6 = namen.map(name => ({ name, code: M.neuerCode() }));
+    const k6 = L.escapeKonfiguration({ minSekunden: 1000, maxSekunden: 5000 }, { koeder: true });
+    k6.kette = await L.ketteVorbereiten(p6, k6);
+    const t6 = await L.erstellen({ art: 'zahl', teile: ['1'], konfig: k6 });
+    const kd = k6.kette, k6s = t6.freigabe.kette;
+    e.koeder = { laenge: kd.pos.length, verborgen: kd.verborgen, hinweise: kd.hinweise.length,
+      lesbar: /kommt vor|kommt direkt|Hälfte|gehört nicht|gehören zur|nicht der/.test(JSON.stringify(t6)) };
+    // Wahrheit pruefen: Stelle jedes Postens aus den Pruefwerten
+    const stelle = [];
+    for (const p of p6) { let s = -1; for (let i = 0; i < kd.pos.length; i++) if (kd.pos[i] === await K.pruefwert('tresor-kette:' + i + ':' + p.code)) s = i; stelle.push(s); }
+    const n = x => namen.indexOf(x);
+    const wahr = h => {
+      let m;
+      if ((m = /^„(.+)“ kommt direkt nach „(.+)“\.$/.exec(h))) return stelle[n(m[1])] === stelle[n(m[2])] + 1 && stelle[n(m[2])] >= 0;
+      if ((m = /^„(.+)“ kommt vor „(.+)“\.$/.exec(h))) return stelle[n(m[1])] >= 0 && stelle[n(m[1])] < stelle[n(m[2])];
+      if ((m = /^Weder „(.+)“ noch „(.+)“ gehören zur Kette\.$/.exec(h))) return stelle[n(m[1])] < 0 && stelle[n(m[2])] < 0;
+      if ((m = /^„(.+)“ gehört nicht zur Kette - „(.+)“ schon\.$/.exec(h))) return stelle[n(m[1])] < 0 && stelle[n(m[2])] >= 0;
+      if ((m = /^„(.+)“ ist nicht der erste Posten\.$/.exec(h))) return stelle[n(m[1])] !== 0;
+      if ((m = /^„(.+)“ ist nicht der letzte\.$/.exec(h))) return stelle[n(m[1])] !== kd.pos.length - 1;
+      if ((m = /^„(.+)“ liegt in der ersten Hälfte\.$/.exec(h))) return stelle[n(m[1])] >= 0 && stelle[n(m[1])] < kd.pos.length / 2;
+      if ((m = /^„(.+)“ liegt in der zweiten Hälfte\.$/.exec(h))) return stelle[n(m[1])] >= kd.pos.length / 2;
+      return false;
+    };
+    // Fehler um Fehler - jeweils ein Posten, der an Stelle 0 nicht stimmt
+    const falsche = p6.filter((_, i) => stelle[i] !== 0);
+    const gezogen = [];
+    let zeit = Date.now();
+    for (let runde = 0; runde < 12; runde++) {
+      const p = falsche[runde % falsche.length];
+      k6s.regel = 'gnade'; k6s.sperreBis = 0; zeit += 60000;
+      const r = await L.ketteScan(t6, p.code, zeit);
+      if (runde === 0) e.ersterHinweis = { text: r.hinweis, ueberIhn: !!r.hinweis && r.hinweis.includes('„' + p.name + '“'),
+        einzeln: !!r.hinweis && !/kommt|Weder/.test(r.hinweis) };
+      if (r.hinweis) gezogen.push(r.hinweis);
+    }
+    e.hinweise = { anzahl: gezogen.length, alleWahr: gezogen.every(wahr), falsch: gezogen.filter(h => !wahr(h)),
+      gespeichert: k6s.hinweise.length, doppelt: new Set(gezogen).size !== gezogen.length, beispiel: gezogen.slice(0, 3) };
+    e.verborgen = (await L.ketteScan(t6, p6[stelle.indexOf(0)].code, zeit + 60000)).laenge;
     return e;
   });
   pruefe('Anfang: Uhr auf "sonst", Leiter endet dort', r.anfang.laenge === 4 && r.anfang.stand === 0 && r.anfang.regel && r.anfang.ziel === 5000 && r.anfang.oben === 5000, JSON.stringify(r.anfang));
@@ -83,6 +125,12 @@ const gespeichert = seite => seite.evaluate(() => JSON.parse(localStorage.getIte
   pruefe('Neustart: zurueck auf Anfang', r.neustart.stand === 0 && r.neustart.gefunden === 0, JSON.stringify(r.neustart));
   pruefe('geloest: Freigabe auf fruehestens plus Strafen', r.geloest.geloest && r.geloest.ziel === 1200, JSON.stringify(r.geloest));
   pruefe('danach: schon geloest', r.danach, '');
+  pruefe('Koeder: Kette kuerzer, Laenge verborgen, Hinweise verschluesselt', r.koeder.laenge >= 4 && r.koeder.laenge <= 5
+    && r.koeder.verborgen && r.koeder.hinweise === 21 && !r.koeder.lesbar, JSON.stringify(r.koeder));
+  pruefe('erster Fehler: nur ein Hinweis ueber diesen Posten lesbar', r.ersterHinweis.ueberIhn && r.ersterHinweis.einzeln, r.ersterHinweis.text);
+  pruefe('alle Hinweise wahr, keiner doppelt', r.hinweise.anzahl >= 8 && r.hinweise.alleWahr && !r.hinweise.doppelt
+    && r.hinweise.gespeichert === r.hinweise.anzahl, JSON.stringify(r.hinweise));
+  pruefe('mit Koedern: "x von y" bleibt verborgen', r.verborgen === null, String(r.verborgen));
   pruefe('Bewegungen fuer den Rueckkanal', r.bewegungen === 'posten+ posten-sperre posten-sperre posten-strafe posten-neustart posten+ posten+ posten+ posten+ kette', r.bewegungen);
   await s0.context().close();
 
@@ -129,6 +177,8 @@ const gespeichert = seite => seite.evaluate(() => JSON.parse(localStorage.getIte
   await s1.waitForSelector('#escapekarte-tresor .strafkasten', { timeout: 15000 });
   const falsch = await s1.textContent('#escapekarte-tresor .strafkasten');
   pruefe('falscher Posten: Runde vorbei, Gnade', /Diesmal kostet es nichts/.test(falsch) && /Runde 2/.test(await s1.textContent('#escapekarte-tresor')), falsch);
+  pruefe('mit Hinweis, und unter "Was du weißt"', /Ein Hinweis: „/.test(falsch) && !!(await s1.$('#escapekarte-tresor .escape-wissen li')),
+    await s1.textContent('#escapekarte-tresor .escape-neuer-hinweis').catch(() => '-'));
   await s1.screenshot({ path: AUSGABE + '/schuss-escape.png', fullPage: true });
   await s1.goto(folge[1]);
   await s1.waitForSelector('#escapekarte-tresor .gutkasten', { timeout: 15000 });

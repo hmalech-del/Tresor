@@ -1200,6 +1200,27 @@ die Runde:
 Fremde Codes zählen nicht – herumsuchen ist kein Fehler. Dieselbe Marke
 zweimal binnen zehn Sekunden (NFC liest gern doppelt) auch nicht.
 
+**Köder.** Auf Wunsch gehören nicht alle Posten zur Kette. Wie viele nicht,
+zieht die App beim Verriegeln – einen bis ein Drittel, die Kette bleibt
+mindestens drei lang – und sagt es nicht; die Anzeige heißt dann „Posten 3
+gesucht" statt „3 von 5". Ein Köder zu scannen ist ein Fehler wie jeder
+andere. Mit Ködern braucht es mindestens vier Posten.
+
+**Hinweise.** Nach einem Fehler gibt es oft (zwei von drei Malen) etwas
+Wahres, aber Vages:
+
+* „Bad" kommt vor „Keller". / „Flur" kommt direkt nach „Bad".
+* „Küche" liegt in der ersten Hälfte. / … ist nicht der erste Posten.
+* „Garten" gehört nicht zur Kette – „Dach" schon. / Weder … noch … gehören zur Kette.
+
+Damit wird aus Raten ein Logikrätsel. Die Hinweise entstehen beim Verriegeln –
+solange die Reihenfolge bekannt ist – und werden mit den Codes der Posten
+verschlüsselt, über die sie etwas sagen: Lesbar ist ein Hinweis über „Bad"
+und „Keller" erst, wenn beide schon einmal gescannt wurden. Im Speicher steht
+nichts Lesbares; das Wissen wächst mit dem Herumprobieren. Bevorzugt kommt
+ein Hinweis über den Posten, der gerade falsch war. Alles Erfahrene steht in
+der Karte unter **„Was du weißt"**.
+
 **Was im Tresor liegt:** je Posten ein Prüfwert „gehört zur Kette" (mit
 Namen, in der Reihenfolge des Anlegens) und je Position einer „dieser Code an
 dieser Stelle" – ohne Verbindung zwischen beiden. Aus dem Speicher allein ist
@@ -1209,8 +1230,8 @@ auf, keinen Entschlossenen.
 
 Marken (Nachlass, Freeze, Wurf …) und Home Assistant funktionieren daneben
 wie gewohnt; der Rückkanal meldet jeden Posten als `art=posten` mit
-`posten=richtig|falsch`, `stand`, `laenge` und bei Fehlern der `regel`, die
-gelöste Kette als `art=kette`.
+`posten=richtig|falsch`, `stand`, `laenge` (nicht bei Ködern) und bei
+Fehlern der `regel` und einem `hinweis`, die gelöste Kette als `art=kette`.
 
 ## Marken: NFC und QR
 

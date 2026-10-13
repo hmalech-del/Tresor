@@ -178,7 +178,12 @@ Reihenfolge beim Verriegeln gezogen, gespeichert als `kette.pruef`
 ohne Verbindung. `freigabe.kette` hält Stand, Runde, Regel (zu Rundenbeginn
 gezogen: neustart/sperre/strafe/gnade), Sperre, Strafen. Gelöst → Konto auf
 `unten + strafeSek`. `codeVerarbeiten` in `app.js` prüft erst die Kette, dann
-Marken. Test: `test-escape.js`.
+Marken. Köder (`konfig.escapeKoeder`, `kette.verborgen`): Posten außerhalb von
+`kette.pos`. Hinweise: beim Verriegeln je Posten und je Paar ein wahrer Satz,
+AES-verschlüsselt mit SHA-256 der beteiligten Codes (`kette.hinweise`);
+`freigabe.kette.bekannt` hält gescannte Codes, `hinweisZiehen` entschlüsselt
+nach Fehlern (`ESCAPE.hinweisChance`). Texte je Paar müssen eindeutig sein.
+Test: `test-escape.js` (prüft jeden gezogenen Hinweis auf Wahrheit).
 
 **Willkür** = `konfig.blind` (in der Oberfläche "Willkür", früher "Meine
 Regeln"). Die App zieht Regeln selbst, zeigt **keine Beträge, keine
