@@ -1010,6 +1010,21 @@ Drei Schalter, die quer über alle Dimensionen wirken:
 * **Strafzeit bei Fehlversuch** (aus / mild ab 20 s / hart ab 60 s). Jeder
   weitere Fehlversuch derselben Aufgabe kostet das 1,7-Fache, gedeckelt bei
   30 Minuten. Die Aufgabe ist währenddessen gesperrt und zeigt einen Countdown.
+
+  **Gestraft wird die verlorene Runde, nicht der einzelne Versuch.** Ein
+  Fehler setzt innerhalb einer Runde nur zurück; Zeit kostet erst, was die
+  Runde beendet:
+
+  | Aufgabe | kostet nichts | kostet eine Strafe |
+  |---|---|---|
+  | Glücksspiele (Würfelserie, Raten, Ziehen, Rad) | jeder misslungene Zug | – (das Glück entscheidet, nicht der Spieler) |
+  | Antwortfelder (Rätsel, Rechnen …) | 1. und 2. falsche Antwort | jede dritte |
+  | Spiele (Simon, N-Back, Stroop …) | – | die verlorene Runde |
+
+  Nach jeder gebuchten Strafe hat dieselbe Aufgabe **15 Minuten Schonfrist**
+  (`STRAFE_SCHONFRIST`): Wer in dieser Zeit noch eine Runde verliert, setzt
+  nur neu an. Früher konnte ein Glücksspiel nach jedem Teilversuch Zeit kosten
+  und das Konto in Serie hochtreiben.
 * **Geheimes Zeitlimit für die Aufgaben** (im Dialog so benannt, damit es
   nicht mit dem Notausgang verwechselt wird). Beim Verriegeln wird eine Frist
   *zufällig gezogen* und nicht angezeigt – sichtbar sind nur die Spanne, die du gesetzt

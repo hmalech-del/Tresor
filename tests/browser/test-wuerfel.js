@@ -43,9 +43,14 @@ const AUSGABE = require('path').join(__dirname, 'schuesse');
   await s.waitForTimeout(300);
   await s.click('#verriegeln');
   await s.waitForSelector('#aufgabenkarte', { timeout: 60000 });
-  // falsche Antwort -> Strafe
-  await s.fill('.aufgabenkarte .antwortfeld', 'garantiertfalsch');
-  await s.click('.aufgabenkarte .antwortzeile button');
+  // dritte falsche Antwort -> Strafe (die ersten zwei sind Teilversuche)
+  for (let i = 0; i < 3; i++) {
+    await s.fill('.aufgabenkarte .antwortfeld', 'garantiertfalsch');
+    await s.click('.aufgabenkarte .antwortzeile button');
+    await s.waitForFunction(() => document.querySelector('.wuerfel')
+      || (document.querySelector('.aufgabenkarte .antwortzeile button') || {}).textContent === 'Prüfen', null, { timeout: 20000 });
+    await s.waitForTimeout(150);
+  }
   await s.waitForSelector('.wuerfel', { timeout: 15000 });
   const vorher = await s.evaluate(() => {
     const t = JSON.parse(localStorage.getItem('tresor.v1'));

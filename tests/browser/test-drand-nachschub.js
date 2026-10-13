@@ -29,7 +29,7 @@ async function neu(browser, fehler) {
       starte: k => { const b = document.createElement('button'); b.id = 't-loesen'; b.textContent = 'loesen';
         b.onclick = () => k.pruefeAntwort('xqzvwk'); k.wurzel.append(b); } });
     H.nachDimension = d => d === 'raetsel' ? [H.hole('probe-raetsel')] : [H.hole('probe-knopf')];
-    L.TAKT.ab = 1e9; L.NACHSCHUB.abstandMin = 2;
+    L.TAKT.ab = 1e9; L.NACHSCHUB.abstandMin = 2; L.STRAFE_SCHONFRIST = 0;   // hier: zwei Strafen hintereinander
     L.AUSSCHLAG.normal.stufen = [[1, 1, 1]]; L.AUSSCHLAG.normal.angebot = 0;
   }, schein.info);
   return seite;
@@ -50,7 +50,7 @@ async function neu(browser, fehler) {
     const e = { vorher: L.nachschubFaellig(t) };
     t.fragmente.forEach(fr => fr.aufgaben.forEach(a => { a.erledigt = true; }));
     e.faellig = L.nachschubFaellig(t);
-    const n1 = await L.nachschubAnlegen(t);
+    const n1 = await L.nachschubAnlegen(t, t.freigabe.start);   // fester Zeitpunkt: unter Last dauert erstellen() sonst laenger als der Abstand
     e.n1 = { extra: n1.extra, abstand: Math.round((n1.frei - t.freigabe.start) / 1000) };
     e.nurEine = !L.nachschubFaellig(t) && (await L.nachschubAnlegen(t)) === null;
     const lage = L.netzLage(t, n1.frei + 10);

@@ -101,7 +101,11 @@
       if (richtig) return;                      // die App blendet die Aufgabe ab
       feld.select();
       if (optionen.beiFehler) optionen.beiFehler();
-      kontext.fehlschlag('Falsch.');
+      /* Eine falsche Antwort ist ein Teilversuch; erst jede dritte zaehlt als
+       * verlorene Runde. So bleibt Raten unattraktiv, Vertipper kosten nichts. */
+      kontext.zustand.falsch = (kontext.zustand.falsch || 0) + 1;
+      if (kontext.zustand.falsch % 3 === 0) kontext.fehlschlag('Dreimal falsch.');
+      else kontext.fehlschlag('Falsch.', 'teil');
     }
     knopf.addEventListener('click', absenden);
     feld.addEventListener('keydown', function (e) { if (e.key === 'Enter') absenden(); });

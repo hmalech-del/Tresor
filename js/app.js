@@ -2115,8 +2115,24 @@
           kontext.fertig();
           return true;
         },
-        fehlschlag: function (grund) {
+        /* Fehlschlag, nach drei Regeln:
+         *   - Ein Teilversuch (ein Wurf, ein Dreh, eine falsche Antwort)
+         *     kostet nie Zeit; die Aufgabe setzt hoechstens selbst zurueck.
+         *   - Eine verlorene Runde kostet Zeit - aber je Pruefung hoechstens
+         *     einmal je Anlauf. Ein neuer Anlauf beginnt erst nach der
+         *     Schonfrist (STRAFE_SCHONFRIST).
+         * Frueher kostete jeder einzelne Fehlversuch Zeit, auch jeder
+         * Fehlwurf im Gluecksspiel. Am Netz zeichnete jede Strafe die Ansicht
+         * neu, und der naechste Fehlversuch kostete die naechste - eine
+         * schlechte Minute reichte fuer Stunden. */
+        fehlschlag: function (grund, art) {
           if (beendet) return false;
+          if (art === 'teil') return false;
+          var schonfrist = T.tresorLogik.STRAFE_SCHONFRIST * 1000;
+          if (aufgabe.zustand.letzteStrafe && Date.now() - aufgabe.zustand.letzteStrafe < schonfrist) {
+            sichern(false);
+            return false;
+          }
           /* Abmachung: Aufgaben, deren Teilfortschritt einen Neustart
            * ueberleben soll, legen ihn unter zustand.stand ab. Ein
            * Fehlschlag - etwa eine abgelaufene Frist - loescht ihn. Genau
@@ -2132,6 +2148,7 @@
             var buchung = T.tresorLogik.strafeBuchen(tresor, aufgabe.zustand.fehlversuche);
             if (!buchung) { sichern(false); return false; }
             beendet = true;
+            aufgabe.zustand.letzteStrafe = Date.now();
             buchung.grund = grund || '';
             buchung.fehlversuch = aufgabe.zustand.fehlversuche;
             buchung.zeit = Date.now();
@@ -2145,6 +2162,7 @@
           var sekunden = T.tresorLogik.strafzeit(tresor.konfig, aufgabe.zustand.fehlversuche);
           if (!sekunden) { sichern(false); return false; }
           beendet = true;
+          aufgabe.zustand.letzteStrafe = Date.now();
           aufgabe.zustand.strafeBis = Date.now() + sekunden * 1000;
           aufgabe.zustand.strafGrund = grund || '';
           if (aufgabe.frist) aufgabe.zustand.fristStart = 0;

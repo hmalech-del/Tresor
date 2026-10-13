@@ -64,10 +64,15 @@ const AUSGABE = require('path').join(__dirname, 'schuesse');
   });
   console.log('Speicherbild:', JSON.stringify(gespeichert));
 
-  // falsche Antwort -> Ablehnung + Strafzeit
+  // falsche Antworten: die ersten zwei sind Teilversuche, die dritte kostet Strafzeit
   console.log('Aufgabe 1:', await seite.textContent('.aufgabe-titel'));
-  await seite.fill('.aufgabenkarte .antwortfeld', 'falschewort');
-  await seite.click('.aufgabenkarte .antwortzeile .knopf');
+  for (let i = 0; i < 3; i++) {
+    await seite.fill('.aufgabenkarte .antwortfeld', 'falschewort');
+    await seite.click('.aufgabenkarte .antwortzeile .knopf');
+    await seite.waitForFunction(() => document.querySelector('.aufgabenkarte .countdown')
+      || (document.querySelector('.aufgabenkarte .antwortzeile .knopf') || {}).textContent === 'Prüfen', null, { timeout: 20000 });
+    await seite.waitForTimeout(150);
+  }
   await seite.waitForSelector('.aufgabenkarte .countdown', { timeout: 20000 });
   console.log('Nach falscher Antwort:', (await seite.textContent('.aufgabe-titel')).trim(),
     '|', (await seite.textContent('.aufgabe-hinweis')).replace(/\s+/g, ' ').trim());

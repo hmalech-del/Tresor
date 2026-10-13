@@ -143,6 +143,10 @@
    * koennen. */
   var TAKT = { ab: 6 * 3600, fensterMin: 12 * 3600, spaetAnteil: 0.5 };
 
+  /* Nach einer Strafe ist eine Pruefung so lange geschont: Weitere verlorene
+   * Runden setzen nur zurueck. Sekunden; veraenderlich fuer Tests. */
+  var STRAFE_SCHONFRIST = 15 * 60;
+
   /* ausschlag: das gezogene Vielfache; ohne Angabe 1 (der Normalwert). */
   function drandStrafe(konfig, fehlversuche, tresorzeitSek, ausschlag) {
     var anteil = DRAND_STRAFE_ANTEIL[util.grenze(konfig.strafe || 0, 0, 2)];
@@ -1372,6 +1376,8 @@
     gutschriftWert: gutschriftWert,
     gutschriftBuchen: gutschriftBuchen,
     TAKT: TAKT,
+    get STRAFE_SCHONFRIST() { return STRAFE_SCHONFRIST; },
+    set STRAFE_SCHONFRIST(v) { STRAFE_SCHONFRIST = v; },
     AUSSCHLAG: AUSSCHLAG,
     ausschlagZiehen: ausschlagZiehen,
     ausschlagSpanne: ausschlagSpanne,

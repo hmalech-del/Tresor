@@ -2,6 +2,9 @@
  * Der Erwartungswert ist bekannt, der Einzelfall nicht - zusammen mit
  * Strafzeiten wird daraus eine Geduldsprobe mit offenem Ausgang. */
 (function (global) {
+  /* Ein Fehlwurf ist hier ein Teilversuch: Er setzt die Serie zurueck, kostet
+   * aber keine Zeit (kontext.fehlschlag(grund, 'teil')). Ein Gluecksspiel,
+   * das jeden verlorenen Wurf bestraft, ist kein Spiel, sondern eine Steuer. */
   'use strict';
   var T = global.Tresor;
   var util = T.util, el = util.el;
@@ -75,7 +78,7 @@
             serie = 0;
             fortschritt.setze(0); fortschritt.text('0 von ' + p.serie);
             b.sag(summe + ' - zu wenig, Serie zurückgesetzt.', 'fehler');
-            kontext.fehlschlag('Serie gerissen.');
+            kontext.fehlschlag('Serie gerissen.', 'teil');
           }
         }, 60);
       });
@@ -136,7 +139,7 @@
               serie = 0;
               fortschritt.setze(0); fortschritt.text('0 von ' + p.serie);
               b.sag('Daneben - Serie beginnt neu.', 'fehler');
-              kontext.fehlschlag('Falsch geraten.');
+              kontext.fehlschlag('Falsch geraten.', 'teil');
             }
           }, 55);
         });
@@ -190,7 +193,7 @@
                 tisch.children[gewinn].classList.add('ist-gewinn');
                 tisch.children[gewinn].textContent = '★';
                 b.sag('Niete.', 'fehler');
-                if (kontext.fehlschlag('Niete gezogen.')) return;
+                if (kontext.fehlschlag('Niete gezogen.', 'teil')) return;
               }
               setTimeout(function () { gesperrt = false; neuMischen(); }, 900);
             });
@@ -250,7 +253,7 @@
           }
           dreht = false; knopf.disabled = false;
           if (ziel === 0) { W.ton(660, 0.3); b.sag('Frei.', 'gut'); kontext.fertig(); }
-          else { b.sag('Feld ' + ziel + ' - noch einmal.', 'fehler'); kontext.fehlschlag('Rad nicht frei.'); }
+          else { b.sag('Feld ' + ziel + ' - noch einmal.', 'fehler'); kontext.fehlschlag('Rad nicht frei.', 'teil'); }
         }
         weiter();
       });

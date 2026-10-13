@@ -88,6 +88,13 @@ Etikettenschwindel – nicht wieder einführen.
 
 - **Gutschrift** bei gelöster Prüfung, **Strafe** bei Fehlversuch – beide
   gezogen (`AUSSCHLAG`, Tabelle normal/willkür), gedeckelt je Buchung.
+- **Faire Strafen**: `kontext.fehlschlag(grund, art)` – `art === 'teil'`
+  kostet nie etwas (Glücksspiel-Züge, 1./2. falsche Antwort im
+  `antwortFeld`); nur die verlorene Runde straft, danach hat die Aufgabe
+  `STRAFE_SCHONFRIST` (15 min, `aufgabe.zustand.letzteStrafe`). Neue Aufgaben:
+  Zwischenfehler als `'teil'` melden. Der Nutzer fand Strafen je Teilversuch
+  unfair – nicht wieder einführen. Tests mit zwei Strafen hintereinander
+  setzen `L.STRAFE_SCHONFRIST = 0`.
 - **Wurf**: ab und zu wird angeboten, eine Buchung zu verwürfeln
   (Erwartungswert genau 1).
 - **Takt** ab `unten ≥ 6 h`: Prüfungen kommen verteilt (`aufgabe.frei`,
@@ -114,7 +121,7 @@ fragen, ob sie unter Willkür etwas verrät.
 
 **Stellschrauben** stehen als Objekte in `tresor.js` und sind über
 `Tresor.tresorLogik` erreichbar (Tests stauchen sie): `TAKT`, `AUSSCHLAG`,
-`KAPITULATION`, `STEIN`, `RECHENZEIT_STUFEN`, `DRAND_STRAFE_ANTEIL`,
+`KAPITULATION`, `STEIN`, `STRAFE_SCHONFRIST`, `RECHENZEIT_STUFEN`, `DRAND_STRAFE_ANTEIL`,
 `DRAND_DECKEL_FAKTOR`, `NOTAUSGANG_WERTE`, `TRESORZEIT_WERTE`. Beim Balancing
 immer mit einem Beispiel rechnen (z. B. Rahmen 2–5 Tage, 10 Prüfungen) und
 die Zahl im Kommentar und in der README nachziehen.
