@@ -31,6 +31,9 @@ fertige Ergebnis.
    oder beim Bild die nächste Schärfestufe.
 5. **Verlauf** – geöffnete Tresore landen im Verlauf und bleiben dort abrufbar.
 
+Daneben gibt es eine zweite Spielart, **Passiv** – ohne Prüfungen, siehe
+[Passiv](#passiv-der-tresor-entscheidet).
+
 ---
 
 ## Ein Bild als Geheimnis
@@ -904,6 +907,54 @@ Zeitschloss ist der **Bann**, die Strafzeit die **Strafe**, Aufgaben sind
 **Prüfungen**. Quadrierungen, PBKDF2 und AES stehen weiterhin da, aber
 zugeklappt hinter „Was dahintersteckt". Diese README bleibt davon unberührt;
 sie ist für Entwickler und darf erklären.
+
+## Passiv: der Tresor entscheidet
+
+Die zweite Spielart, oben unter „Wie soll es laufen?". Keine Prüfungen, keine
+Fragmente, kein Stein, kein Notausgang. Man setzt nur einen **Rahmen** –
+frühestens, spätestens – und der Tresor geht irgendwo darin auf. Das Geheimnis
+kommt am Ende **als Ganzes**: die Zahl am Stück, beim Bild nur die schärfste
+Stufe.
+
+Wo genau im Rahmen, bewegen **Eingänge**, die von selbst eintreffen – als käme
+die Anweisung von woanders und der Game Master reichte sie nur weiter:
+
+| Eingang | Häufigkeit | Wirkung |
+|---|---|---|
+| Nachlass | 3/11 | früher, um ½ bis 1½ Einheiten |
+| Aufschlag | 3/11 | später, um ½ bis 1½ Einheiten |
+| Angebot | 3/11 | ein Wurf, freiwillig: 6 −2, 5 −1, 3/4 nichts, 2 +1, 1 +2 Einheiten |
+| Münzwurf | 1/11 | Kopf früher, Zahl später, je 1 Einheit |
+| Kontrolle | 1/11 | nichts – „Ich habe nachgesehen." |
+
+**Fair:** Jeder Eingang ist im Mittel null, auch der Wurf. Die Uhr startet
+irgendwo in der Mitte des Rahmens (35–65 %) und wandert von da aus; über den
+Rahmen hinaus geht sie nie – „spätestens" ist eine Zusage, das Netz hält sie.
+Ein Angebot gilt bis zum nächsten Eingang; man kann es ausschlagen oder
+verpassen, beides kostet nichts.
+
+Drei Einstellungen:
+
+* **Wie oft** – selten, gelegentlich, oft: etwa 6, 12 oder 24 Eingänge über die
+  Laufzeit. Die Abstände sind gezogen (0,4- bis 1,6-mal der mittlere Abstand,
+  mindestens eine Minute).
+* **Wie hart** – die Einheit ist Spanne × 0,22 (mild) oder 0,4 (hart) ÷ √Anzahl.
+  So streut die Summe aller Eingänge um gut ein Viertel (mild) oder knapp die
+  Hälfte (hart) der Spanne, egal wie oft.
+* **Die Uhr zeigen** – an: Countdown und Beträge. Aus: `· · ·`, und ein
+  Eingang sagt nur „Früher." oder „Später."
+
+Beispiel: Rahmen 2 bis 6 Stunden, gelegentlich, mild. Einheit
+4 h × 0,22 ÷ √12 ≈ 15 Minuten, ein Eingang etwa alle 20 Minuten.
+
+Eingänge treten zu ihrer Zeit ein, auch bei geschlossener App: Beim nächsten
+Öffnen werden die verpassten der Reihe nach nachgeholt – aber nur die, die vor
+der Freigabe lagen – und stehen gesammelt in einem Kasten. Das Protokoll
+(„Eingänge") hält die letzten 40.
+
+Technisch ist Passiv ein Tresor am Netz mit einem einzigen Fragment und ohne
+Aufgaben; die Leiter des Zeitkontos endet am oberen Rahmen statt am
+Zehnfachen. Stellschrauben in `PASSIV` (`js/tresor.js`).
 
 ## Willkür
 

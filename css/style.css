@@ -808,3 +808,11 @@ select, input[type=file] {
 .stein-zaehler { text-align: center; color: var(--flaut); font-variant-numeric: tabular-nums; margin: 6px 0; }
 .stein-haende { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .stein-haende .knopf { min-height: 64px; touch-action: manipulation; user-select: none; }
+
+/* Passiv: Uhr, Eingaenge, Angebot */
+.passiv-karte .countdown { margin: 4px 0 0; }
+.passiv-karte > .flaut.klein { text-align: center; }
+.passiv-angebot .wuerfelbox { margin: 4px 0; }
+.passiv-eingaenge summary { cursor: pointer; color: var(--flaut); }
+.passiv-protokoll { list-style: none; padding: 0; margin: 8px 0 0; display: flex; flex-direction: column; gap: 4px; font-size: .92em; }
+.passiv-protokoll .flaut { font-variant-numeric: tabular-nums; }

@@ -121,6 +121,32 @@
       'Keine Ausrüstung, kein Rabatt.',
       'Du weichst aus. Das kostet.'
     ],
+    /* Passiv: Ereignisse, die von selbst eintreffen - als kaeme die
+     * Anweisung von woanders her. Er ueberbringt sie nur. */
+    nachlass: [
+      'Man hat entschieden, dich früher gehen zu lassen. Nicht meine Idee.',
+      'Nachlass. Freu dich nicht zu früh.',
+      'Von oben kam Gnade. Ich reiche sie weiter. Widerwillig.'
+    ],
+    aufschlag: [
+      'Neue Anweisung: länger.',
+      'Es wurde verlängert. Frag nicht, von wem.',
+      'Aufschlag. Du hast nichts falsch gemacht. Das spielt keine Rolle.'
+    ],
+    muenze: [
+      'Ich habe eine Münze geworfen. Du warst nicht gefragt.',
+      'Kopf oder Zahl. Entschieden ist entschieden.'
+    ],
+    stille: [
+      'Ich habe nachgesehen. Es bleibt, wie es ist.',
+      'Kontrolle. Nichts zu melden.',
+      'Ich sehe dich. Weiter.'
+    ],
+    angebot: [
+      'Ein Wurf ist frei. Deine Entscheidung.',
+      'Du darfst würfeln. Oder es lassen.',
+      'Ich biete dir einen Wurf an. Einmal.'
+    ],
     /* Willkür: was der Spieler nicht erfaehrt */
     dunkel: [
       'Du erfährst es nicht.',

@@ -113,6 +113,19 @@ Etikettenschwindel – nicht wieder einführen.
 - **Notausgang**: zweiter Weg zum ganzen Geheimnis, fest/Spanne/geheim; am Netz
   als drand-Runde, sonst Rechenzeit oder Zeitstempel.
 
+**Passiv** = `konfig.spielart === 'passiv'` (`passivKonfiguration`,
+`passivModus`): zweite Spielart neben den Prüfungen, gewünscht, weil die App
+dem Nutzer zu kompliziert und zu sehr Spiel war. Am Netz, **ein** Fragment mit
+dem ganzen Geheimnis, keine Aufgaben, kein Notausgang, kein Stein; die Leiter
+endet am oberen Rahmen (Zusage "spätestens"). `freigabe.passiv` hält `einheit`,
+`abstand`, `naechstes`, `angebot`, `protokoll`, `gesehen`. Eingänge
+(`PASSIV.arten`: Nachlass, Aufschlag, Angebot/Wurf, Münze, Kontrolle) sind im
+Mittel null; `passivSchritt` holt verpasste der Reihe nach nach. Oberfläche:
+`passivKarte` in `app.js` (eine Karte statt Band, Freigabe-, Aufgaben-,
+Stein-Karte und Fahrplan); `zustand.passivWurf` hält Neuzeichnen während des
+Wurfs an. Test: `test-passiv.js`. Hier docken später Eingänge von außen an
+(Home Assistant, Art `extern`).
+
 **Willkür** = `konfig.blind` (in der Oberfläche "Willkür", früher "Meine
 Regeln"). Die App zieht Regeln selbst, zeigt **keine Beträge, keine
 Freigabe-Uhr, keine Gesamtzahl** – nur, wann die nächste Prüfung kommt. In
@@ -121,7 +134,7 @@ fragen, ob sie unter Willkür etwas verrät.
 
 **Stellschrauben** stehen als Objekte in `tresor.js` und sind über
 `Tresor.tresorLogik` erreichbar (Tests stauchen sie): `TAKT`, `AUSSCHLAG`,
-`KAPITULATION`, `STEIN`, `STRAFE_SCHONFRIST`, `RECHENZEIT_STUFEN`, `DRAND_STRAFE_ANTEIL`,
+`KAPITULATION`, `STEIN`, `PASSIV`, `STRAFE_SCHONFRIST`, `RECHENZEIT_STUFEN`, `DRAND_STRAFE_ANTEIL`,
 `DRAND_DECKEL_FAKTOR`, `NOTAUSGANG_WERTE`, `TRESORZEIT_WERTE`. Beim Balancing
 immer mit einem Beispiel rechnen (z. B. Rahmen 2–5 Tage, 10 Prüfungen) und
 die Zahl im Kommentar und in der README nachziehen.

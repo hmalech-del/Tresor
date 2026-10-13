@@ -489,6 +489,9 @@
       /* Kommt der Notausgang vor dem Rahmen, ist er der Deckel - und der
        * Rahmen rueckt darunter, damit die Leiter nicht verkehrt herum steht. */
       var deckel = exitZug ? exitZug.gezogen : tzMax * DRAND_DECKEL_FAKTOR;
+      /* Passiv: Der Rahmen ist eine Zusage - nie frueher, nie spaeter. Die
+       * Leiter endet deshalb oben, und das Konto kann nicht darueber hinaus. */
+      if (passivModus(konfig)) deckel = Math.min(deckel, tzMax);
       tzMax = Math.min(tzMax, deckel);
       tzMin = Math.min(tzMin, tzMax);
       var tresorzeit = tzMax;                                // Start: ohne eine einzige Pruefung
@@ -509,6 +512,7 @@
         letzteBuchung: null,
         z: null
       };
+      if (passivModus(konfig)) freigabe.passiv = passivAnlegen(freigabe, konfig);
       tresorzeit = null;
     }
 
@@ -1265,6 +1269,181 @@
     return !!(konfig && konfig.blind) && zufallsAnteil() < STEIN.abrutschen;
   }
 
+  /* ---------- Spielart Passiv ----------
+   *
+   * Keine Pruefungen, keine Fragmente, kein Stein. Der Spieler setzt einen
+   * Rahmen ("frühestens, spätestens"), und der Tresor geht irgendwo darin auf.
+   * Wo genau, bewegen Ereignisse, die von selbst eintreffen - als kaeme von
+   * aussen eine Anweisung: Nachlass, Aufschlag, ein Muenzwurf, ein Angebot zu
+   * wuerfeln, manchmal nur die Mitteilung, dass nachgesehen wurde.
+   *
+   * Anlass: Die App war dem Nutzer zu sehr Spiel und zu kompliziert. Er wollte
+   * daneben einen Ablauf, in dem man nur ab und zu gefragt wird und der Rest
+   * mit einem geschieht.
+   *
+   * Fair heisst hier: Jedes Ereignis ist im Mittel null. Nachlass und
+   * Aufschlag sind gleich wahrscheinlich und gleich gross, der Muenzwurf
+   * ebenso, und der Wurf auf ein Angebot (1: +2, 2: +1, 3/4: nichts, 5: -1,
+   * 6: -2 Einheiten) auch. Die Uhr startet irgendwo in der Mitte des Rahmens
+   * und wandert von da aus. Die Einheit ist so bemessen, dass die Summe aller
+   * Ereignisse grob ein Viertel (mild) bis knapp die Haelfte (hart) der Spanne
+   * streut: Spanne x Wucht / Wurzel(Anzahl).
+   *
+   * Beispiel: Rahmen 2 bis 6 Stunden, "gelegentlich" (12 Ereignisse), mild:
+   * Einheit 4 h x 0,22 / 3,46 = gut 15 Minuten, etwa alle 20 Minuten ein
+   * Ereignis.
+   *
+   * Ereignisse treten zu ihrer Zeit ein, auch bei geschlossener App: Beim
+   * naechsten Oeffnen werden die verpassten der Reihe nach nachgeholt, aber
+   * nur die, die vor der Freigabe lagen. Ein Wurfangebot gilt bis zum
+   * naechsten Ereignis; wer es verpasst, hat es verpasst. Als Objekt, damit
+   * Tests es stauchen koennen. */
+  var PASSIV = {
+    dichte: { selten: 6, mittel: 12, oft: 24 },
+    wucht: [0, 0.22, 0.4],                       // -, mild, hart
+    abstandMin: 60,
+    arten: [['nachlass', 3], ['aufschlag', 3], ['wurf', 3], ['muenze', 1], ['stille', 1]],
+    wurf: [0, 2, 1, 0, 0, -1, -2],               // Einheiten je Augenzahl (Index 1-6)
+    protokoll: 40
+  };
+
+  function passivModus(konfig) { return !!konfig && konfig.spielart === 'passiv'; }
+
+  /* Die Konfiguration fuer Passiv: alles, was es nicht gibt, ausgeschaltet. */
+  function passivKonfiguration(rahmen, notausgang, wahl) {
+    wahl = wahl || {};
+    var k = standardKonfiguration();
+    k.dimensionen = [];
+    k.stufen = {};
+    k.aufgabenProFragment = 0;
+    k.sicherheit = 'drand';
+    k.tresorzeit = { minSekunden: Math.min(rahmen.minSekunden, rahmen.maxSekunden),
+                     maxSekunden: Math.max(rahmen.minSekunden, rahmen.maxSekunden) };
+    k.strafe = 0;
+    k.gluecksspiel = false;
+    k.erinnerungen = !!wahl.erinnerungen;
+    k.geheimeFrist.aktiv = false;
+    k.notausgang = notausgang;
+    k.spielart = 'passiv';
+    k.passiv = {
+      dichte: PASSIV.dichte[wahl.dichte] ? wahl.dichte : 'mittel',
+      haerte: util.grenze(wahl.haerte || 1, 1, 2),
+      uhr: wahl.uhr !== false
+    };
+    return k;
+  }
+
+  function passivAbstand(p) {
+    return Math.round(p.abstand * (0.4 + zufallsAnteil() * 1.2) * 1000);
+  }
+
+  function passivAnlegen(freigabe, konfig) {
+    var wahl = konfig.passiv;
+    var n = PASSIV.dichte[wahl.dichte] || PASSIV.dichte.mittel;
+    var unten = freigabe.rahmen[0], oben = freigabe.rahmen[1];
+    var spanne = oben - unten;
+    var startSek = Math.round(unten + spanne * (0.35 + zufallsAnteil() * 0.3));
+    freigabe.konto = { zielSek: startSek };
+    var p = {
+      einheit: Math.round(spanne * PASSIV.wucht[wahl.haerte] / Math.sqrt(n)),
+      abstand: Math.max(PASSIV.abstandMin, startSek / (n + 1)),
+      naechstes: 0,
+      nr: 0,
+      angebot: null,
+      protokoll: []
+    };
+    p.naechstes = freigabe.start + passivAbstand(p);
+    return p;
+  }
+
+  function passivZiehen() {
+    var summe = PASSIV.arten.reduce(function (s, a) { return s + a[1]; }, 0);
+    var r = zufallsAnteil() * summe;
+    for (var i = 0; i < PASSIV.arten.length; i++) {
+      r -= PASSIV.arten[i][1];
+      if (r < 0) return PASSIV.arten[i][0];
+    }
+    return 'stille';
+  }
+
+  /* Bucht und gibt zurueck, was wirklich angekommen ist - am Rand weniger. */
+  function passivBuchen(tresor, sekunden) {
+    var f = tresor.freigabe;
+    var vorher = f.konto.zielSek;
+    var zug = zeitkontoVerschieben(tresor, Math.round(sekunden));
+    return { sekunden: Math.round(f.konto.zielSek - vorher), amBoden: !!(zug && zug.amBoden),
+             amDeckel: !!(zug && zug.amDeckel) };
+  }
+
+  function passivEintragen(p, e) {
+    p.protokoll.unshift(e);
+    if (p.protokoll.length > PASSIV.protokoll) p.protokoll.length = PASSIV.protokoll;
+  }
+
+  /* Ein Ereignis zur Zeit zeit. art nur fuer Tests; sonst gezogen. */
+  function passivEreignis(tresor, zeit, art) {
+    var p = tresor.freigabe.passiv;
+    if (p.angebot) {
+      p.protokoll.forEach(function (e) { if (e.nr === p.angebot.nr) { e.offen = false; e.verfallen = true; } });
+      p.angebot = null;
+    }
+    art = art || passivZiehen();
+    p.nr++;
+    var e = { nr: p.nr, zeit: zeit, art: art, sekunden: 0 };
+    var u = p.einheit * (0.5 + zufallsAnteil());
+    if (art === 'nachlass') Object.assign(e, passivBuchen(tresor, -u));
+    else if (art === 'aufschlag') Object.assign(e, passivBuchen(tresor, u));
+    else if (art === 'muenze') {
+      e.kopf = zufallsAnteil() < 0.5;
+      Object.assign(e, passivBuchen(tresor, e.kopf ? -p.einheit : p.einheit));
+    } else if (art === 'wurf') {
+      e.offen = true;
+      p.angebot = { nr: e.nr, zeit: zeit };
+    }
+    e.neueZeit = freigabeZiel(tresor).zeit;
+    passivEintragen(p, e);
+    return e;
+  }
+
+  /* Faellige Ereignisse nachholen, der Reihe nach. Eines, das erst nach der
+   * Freigabe laege, kommt nicht mehr: Dann war die Zeit vorher um. */
+  function passivSchritt(tresor, jetzt) {
+    var f = tresor.freigabe, p = f && f.passiv;
+    if (!p || f.z) return [];
+    jetzt = jetzt || Date.now();
+    var neu = [];
+    for (var schutz = 0; schutz < 1000 && p.naechstes <= jetzt; schutz++) {
+      if (p.naechstes >= freigabeZiel(tresor).zeit) break;
+      neu.push(passivEreignis(tresor, p.naechstes));
+      p.naechstes += passivAbstand(p);
+    }
+    return neu;
+  }
+
+  /* Auf das offene Angebot wuerfeln. augen 1-6. */
+  function passivWuerfeln(tresor, augen) {
+    var f = tresor.freigabe, p = f && f.passiv;
+    if (!p || !p.angebot || f.z) return null;
+    var e = null;
+    p.protokoll.forEach(function (x) { if (x.nr === p.angebot.nr) e = x; });
+    p.angebot = null;
+    if (!e) return null;
+    e.offen = false;
+    e.augen = augen;
+    Object.assign(e, passivBuchen(tresor, (PASSIV.wurf[augen] || 0) * p.einheit));
+    e.neueZeit = freigabeZiel(tresor).zeit;
+    return e;
+  }
+
+  /* Das Angebot ausschlagen - es verfaellt dann nicht, es ist abgelehnt. */
+  function passivAblehnen(tresor) {
+    var p = tresor.freigabe && tresor.freigabe.passiv;
+    if (!p || !p.angebot) return false;
+    p.protokoll.forEach(function (x) { if (x.nr === p.angebot.nr) { x.offen = false; x.abgelehnt = true; } });
+    p.angebot = null;
+    return true;
+  }
+
   /* Notausgang ueber das Netz: erst den Zeitschluessel holen, dann wie immer. */
   async function notausgangUeberNetz(tresor, passMat) {
     var exit = tresor.notausgang;
@@ -1388,6 +1567,13 @@
     kapitulieren: kapitulieren,
     kapitulationAbgesessen: kapitulationAbgesessen,
     notausgangUeberNetz: notausgangUeberNetz,
+    PASSIV: PASSIV,
+    passivModus: passivModus,
+    passivKonfiguration: passivKonfiguration,
+    passivEreignis: passivEreignis,
+    passivSchritt: passivSchritt,
+    passivWuerfeln: passivWuerfeln,
+    passivAblehnen: passivAblehnen,
     STEIN: STEIN,
     steinArt: steinArt,
     steinBissen: steinBissen,

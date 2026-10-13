@@ -8,6 +8,7 @@
     tresor: null,
     konfig: null,
     art: 'zahl',
+    spielart: 'pruefungen',        // 'pruefungen' oder 'passiv'
     geheimnis: '',
     bild: null,
     laenge: 5,
@@ -68,6 +69,7 @@
     if (zustand.exitUhr) { clearInterval(zustand.exitUhr); zustand.exitUhr = null; }
     if (zustand.freigabeUhr) { clearInterval(zustand.freigabeUhr); zustand.freigabeUhr = null; }
     if (zustand.steinUhr) { clearInterval(zustand.steinUhr); zustand.steinUhr = null; }
+    zustand.passivWurf = false;
     // Der Notausgang rechnet weiter - nur seine Anzeige verschwindet
     zustand.exitAnzeige = null;
     bildschirmWachHalten(false);
@@ -145,7 +147,10 @@
 
   /* Welches Zeitschloss gilt gerade? Unter Willkür gibt es nur
    * Rechenzeit oder keine - dort waehlt der Game Master. */
+  function passivGewaehlt() { return zustand.spielart === 'passiv' && !!$('#passiv-min'); }
+
   function zeitschlossArt() {
+    if (passivGewaehlt()) return 'drand';
     if ($('#blindgang') && $('#blindgang').checked) return $('#blind-zeitschloss').value;
     return $('#sicherheit').value;
   }
@@ -163,13 +168,14 @@
     var vollstaendig = zustand.art === 'foto'
       ? !!zustand.bild
       : /^\d+$/.test(zustand.geheimnis) && zustand.geheimnis.length === zustand.laenge;
-    var blind = $('#blindgang') && $('#blindgang').checked;
-    var dimensionen = blind ? ['meine-regeln'] : aktiveDimensionen();
-    var passAn = $('#passphrase-aktiv') && $('#passphrase-aktiv').checked;
+    var passiv = passivGewaehlt();
+    var blind = !passiv && $('#blindgang') && $('#blindgang').checked;
+    var dimensionen = passiv || blind ? ['ohne-wahl'] : aktiveDimensionen();
+    var passAn = !passiv && $('#passphrase-aktiv') && $('#passphrase-aktiv').checked;
     var pass = passAn ? $('#passphrase').value : '';
     var passWdh = passAn ? $('#passphrase-wdh').value : '';
     var passOk = !passAn || (pass.length >= 4 && pass === passWdh);
-    var stationenNoetig = !blind && dimensionen.indexOf('ort') !== -1;
+    var stationenNoetig = !passiv && !blind && dimensionen.indexOf('ort') !== -1;
     var stationenOk = !stationenNoetig || (zustand.stationen || []).length >= 2;
     if (passAn) {
       $('#passphrase-hinweis').textContent = !pass.length ? 'Noch keine Passphrase.'
@@ -331,6 +337,12 @@
   }
 
   function konfigurationLesen() {
+    if (passivGewaehlt()) {
+      return T.tresorLogik.passivKonfiguration(
+        { minSekunden: Number($('#passiv-min').value), maxSekunden: Number($('#passiv-max').value) },
+        { modus: 'aus', sekunden: 0, minSekunden: 0, maxSekunden: 0 },
+        { dichte: $('#passiv-dichte').value, haerte: Number($('#passiv-haerte').value), uhr: $('#passiv-uhr').checked });
+    }
     var notausgang = {
       modus: $('#notausgang-modus').value,
       sekunden: Number($('#notausgang-dauer').value),
@@ -453,6 +465,11 @@
   function schaetzungAktualisieren() {
     var anzeige = $('#schaetzung');
     if (!anzeige) return;
+
+    if (passivGewaehlt()) {
+      passivHinweis();
+      return;
+    }
 
     /* Unter Willkür gibt es nichts zu schätzen - das ist der Punkt. Der
      * Notausgang zahlt dort immer in Rechenzeit. */
@@ -579,7 +596,7 @@
       ]),
 
       el('div', { id: 'art-bereich-zahl', class: zustand.art === 'zahl' ? '' : 'versteckt' }, [
-        el('p', { class: 'flaut', text: 'Eine Ziffer je Fragment. Danach existiert die Zahl nirgends mehr - auch nicht für mich.' }),
+        el('p', { class: 'flaut', id: 'zahl-hinweis', text: 'Eine Ziffer je Fragment. Danach existiert die Zahl nirgends mehr - auch nicht für mich.' }),
         el('div', { class: 'reiter' }, [
           el('button', { class: 'reiter-knopf ist-aktiv', type: 'button', id: 'reiter-tippen', text: 'Tippen' }),
           el('button', { class: 'reiter-knopf', type: 'button', id: 'reiter-foto', text: 'Vom Foto ablesen' })
@@ -601,7 +618,7 @@
       ]),
 
       el('div', { id: 'art-bereich-foto', class: zustand.art === 'foto' ? '' : 'versteckt' }, [
-        el('p', { class: 'flaut', text: 'Zerlegt in Schärfestufen - erst ein Farbfleck, zuletzt das ganze Bild. Jede Stufe kostet dich einzeln.' }),
+        el('p', { class: 'flaut', id: 'bild-hinweis', text: 'Zerlegt in Schärfestufen - erst ein Farbfleck, zuletzt das ganze Bild. Jede Stufe kostet dich einzeln.' }),
         el('input', { type: 'file', accept: 'image/*', id: 'bilddatei' }),
         el('div', { class: 'feld' }, [
           el('label', { for: 'bild-stufen', text: 'Schärfestufen' }),
@@ -875,7 +892,55 @@
         + 'bekommt, liest sie mit jeder NFC-App aus: Das hält dich auf, nicht jemanden, der bei dir ein und aus geht.' })
     ]);
 
+    /* Zwei Spielarten. Passiv blendet alles aus, was es dort nicht gibt -
+     * Pruefungen, Willkuer, Zeitregeln, Feineinstellung - und laesst nur den
+     * Rahmen und drei Fragen stehen. */
+    var spielartTeil = el('section', { class: 'karte' }, [
+      el('h2', { text: 'Wie soll es laufen?' }),
+      el('div', { class: 'reiter' }, [
+        el('button', { class: 'reiter-knopf' + (zustand.spielart !== 'passiv' ? ' ist-aktiv' : ''), type: 'button',
+          id: 'spielart-pruefungen', text: 'Mit Prüfungen' }),
+        el('button', { class: 'reiter-knopf' + (zustand.spielart === 'passiv' ? ' ist-aktiv' : ''), type: 'button',
+          id: 'spielart-passiv', text: 'Passiv' })
+      ]),
+      el('p', { class: 'flaut klein', id: 'spielart-hinweis', text: '' })
+    ]);
+
+    var passivTeil = el('section', { class: 'karte', id: 'passivkarte' }, [
+      el('h2', { text: '2 · Der Rahmen' }),
+      el('div', { class: 'feld' }, [
+        el('label', { for: 'passiv-min', text: 'Frühestens offen nach' }),
+        el('select', { id: 'passiv-min' }, tresorzeitOptionen(3600))
+      ]),
+      el('div', { class: 'feld' }, [
+        el('label', { for: 'passiv-max', text: 'Spätestens offen nach' }),
+        el('select', { id: 'passiv-max' }, tresorzeitOptionen(10800))
+      ]),
+      el('div', { class: 'feld' }, [
+        el('label', { for: 'passiv-dichte', text: 'Wie oft ich mich melde' }),
+        el('select', { id: 'passiv-dichte' }, [
+          el('option', { value: 'selten' }, 'selten – etwa 6-mal'),
+          el('option', { value: 'mittel', selected: 'selected' }, 'gelegentlich – etwa 12-mal'),
+          el('option', { value: 'oft' }, 'oft – etwa 24-mal')
+        ])
+      ]),
+      el('div', { class: 'feld' }, [
+        el('label', { for: 'passiv-haerte', text: 'Wie hart' }),
+        el('select', { id: 'passiv-haerte' }, [
+          el('option', { value: '1', selected: 'selected' }, 'mild – kleine Schritte'),
+          el('option', { value: '2' }, 'hart – große Sprünge')
+        ])
+      ]),
+      el('label', { class: 'schalterzeile' }, [
+        el('input', { type: 'checkbox', id: 'passiv-uhr', checked: 'checked' }),
+        el('span', { text: 'Die Uhr zeigen' })
+      ]),
+      el('p', { class: 'flaut klein', id: 'passiv-hinweis', text: '' })
+    ]);
+
     wurzel.appendChild(geheimTeil);
+    wurzel.appendChild(spielartTeil);
+    wurzel.appendChild(passivTeil);
     wurzel.appendChild(blindTeil);
     wurzel.appendChild(dimensionTeil);
     wurzel.appendChild(stationTeil);
@@ -885,7 +950,7 @@
 
     /* Probelauf: Ob eine Uebung zu schaffen ist, zeigt sich erst beim
      * Spielen - und dann steht der Tresor schon zu. */
-    wurzel.appendChild(el('section', { class: 'karte' }, [
+    wurzel.appendChild(el('section', { class: 'karte', id: 'probekarte' }, [
       el('p', { class: 'flaut klein', text:
         'Unsicher, ob eine Prüfung zu schaffen ist? Probier sie aus, bevor du verriegelst.' }),
       el('button', { class: 'knopf', type: 'button', text: 'Prüfungen ausprobieren',
@@ -1042,7 +1107,15 @@
       });
       kinder.forEach(function (kind, i) {
         if (i === 0 || (grenze >= 0 && i >= grenze)) return;
-        kind.classList.toggle('versteckt', an);
+        /* Nur zurueckholen, was der Modus selbst versteckt hat - die Frist
+         * etwa bleibt zu, solange ihr Schalter aus ist. */
+        if (an && !kind.classList.contains('versteckt')) {
+          kind.classList.add('versteckt');
+          kind.dataset.blindVersteckt = '1';
+        } else if (!an && kind.dataset.blindVersteckt) {
+          kind.classList.remove('versteckt');
+          delete kind.dataset.blindVersteckt;
+        }
       });
       zeitTeil.querySelector('h2').textContent = an ? '2 · Der Notausgang' : '3 · Zeitregeln';
       schaetzungAktualisieren();
@@ -1061,12 +1134,65 @@
     });
     $('#verriegeln').addEventListener('click', verriegeln);
 
+    function spielartAnwenden(welche) {
+      zustand.spielart = welche;
+      var passiv = welche === 'passiv';
+      $('#spielart-pruefungen').classList.toggle('ist-aktiv', !passiv);
+      $('#spielart-passiv').classList.toggle('ist-aktiv', passiv);
+      $('#spielart-hinweis').textContent = passiv
+        ? 'Keine Prüfungen. Du setzt einen Rahmen, ich entscheide, wo darin er aufgeht. Ab und zu melde ich mich - '
+          + 'mit Nachlass, Aufschlag oder einem Würfel, den du werfen darfst. Das Geheimnis kommt am Ende als Ganzes.'
+        : 'Prüfungen holen Zeit zurück, Fehler kosten. Das Geheimnis kommt in Fragmenten.';
+      passivTeil.classList.toggle('versteckt', !passiv);
+      [blindTeil, dimensionTeil, zeitTeil, feinTeil, $('#probekarte')].forEach(function (teil) {
+        if (teil) teil.classList.toggle('versteckt', passiv);
+      });
+      /* Unter Willkuer versteckt blindgangAnwenden eigene Teile - ohne Passiv
+       * muss es das wieder tun duerfen. */
+      if (!passiv) blindgangAnwenden();
+      stationLageZeigen();
+      if (passiv) $('#stationkarte').classList.add('versteckt');
+      $('#zahl-hinweis').textContent = passiv
+        ? 'Sie kommt am Ende als Ganzes. Danach existiert die Zahl nirgends mehr - auch nicht für mich.'
+        : 'Eine Ziffer je Fragment. Danach existiert die Zahl nirgends mehr - auch nicht für mich.';
+      $('#bild-hinweis').textContent = passiv
+        ? 'Es kommt am Ende als Ganzes. Die Schärfestufen unten gelten nur mit Prüfungen.'
+        : 'Zerlegt in Schärfestufen - erst ein Farbfleck, zuletzt das ganze Bild. Jede Stufe kostet dich einzeln.';
+      schaetzungAktualisieren();
+      pruefeBereit();
+    }
+    $('#spielart-pruefungen').addEventListener('click', function () { spielartAnwenden('pruefungen'); });
+    $('#spielart-passiv').addEventListener('click', function () { spielartAnwenden('passiv'); });
+    ['#passiv-min', '#passiv-max', '#passiv-dichte', '#passiv-haerte', '#passiv-uhr'].forEach(function (feld) {
+      $(feld).addEventListener('change', function () { schaetzungAktualisieren(); pruefeBereit(); });
+    });
+
     wurzel.appendChild(sicherungsKarte());
     var verlauf = verlaufKarte();
     if (verlauf) wurzel.appendChild(verlauf);
 
-    schaetzungAktualisieren();
-    pruefeBereit();
+    spielartAnwenden(zustand.spielart);
+  }
+
+  /* Was der Passiv-Rahmen bedeutet - mit den Zahlen, die die Logik nimmt. */
+  function passivHinweis() {
+    var konfig = konfigurationLesen();
+    var tz = konfig.tresorzeit, wahl = konfig.passiv;
+    var P = T.tresorLogik.PASSIV;
+    var n = P.dichte[wahl.dichte];
+    var spanne = tz.maxSekunden - tz.minSekunden;
+    var einheit = spanne * P.wucht[wahl.haerte] / Math.sqrt(n);
+    var mitte = (tz.minSekunden + tz.maxSekunden) / 2;
+    $('#passiv-hinweis').textContent = (spanne <= 0
+      ? 'Kein Spielraum: Er geht nach genau ' + nachDauer(tz.minSekunden) + ' auf, was ich auch melde.'
+      : 'Nie vor ' + util.dauer(tz.minSekunden) + ', nie nach ' + util.dauer(tz.maxSekunden) + '. Die Uhr startet irgendwo in der Mitte. '
+        + 'Etwa alle ' + util.dauer(Math.max(P.abstandMin, mitte / (n + 1))) + ' melde ich mich; ein Schritt ist meist um '
+        + util.dauer(Math.max(1, Math.round(einheit))) + '. Im Mittel gleicht sich alles aus.')
+      + (wahl.uhr ? '' : ' Ohne Uhr erfährst du nur, in welche Richtung es ging - nicht, wie weit.');
+    $('#abschluss-warnung').textContent = 'Ab hier öffnet ihn nur noch das Netz - frühestens nach '
+      + nachDauer(tz.minSekunden) + ', spätestens nach ' + nachDauer(tz.maxSekunden)
+      + '. Einen Notausgang gibt es nicht: Der Rahmen ist die Zusage. Zum Öffnen braucht es Internet. '
+      + 'Löschen des Tresors löscht das Geheimnis.';
   }
 
   function artWechsel(welche) {
@@ -1250,9 +1376,13 @@
     // vor dem Leeren der Bühne auslesen - danach gibt es die Felder nicht mehr
     var passphrase = konfig.mitPassphrase ? $('#passphrase').value : '';
     var art = zustand.art;
+    /* Passiv: ein einziges Fragment mit dem ganzen Geheimnis - die Zahl am
+     * Stueck, beim Bild nur die schaerfste Stufe. */
+    var passiv = T.tresorLogik.passivModus(konfig);
     var teile = art === 'foto'
-      ? zustand.bild.stufen.map(function (stufe) { return stufe.bild; })
-      : zustand.geheimnis.split('');
+      ? (passiv ? [zustand.bild.stufen[zustand.bild.stufen.length - 1].bild]
+                : zustand.bild.stufen.map(function (stufe) { return stufe.bild; }))
+      : passiv ? [zustand.geheimnis] : zustand.geheimnis.split('');
     var wurzel = util.leeren($('#buehne'));
     var kasten = el('section', { class: 'karte mittig' }, [
       el('h2', { text: 'Wird verriegelt' }),
@@ -1390,12 +1520,16 @@
       zustand.fristMeldung = null;
     }
 
-    wurzel.appendChild(el('section', { class: 'karte band-karte' }, [
-      tresor.art === 'foto' ? zeichneBildbuehne(tresor) : zeichneZiffernband(),
-      el('p', { class: 'flaut mittig-text', text: bandText(tresor) })
-    ]));
+    var passiv = T.tresorLogik.passivModus(tresor.konfig);
+    /* Passiv gibt es keine Fragmente zu zeigen - das Geheimnis kommt am Stueck. */
+    if (!passiv) {
+      wurzel.appendChild(el('section', { class: 'karte band-karte' }, [
+        tresor.art === 'foto' ? zeichneBildbuehne(tresor) : zeichneZiffernband(),
+        el('p', { class: 'flaut mittig-text', text: bandText(tresor) })
+      ]));
+    }
 
-    if (!fertig && tresor.freigabe) wurzel.appendChild(freigabeKarte(tresor));
+    if (!fertig && tresor.freigabe && !passiv) wurzel.appendChild(freigabeKarte(tresor));
 
     if (fertig) {
       // Ergebnis in den Verlauf legen, bevor irgendetwas es überschreiben kann
@@ -1416,6 +1550,8 @@
       ]));
     } else if (T.tresorLogik.brauchtPassphrase(tresor) && !zustand.passMaterial) {
       wurzel.appendChild(passphraseKarte());
+    } else if (passiv) {
+      wurzel.appendChild(passivKarte(tresor));
     } else {
       var aufgabenKarte = el('section', { class: 'karte aufgabenkarte', id: 'aufgabenkarte' });
       wurzel.appendChild(aufgabenKarte);
@@ -1466,7 +1602,7 @@
 
     /* Unter Willkür gibt es keinen Fahrplan - auch keine leere Karte,
      * die daran erinnert. Was es nicht gibt, soll auch keinen Platz belegen. */
-    if (!imDunkeln()) {
+    if (!imDunkeln() && !passiv) {
       wurzel.appendChild(el('section', { class: 'karte' }, [
         el('h2', { text: 'Fahrplan' }),
         fragmentUebersicht()
@@ -1487,7 +1623,8 @@
         : tresor.fragmente[0].schloss
         ? 'Eisern. Jedes Fragment liegt unter einem Bann, den nur Zeit bricht.'
         : 'Nachsichtig. Es hält dich nichts als dein eigener Vorsatz.' }),
-      el('p', { text: gebunden
+      el('p', { text: passiv ? 'Passiv. Keine Prüfung, nur der Rahmen und was ich darin entscheide.'
+        : gebunden
         ? gebunden + (gebunden === 1 ? ' Prüfung hält' : ' Prüfungen halten') + ' ein Stück des Schlüssels. Raten kostet.'
         : 'Keine Prüfung hält den Schlüssel. Du hältst dich selbst auf.' }),
       T.tresorLogik.brauchtPassphrase(tresor)
@@ -1910,7 +2047,7 @@
           ergebnis.verlauf.slice().reverse().forEach(function (eintrag) { T.speicher.archivErgaenzen(eintrag); });
         }
         zustand.tresor = ergebnis.tresor;
-        zustand.laenge = ergebnis.tresor.laenge;
+        if (!T.tresorLogik.passivModus(ergebnis.tresor.konfig)) zustand.laenge = ergebnis.tresor.laenge;
         zustand.art = ergebnis.tresor.art || 'zahl';
         if (!T.speicher.sichern(ergebnis.tresor)) {
           meldungEin.textContent = 'Der Tresor passt nicht in den Browser-Speicher dieses Geräts.';
@@ -2680,6 +2817,155 @@
   }
 
   /* Gesperrte Aufgabe: Strafzeit absitzen. */
+  /* ---------------- Passiv ----------------
+   * Eine Karte: die Uhr, was zuletzt eingegangen ist, ein offenes Angebot und
+   * das Protokoll. Ereignisse kommen von selbst (passivSchritt); die Karte
+   * fragt jede Sekunde nach und zeichnet neu, wenn etwas eingetroffen ist -
+   * hier gibt es keine Pruefung, die dabei weggerissen wuerde. */
+  var PASSIV_TITEL = { nachlass: 'Nachlass', aufschlag: 'Aufschlag', muenze: 'Münzwurf',
+    stille: 'Kontrolle', wurf: 'Angebot', extern: 'Eingang' };
+
+  /* Was ein Ereignis bewegt hat, in Worten. Ohne Uhr nur die Richtung. */
+  function passivWirkung(tresor, e) {
+    var uhr = tresor.konfig.passiv.uhr;
+    if (e.art === 'stille') return 'Keine Änderung.';
+    if (e.art === 'wurf' && e.offen) return 'Offen.';
+    if (e.art === 'wurf' && e.verfallen) return 'Verfallen - nicht gewürfelt.';
+    if (e.art === 'wurf' && e.abgelehnt) return 'Ausgeschlagen.';
+    var vor = e.art === 'wurf' ? 'Gewürfelt: ' + e.augen + '. ' : e.art === 'muenze' ? (e.kopf ? 'Kopf. ' : 'Zahl. ') : '';
+    if (!e.sekunden) return vor + (e.amBoden ? 'Früher geht es nicht.' : e.amDeckel ? 'Später geht es nicht.' : 'Keine Änderung.');
+    if (!uhr) return vor + (e.sekunden < 0 ? 'Früher.' : 'Später.');
+    return vor + (e.sekunden < 0 ? '−' + util.dauer(-e.sekunden) : '+' + util.dauer(e.sekunden)) + '.';
+  }
+
+  /* "14:32" fuer heute, sonst mit Tag - ohne "Uhr", das stuende in jeder Zeile. */
+  function kurzeZeit(ms) { return util.zeitpunkt(ms).replace(' Uhr', '').replace(/^heute /, ''); }
+
+  function passivKarte(tresor) {
+    var f = tresor.freigabe, p = f.passiv;
+    var uhr = tresor.konfig.passiv.uhr;
+    var karte = el('section', { class: 'karte passiv-karte', id: 'passivkarte' });
+    if (T.tresorLogik.passivSchritt(tresor).length) sichern(true);
+    if (T.tresorLogik.freigabeErreicht(tresor)) {
+      netzAbholen(karte);
+      return karte;
+    }
+
+    karte.appendChild(el('h2', { text: 'Der Tresor' }));
+    var anzeige = el('div', { class: 'countdown', text: '–' });
+    var wann = el('p', { class: 'flaut klein mittig-text', text: '' });
+    karte.appendChild(anzeige);
+    karte.appendChild(wann);
+    karte.appendChild(el('p', { class: 'flaut klein mittig-text', text:
+      'Frühestens ' + util.zeitpunkt(T.drand.zeitVon(f.runden[0])) + ' · spätestens '
+      + util.zeitpunkt(T.drand.zeitVon(f.runden[f.runden.length - 1])) }));
+
+    /* Was seit dem letzten Blick eingegangen ist - das neueste zuerst. */
+    var neu = p.protokoll.filter(function (e) { return e.nr > (p.gesehen || 0) && !(e.art === 'wurf' && e.offen); });
+    if (neu.length) {
+      var letzte = neu[0];
+      var gut = letzte.sekunden < 0, schlecht = letzte.sekunden > 0;
+      var kasten = el('div', { class: schlecht ? 'strafkasten' : 'gutkasten' }, [
+        el('p', { class: 'aufgabe-titel', text: neu.length > 1 ? neu.length + ' Eingänge' : 'Eingang · ' + PASSIV_TITEL[letzte.art] }),
+        el('p', { class: 'wachterwort', text: letzte.art === 'wurf' ? T.stimme.sag(gut ? 'nachlass' : schlecht ? 'aufschlag' : 'stille')
+          : T.stimme.sag(letzte.art) })
+      ]);
+      neu.slice(0, 5).forEach(function (e) {
+        kasten.appendChild(el('p', { class: 'aufgabe-hinweis', text:
+          kurzeZeit(e.zeit) + ' · ' + PASSIV_TITEL[e.art] + ' · ' + passivWirkung(tresor, e) }));
+      });
+      kasten.appendChild(el('button', { class: 'knopf', type: 'button', text: 'Verstanden', onclick: function () {
+        p.gesehen = p.nr; sichern(true); kasten.remove();
+      } }));
+      karte.appendChild(kasten);
+    }
+
+    /* Ein offenes Angebot: ein Wurf, im Mittel null. Gilt bis zum naechsten Eingang. */
+    if (p.angebot) {
+      var e = p.protokoll.filter(function (x) { return x.nr === p.angebot.nr; })[0];
+      var u = p.einheit;
+      var angebot = el('div', { class: 'gutkasten passiv-angebot' }, [
+        el('p', { class: 'aufgabe-titel', text: 'Angebot' }),
+        el('p', { class: 'wachterwort', text: T.stimme.sag('angebot') })
+      ]);
+      karte.appendChild(angebot);
+      T.herausforderungen.werkzeug.wuerfel(angebot, function (gewonnen, streckung, augen) {
+        var erg = T.tresorLogik.passivWuerfeln(tresor, augen);
+        zustand.passivWurf = 'ergebnis';
+        p.gesehen = Math.max(p.gesehen || 0, erg ? erg.nr : 0);
+        sichern(true);
+        lassKnopf.remove();
+        if (erg) angebot.querySelector('.wuerfelbox .flaut').textContent = passivWirkung(tresor, erg);
+        angebot.appendChild(el('button', { class: 'knopf', type: 'button', text: 'Weiter',
+          onclick: function () { zustand.passivWurf = false; zeichneTresor(); } }));
+      }, {
+        regel: uhr
+          ? '6: −' + util.dauer(2 * u) + '. 5: −' + util.dauer(u) + '. 3 und 4: nichts. 2: +' + util.dauer(u)
+            + '. 1: +' + util.dauer(2 * u) + '. Im Mittel nichts. Ein Wurf - oder lass es.'
+          : '6 und 5: früher. 3 und 4: nichts. 2 und 1: später. Wie viel, sage ich nicht. Ein Wurf - oder lass es.',
+        ergebnis: function (augen) {
+          var w = T.tresorLogik.PASSIV.wurf[augen];
+          return w < 0 ? 'Früher.' : w > 0 ? 'Später.' : 'Nichts.';
+        }
+      });
+      var wuerfelKnopf = angebot.querySelector('.wuerfelbox .knopf');
+      if (wuerfelKnopf) wuerfelKnopf.addEventListener('click', function () { zustand.passivWurf = true; });
+      var lassKnopf = el('button', { class: 'knopf', type: 'button', text: 'Lass es', onclick: function () {
+        T.tresorLogik.passivAblehnen(tresor);
+        p.gesehen = Math.max(p.gesehen || 0, e ? e.nr : 0);
+        sichern(true);
+        zeichneTresor();
+      } });
+      angebot.appendChild(lassKnopf);
+    }
+
+    karte.appendChild(el('p', { class: 'flaut klein', text:
+      'Das Netz hält ihn, nicht dieses Gerät. Ab und zu melde ich mich - auch wenn die App zu ist; '
+      + 'was du verpasst, steht beim nächsten Öffnen hier. Ist die Zeit um, geht er auf.' }));
+
+    if (p.protokoll.length) {
+      var liste = el('ol', { class: 'passiv-protokoll' }, p.protokoll.map(function (e) {
+        return el('li', {}, [
+          el('span', { class: 'flaut', text: kurzeZeit(e.zeit) }),
+          ' ' + PASSIV_TITEL[e.art] + ' · ' + passivWirkung(tresor, e)
+        ]);
+      }));
+      var lade = el('details', { class: 'passiv-eingaenge' }, [
+        el('summary', { text: 'Eingänge (' + p.protokoll.length + ')' }), liste]);
+      karte.appendChild(lade);
+    }
+
+    function takt(ausUhr) {
+      /* Nie in einen rollenden Wuerfel hinein (true): Sein Ergebnis bucht
+       * gleich noch auf die Uhr. Steht sein Ergebnis da ('ergebnis'), warten
+       * neue Eingaenge, bis man es gelesen hat - die Freigabe nicht. */
+      if (ausUhr === true && zustand.passivWurf !== true && !zustand.abholen) {
+        var eingetroffen = zustand.passivWurf ? [] : T.tresorLogik.passivSchritt(tresor);
+        var um = T.tresorLogik.freigabeErreicht(tresor);
+        if (eingetroffen.length || um) {
+          sichern(true);
+          clearInterval(zustand.freigabeUhr);
+          zustand.freigabeUhr = null;
+          zeichneTresor();
+          return;
+        }
+      }
+      var rest = (T.tresorLogik.freigabeZiel(tresor).zeit - Date.now()) / 1000;
+      if (!uhr) {
+        anzeige.textContent = rest > 0 ? '· · ·' : 'Die Zeit ist um.';
+        wann.textContent = rest > 0 ? 'Wann, sage ich nicht. Irgendwo im Rahmen.' : '';
+        return;
+      }
+      anzeige.textContent = rest > 0 ? restUhr(rest) : 'Die Zeit ist um.';
+      anzeige.classList.toggle('ist-lang', rest >= 86400);
+      wann.textContent = rest > 0 ? 'Offen ' + util.zeitpunkt(T.tresorLogik.freigabeZiel(tresor).zeit)
+        + ' - wenn nichts dazwischenkommt.' : '';
+    }
+    takt();
+    zustand.freigabeUhr = setInterval(function () { takt(true); }, 1000);
+    return karte;
+  }
+
   function strafBuehne(buehne, aufgabe) {
     var modul = T.herausforderungen.hole(aufgabe.id);
     var aufgegeben = !!aufgabe.zustand.kapituliert;
