@@ -171,6 +171,15 @@ und nimmt ihn sofort heraus. `markenKarte` zeichnet nur sich neu. Test:
 `test-marken.js` (Link-Weg; Web NFC und BarcodeDetector gibt es headless
 nicht – auf dem Handy des Nutzers ungetestet, das offen sagen).
 
+**Escape Room** = `konfig.spielart === 'escape'` (`escapeKonfiguration`,
+`ketteVorbereiten`, `ketteScan`, `ESCAPE`): Posten = Marken ohne Wirkung;
+Reihenfolge beim Verriegeln gezogen, gespeichert als `kette.pruef`
+(Mitgliedschaft, Anlege-Reihenfolge) und `kette.pos` (Code an Position i),
+ohne Verbindung. `freigabe.kette` hält Stand, Runde, Regel (zu Rundenbeginn
+gezogen: neustart/sperre/strafe/gnade), Sperre, Strafen. Gelöst → Konto auf
+`unten + strafeSek`. `codeVerarbeiten` in `app.js` prüft erst die Kette, dann
+Marken. Test: `test-escape.js`.
+
 **Willkür** = `konfig.blind` (in der Oberfläche "Willkür", früher "Meine
 Regeln"). Die App zieht Regeln selbst, zeigt **keine Beträge, keine
 Freigabe-Uhr, keine Gesamtzahl** – nur, wann die nächste Prüfung kommt. In

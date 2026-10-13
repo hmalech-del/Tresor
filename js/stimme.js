@@ -163,6 +163,22 @@
       'Doppelt so lang. Beschwer dich nicht, du hast es so gewollt.',
       'Drakonisch, wie bestellt.'
     ],
+    /* Escape Room: Posten richtig, falsch, Kette geloest */
+    postenRichtig: [
+      'Richtig. Weiter.',
+      'Der stimmt. Der nächste nicht unbedingt.',
+      'Getroffen. Bilde dir nichts ein.'
+    ],
+    postenFalsch: [
+      'Falsch. Die Runde ist vorbei.',
+      'Nicht der. Ich hatte es gesagt.',
+      'Daneben. Die Reihenfolge kenne nur ich.'
+    ],
+    ketteGeloest: [
+      'Die Kette ist geschlossen. Ausreichend.',
+      'Gelöst. Ich hätte nicht darauf gewettet.',
+      'Alle Posten, in meiner Reihenfolge. Du darfst früher.'
+    ],
     /* Einbahnstrasse: Nachlass von aussen abgewiesen */
     abgewiesen: [
       'Nachlass von außen? Nicht bei mir.',

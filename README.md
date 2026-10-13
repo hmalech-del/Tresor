@@ -31,8 +31,9 @@ fertige Ergebnis.
    oder beim Bild die nächste Schärfestufe.
 5. **Verlauf** – geöffnete Tresore landen im Verlauf und bleiben dort abrufbar.
 
-Daneben gibt es eine zweite Spielart, **Passiv** – ohne Prüfungen, siehe
-[Passiv](#passiv-der-tresor-entscheidet).
+Daneben gibt es zwei Spielarten ohne Prüfungen: **Passiv**, siehe
+[Passiv](#passiv-der-tresor-entscheidet), und **Escape Room**, siehe
+[Escape Room](#escape-room-die-kette).
 
 ---
 
@@ -1122,7 +1123,7 @@ Administrator. Die ID ist das Geheimnis, also lang und zufällig wählen.
 
 | Feld | Inhalt |
 |---|---|
-| `art` | `verriegelt`, `gutschrift`, `strafe`, `wurf`, `kapitulation`, `stein`, `nachlass`, `aufschlag`, `muenze`, `verdoppelt`, `frost`, `extern`, `marke`, `angebot`, `freigabe`, `test` |
+| `art` | `verriegelt`, `gutschrift`, `strafe`, `wurf`, `kapitulation`, `stein`, `nachlass`, `aufschlag`, `muenze`, `verdoppelt`, `frost`, `extern`, `marke`, `posten`, `kette`, `angebot`, `freigabe`, `test` |
 | `frost` | bei `art=frost`: `an` (Uhr steht) oder `aus` (läuft wieder; `sekunden` = wie viel dazukam) |
 | `richtung` | `frueher`, `spaeter`, `gleich`, `abgewiesen` (bei Bewegungen) |
 | `sekunden` | gebuchte Sekunden, negativ = früher |
@@ -1170,6 +1171,46 @@ actions:
         target: { entity_id: input_datetime.tresor_freigabe }
         data: { timestamp: "{{ trigger.data.freigabe_ts | int }}" }
 ```
+
+## Escape Room: die Kette
+
+Die dritte Spielart, neben „Mit Prüfungen" und „Passiv". Man legt **Posten**
+an – Marken wie oben (QR-Code oder NFC), nur ohne eigene Wirkung, mit einem
+Namen, damit man weiß, was wo liegt – und versteckt sie. Die **Reihenfolge
+zieht die App beim Verriegeln** und verrät sie nie. Wo die Posten liegen, weiß
+man; in welcher Folge sie zu scannen sind, nicht. Gedacht für einen selbst:
+Das Rätsel ist die Reihenfolge.
+
+Zwei Zeiten: **gelöst offen nach** (Vorgabe 30 min) und **sonst offen nach**
+(Vorgabe 1 Tag). Die Uhr startet bei „sonst". Schließt man die Kette, springt
+die Freigabe auf „gelöst" plus die gesammelten Zeitstrafen. Mindestens drei
+Posten; bei sechs sind es 720 mögliche Reihenfolgen.
+
+**Runden.** Zu Beginn jeder Runde zieht die App, was ein Fehler kostet, und
+sagt es an. Ein richtiger Scan bringt einen Posten weiter, ein falscher beendet
+die Runde:
+
+| Regel | Gewicht | Folge eines Fehlers |
+|---|---|---|
+| Neustart | 3/10 | zurück auf Anfang |
+| Sperre | 3/10 | der Stand bleibt, aber gesperrt: 5 min, jedes Mal doppelt, höchstens 2 h |
+| Zeitstrafe | 3/10 | der Stand bleibt; 5 % der Spanne kommen auf „gelöst" |
+| Gnade | 1/10 | nichts |
+
+Fremde Codes zählen nicht – herumsuchen ist kein Fehler. Dieselbe Marke
+zweimal binnen zehn Sekunden (NFC liest gern doppelt) auch nicht.
+
+**Was im Tresor liegt:** je Posten ein Prüfwert „gehört zur Kette" (mit
+Namen, in der Reihenfolge des Anlegens) und je Position einer „dieser Code an
+dieser Stelle" – ohne Verbindung zwischen beiden. Aus dem Speicher allein ist
+die Reihenfolge nicht abzulesen. Wer jede Marke mit einer fremden App ausliest
+und die Prüfwerte selbst nachrechnet, kann es – das hält den eigenen Impuls
+auf, keinen Entschlossenen.
+
+Marken (Nachlass, Freeze, Wurf …) und Home Assistant funktionieren daneben
+wie gewohnt; der Rückkanal meldet jeden Posten als `art=posten` mit
+`posten=richtig|falsch`, `stand`, `laenge` und bei Fehlern der `regel`, die
+gelöste Kette als `art=kette`.
 
 ## Marken: NFC und QR
 

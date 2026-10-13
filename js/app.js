@@ -10,6 +10,7 @@
     art: 'zahl',
     spielart: 'pruefungen',        // 'pruefungen' oder 'passiv'
     marken: [],                    // beim Einrichten: Marken mit Code, bis zum Verriegeln
+    posten: [],                    // beim Einrichten: Posten der Escape-Kette, bis zum Verriegeln
     geheimnis: '',
     bild: null,
     laenge: 5,
@@ -89,7 +90,8 @@
 
   function rueckNachricht(tresor, art, b) {
     var dunkel = rueckDunkel(tresor), f = tresor.freigabe;
-    var d = { art: art, tresor: tresor.id, spielart: T.tresorLogik.passivModus(tresor.konfig) ? 'passiv' : 'pruefungen',
+    var d = { art: art, tresor: tresor.id, spielart: T.tresorLogik.passivModus(tresor.konfig) ? 'passiv'
+      : T.tresorLogik.escapeModus(tresor.konfig) ? 'escape' : 'pruefungen',
       zeit_ts: Math.round(((b && b.zeit) || Date.now()) / 1000) };
     var satz = '';
     if (b) {
@@ -98,7 +100,16 @@
       if (!dunkel) d.sekunden = b.sekunden;
       var kat = RUECK_TEXT[art] || (b.sekunden < 0 ? 'nachlass' : b.sekunden > 0 ? 'aufschlag' : 'stille');
       if (art === 'frost') d.frost = b.an ? 'an' : 'aus';
-      satz = b.abgewiesen ? T.stimme.sag('abgewiesen')
+      if (art === 'posten') {
+        d.posten = b.richtig ? 'richtig' : 'falsch';
+        d.stand = b.stand; d.laenge = b.laenge;
+        if (!b.richtig) d.regel = b.regel;
+      }
+      satz = art === 'posten' ? (b.richtig ? T.stimme.sag('postenRichtig') + ' ' + b.stand + ' von ' + b.laenge + '.'
+          : T.stimme.sag('postenFalsch') + ' ' + ({ neustart: 'Zurück auf Anfang.', sperre: 'Gesperrt.',
+            strafe: 'Das kostet Zeit.', gnade: 'Diesmal kostet es nichts.' }[b.regel] || ''))
+        : art === 'kette' ? T.stimme.sag('ketteGeloest')
+        : b.abgewiesen ? T.stimme.sag('abgewiesen')
         : art === 'frost' && b.an ? T.stimme.sag('frost')
         : T.stimme.sag(art === 'frost' ? 'tauwetter' : kat) + ' ' + (!b.sekunden ? 'Keine Änderung.'
         : dunkel ? (b.sekunden < 0 ? 'Früher.' : 'Später.')
@@ -247,9 +258,12 @@
   /* Welches Zeitschloss gilt gerade? Unter Willkür gibt es nur
    * Rechenzeit oder keine - dort waehlt der Game Master. */
   function passivGewaehlt() { return zustand.spielart === 'passiv' && !!$('#passiv-min'); }
+  function escapeGewaehlt() { return zustand.spielart === 'escape' && !!$('#escape-min'); }
+  /* Spielarten ohne Pruefungen: kein Plan, keine Dimensionen, am Netz. */
+  function spielartOhnePruefungen() { return passivGewaehlt() || escapeGewaehlt(); }
 
   function zeitschlossArt() {
-    if (passivGewaehlt()) return 'drand';
+    if (spielartOhnePruefungen()) return 'drand';
     if ($('#blindgang') && $('#blindgang').checked) return $('#blind-zeitschloss').value;
     return $('#sicherheit').value;
   }
@@ -267,8 +281,9 @@
     var vollstaendig = zustand.art === 'foto'
       ? !!zustand.bild
       : /^\d+$/.test(zustand.geheimnis) && zustand.geheimnis.length === zustand.laenge;
-    var passiv = passivGewaehlt();
+    var passiv = spielartOhnePruefungen();
     var blind = !passiv && $('#blindgang') && $('#blindgang').checked;
+    var kettenOk = !escapeGewaehlt() || zustand.posten.length >= 3;
     var dimensionen = passiv || blind ? ['ohne-wahl'] : aktiveDimensionen();
     var passAn = !passiv && $('#passphrase-aktiv') && $('#passphrase-aktiv').checked;
     var pass = passAn ? $('#passphrase').value : '';
@@ -282,12 +297,13 @@
         : pass !== passWdh ? 'Die beiden Eingaben stimmen noch nicht überein.'
         : 'Passt. Schreib sie dir auf, bevor du verriegelst.';
     }
-    knopf.disabled = !(vollstaendig && dimensionen.length && passOk && stationenOk);
+    knopf.disabled = !(vollstaendig && dimensionen.length && passOk && stationenOk && kettenOk);
     $('#bereit-hinweis').textContent = !vollstaendig
       ? (zustand.art === 'foto' ? 'Es fehlt noch ein Bild.' : 'Es fehlen noch Ziffern.')
       : !dimensionen.length ? 'Wähle mindestens eine Dimension.'
       : !passOk ? 'Die Passphrase ist noch nicht vollständig.'
-      : !stationenOk ? 'Für die Dimension „Ort“ brauchst du mindestens zwei beschriebene Marken.' : '';
+      : !stationenOk ? 'Für die Dimension „Ort“ brauchst du mindestens zwei beschriebene Marken.'
+      : !kettenOk ? 'Die Kette braucht mindestens drei Posten.' : '';
   }
 
   /* Technisches bleibt verfuegbar, aber zugeklappt: Der Game Master erklaert nicht,
@@ -450,6 +466,9 @@
   }
 
   function konfigurationRoh() {
+    if (escapeGewaehlt()) {
+      return T.tresorLogik.escapeKonfiguration({ minSekunden: Number($('#escape-min').value), maxSekunden: Number($('#escape-max').value) });
+    }
     if (passivGewaehlt()) {
       return T.tresorLogik.passivKonfiguration(
         { minSekunden: Number($('#passiv-min').value), maxSekunden: Number($('#passiv-max').value) },
@@ -584,6 +603,10 @@
 
     if (passivGewaehlt()) {
       passivHinweis();
+      return;
+    }
+    if (escapeGewaehlt()) {
+      escapeHinweis();
       return;
     }
 
@@ -828,7 +851,7 @@
 
   /* Eine Zeile beim Einrichten: Name, Wirkung, Minuten, einmal/wiederholt,
    * dazu der QR-Code und das Schreiben auf eine NFC-Marke. */
-  function markenZeile(m, neuZeichnen) {
+  function markenZeile(m, neuZeichnen, nurName) {
     var qr = el('div', { class: 'marken-qr', 'data-link': T.marken.link(m.code) });
     qr.innerHTML = T.marken.qrSvg(T.marken.link(m.code), 3);
     var meldung = el('p', { class: 'aufgabe-meldung', role: 'status', text: '' });
@@ -840,7 +863,7 @@
       el('div', { class: 'marken-felder' }, [
         el('input', { type: 'text', class: 'antwortfeld', value: m.name, maxlength: '40', 'aria-label': 'Name',
           oninput: function () { m.name = this.value; } }),
-        el('div', { class: 'marken-reihe' }, [
+        nurName ? null : el('div', { class: 'marken-reihe' }, [
           el('select', { 'aria-label': 'Wirkung', onchange: function () { m.wirkung = this.value; } },
             T.tresorLogik.MARKEN_WIRKUNGEN.map(function (w) {
               return el('option', { value: w, selected: w === m.wirkung ? 'selected' : null }, MARKE_WORT[w]);
@@ -849,14 +872,14 @@
             oninput: function () { m.minuten = Number(this.value) || 1; } }),
           el('span', { class: 'flaut', text: 'min' })
         ]),
-        el('select', { 'aria-label': 'Wie oft', onchange: function () {
+        nurName ? null : el('select', { 'aria-label': 'Wie oft', onchange: function () {
           m.mehrfach = this.value === 'mehrfach';
           sperreZeile.classList.toggle('versteckt', !m.mehrfach);
         } }, [
           el('option', { value: 'einmal', selected: m.mehrfach ? null : 'selected' }, 'einmal'),
           el('option', { value: 'mehrfach', selected: m.mehrfach ? 'selected' : null }, 'wiederholt')
         ]),
-        sperreZeile,
+        nurName ? null : sperreZeile,
         el('div', { class: 'marken-reihe' }, [
           T.nfc.moeglich() ? el('button', { class: 'knopf klein', type: 'button', text: 'Auf NFC schreiben', onclick: function () {
             meldung.className = 'aufgabe-meldung ist-laeuft';
@@ -870,7 +893,8 @@
             });
           } }) : null,
           el('button', { class: 'knopf klein flach', type: 'button', text: 'Entfernen', onclick: function () {
-            zustand.marken.splice(zustand.marken.indexOf(m), 1);
+            var liste = nurName ? zustand.posten : zustand.marken;
+            liste.splice(liste.indexOf(m), 1);
             neuZeichnen();
           } })
         ]),
@@ -881,10 +905,10 @@
 
   /* Ein Blatt zum Ausdrucken: je Marke QR-Code und Name, sonst nichts -
    * was sie bewirkt, steht nicht drauf. */
-  function markenDrucken() {
+  function markenDrucken(liste) {
     var fenster = global.open('', '_blank');
     if (!fenster) return false;
-    var karten = zustand.marken.map(function (m) {
+    var karten = (Array.isArray(liste) ? liste : zustand.marken).map(function (m) {
       return '<figure>' + T.marken.qrSvg(T.marken.link(m.code), 5) + '<figcaption>'
         + String(m.name).replace(/[<>&]/g, '') + '</figcaption></figure>';
     }).join('');
@@ -895,6 +919,16 @@
       + '<script>setTimeout(function(){print()},300)<\/script>');
     fenster.document.close();
     return true;
+  }
+
+  /* Jeder gescannte Code: erst die Kette, dann die Marken. */
+  async function codeVerarbeiten(code) {
+    var tresor = zustand.tresor;
+    if (tresor && T.tresorLogik.escapeModus(tresor.konfig)) {
+      var r = await T.tresorLogik.ketteScan(tresor, code);
+      if (r) { zustand.ketteMeldung = r; sichern(true); return; }
+    }
+    return markeVerarbeiten(code);
   }
 
   /* Marken einloesen - aus der Adresse, aus Web NFC oder vom Kamera-Scan. */
@@ -920,15 +954,139 @@
     zustand.markeMeldung = null;
   }
 
+  /* Knoepfe zum Lesen (NFC) und Scannen (QR) - fuer Marken und Kette.
+   * nachher(code) wird nach dem Einloesen gerufen. */
+  function scanKnoepfe(karte, nachher) {
+    function aufhoeren() { if (zustand.markenStopp) { zustand.markenStopp(); zustand.markenStopp = null; } }
+    var buehne = el('div', { class: 'marken-buehne' });
+    var meldung = el('p', { class: 'aufgabe-meldung', role: 'status', text: '' });
+    var knoepfe = el('div', { class: 'marken-reihe' });
+    if (T.nfc.moeglich()) {
+      knoepfe.appendChild(el('button', { class: 'knopf', type: 'button', text: 'NFC lesen', onclick: function () {
+        aufhoeren();
+        meldung.className = 'aufgabe-meldung ist-laeuft';
+        meldung.textContent = 'Marke ans Handy halten ...';
+        zustand.markenStopp = T.marken.nfcLauschen(async function (code) {
+          if (!code) { meldung.textContent = 'Keine Tresor-Marke.'; return; }
+          aufhoeren();
+          await codeVerarbeiten(code);
+          nachher();
+        }, function (fehler) { meldung.className = 'aufgabe-meldung ist-fehler'; meldung.textContent = fehler.message; });
+      } }));
+    }
+    if (T.marken.qrScanMoeglich()) {
+      knoepfe.appendChild(el('button', { class: 'knopf', type: 'button', text: 'QR scannen', onclick: function () {
+        aufhoeren();
+        meldung.className = 'aufgabe-meldung ist-laeuft';
+        meldung.textContent = 'Kamera auf den Code richten ...';
+        zustand.markenStopp = T.marken.qrScannen(buehne, async function (code) {
+          zustand.markenStopp = null;
+          await codeVerarbeiten(code);
+          nachher();
+        }, function (fehler) { meldung.className = 'aufgabe-meldung ist-fehler'; meldung.textContent = 'Kamera: ' + fehler.message; });
+      } }));
+    }
+    karte.appendChild(knoepfe);
+    karte.appendChild(buehne);
+    karte.appendChild(meldung);
+    karte.appendChild(el('p', { class: 'flaut klein', text:
+      'Oder einfach scannen bzw. antippen: Die Kamera-App oder Android öffnen die Marke direkt hier.' }));
+  }
+
+  /* ---------------- Escape Room ----------------
+   * Eine Karte: die Uhr (bis "spaetestens", geloest bis "fruehestens" plus
+   * Strafen), die Regel dieser Runde, der Fortschritt, was der letzte Scan
+   * ergab, und die Knoepfe. Hier laeuft keine Pruefung - neu zeichnen ist
+   * gefahrlos. */
+  function regelText(tresor, k) {
+    var L = T.tresorLogik;
+    return k.regel === 'neustart' ? 'Diese Runde: Ein Fehler, und du fängst von vorn an.'
+      : k.regel === 'sperre' ? 'Diese Runde: Ein Fehler sperrt dich ' + util.dauer(L.ketteSperreSek(k)) + '.'
+      : k.regel === 'strafe' ? 'Diese Runde: Ein Fehler kostet ' + util.dauer(L.ketteStrafeSek(tresor)) + ' auf „frühestens“.'
+      : 'Diese Runde: Ein Fehler kostet nichts. Diesmal.';
+  }
+
+  function ketteMeldungText(r) {
+    var name = '„' + r.name + '“';
+    if (r.schon) return { text: 'Die Kette ist schon gelöst.' };
+    if (r.doppelt) return { text: name + ' hast du gerade erst gescannt.' };
+    if (r.gesperrt) return { schlecht: true, text: 'Gesperrt bis ' + util.zeitpunkt(r.bis) + '. ' + name + ' zählt nicht.' };
+    if (r.geloest) return { text: name + ' - ' + T.stimme.sag('ketteGeloest') };
+    if (r.richtig) return { text: name + ' - ' + T.stimme.sag('postenRichtig') + ' ' + r.stand + ' von ' + r.laenge + '.' };
+    return { schlecht: true, text: name + ' - ' + T.stimme.sag('postenFalsch') + ' '
+      + (r.regel === 'neustart' ? 'Zurück auf Anfang.'
+        : r.regel === 'sperre' ? 'Gesperrt bis ' + util.zeitpunkt(r.bis) + '.'
+        : r.regel === 'strafe' ? '+' + util.dauer(r.sekunden) + ' auf „frühestens“.'
+        : 'Diesmal kostet es nichts.') };
+  }
+
+  function escapeKarte(tresor) {
+    var f = tresor.freigabe, k = f.kette, kd = tresor.konfig.kette;
+    var karte = el('section', { class: 'karte passiv-karte escape-karte', id: 'escapekarte-tresor' });
+    if (T.tresorLogik.freigabeErreicht(tresor)) { netzAbholen(karte); return karte; }
+    karte.appendChild(el('h2', { text: k.geloest ? 'Die Kette ist geschlossen' : 'Die Kette' }));
+    var anzeige = el('div', { class: 'countdown', text: '–' });
+    var wann = el('p', { class: 'flaut klein mittig-text', text: '' });
+    karte.appendChild(anzeige);
+    karte.appendChild(wann);
+    karte.appendChild(el('p', { class: 'flaut klein mittig-text', text: k.geloest
+      ? (k.strafeSek ? 'Frühestens plus ' + util.dauer(k.strafeSek) + ' Strafen.' : 'Ohne Strafen: so früh es geht.')
+      : 'Gelöst offen ' + util.zeitpunkt(T.drand.zeitVon(f.runden[0]))
+        + (k.strafeSek ? ' plus ' + util.dauer(k.strafeSek) : '') + ' · sonst ' + util.zeitpunkt(T.drand.zeitVon(f.runden[f.runden.length - 1])) }));
+    if (zustand.ketteMeldung) {
+      var m = ketteMeldungText(zustand.ketteMeldung);
+      karte.appendChild(el('div', { class: m.schlecht ? 'strafkasten' : 'gutkasten' }, [
+        el('p', { class: 'wachterwort', text: m.text })]));
+      zustand.ketteMeldung = null;
+    }
+    if (!k.geloest) {
+      var gesperrt = k.sperreBis > Date.now();
+      var sperrZeile = el('p', { class: 'aufgabe-meldung ist-fehler', text: '' });
+      karte.appendChild(el('div', { class: 'escape-runde' }, [
+        el('p', { class: 'aufgabe-titel', text: 'Runde ' + k.runde }),
+        el('p', { class: 'wachterwort', text: regelText(tresor, k) }),
+        el('p', { class: 'aufgabe-hinweis', text: 'Posten ' + (k.stand + 1) + ' von ' + k.laenge + ' gesucht.'
+          + (k.fehler ? ' Fehler bisher: ' + k.fehler + '.' : '') }),
+        k.gefunden.length ? el('ol', { class: 'escape-gefunden' }, k.gefunden.map(function (i) {
+          return el('li', { text: '✓ ' + kd.namen[i] });
+        })) : null,
+        gesperrt ? sperrZeile : null
+      ]));
+      scanKnoepfe(karte, zeichneTresor);
+    }
+    var haZeile = haStatusZeile(tresor);
+    if (haZeile) karte.appendChild(haZeile);
+
+    function takt(ausUhr) {
+      if (ausUhr === true && !zustand.abholen && T.tresorLogik.freigabeErreicht(tresor)) {
+        clearInterval(zustand.freigabeUhr); zustand.freigabeUhr = null; zeichneTresor(); return;
+      }
+      if (!k.geloest && k.sperreBis) {
+        var bis = (k.sperreBis - Date.now()) / 1000;
+        if (sperrZeile) sperrZeile.textContent = bis > 0 ? 'Gesperrt - noch ' + restUhr(bis) + '.' : '';
+        if (ausUhr === true && bis <= 0 && bis > -1.5) { zeichneTresor(); return; }
+      }
+      var steht = T.tresorLogik.frostRest(tresor);
+      var rest = steht !== null ? steht : (T.tresorLogik.freigabeZiel(tresor).zeit - Date.now()) / 1000;
+      anzeige.classList.toggle('ist-gefroren', steht !== null);
+      anzeige.textContent = rest > 0 ? restUhr(rest) : 'Die Zeit ist um.';
+      anzeige.classList.toggle('ist-lang', rest >= 86400);
+      wann.textContent = steht !== null ? 'Die Uhr steht.' : rest > 0
+        ? 'Offen ' + util.zeitpunkt(T.tresorLogik.freigabeZiel(tresor).zeit) + (k.geloest ? '.' : ' - es sei denn, du schließt die Kette.') : '';
+    }
+    takt();
+    zustand.freigabeUhr = setInterval(function () { takt(true); }, 1000);
+    return karte;
+  }
+
   /* Die Karte im laufenden Tresor: was es gibt, was verbraucht ist, und
    * die Knoepfe zum Lesen und Scannen. Zeichnet sich selbst neu - nicht den
    * ganzen Tresor, sonst risse ein Scan die laufende Pruefung weg. */
-  function markenKarte(tresor) {
+  function markenKarte(tresor, ohneKnoepfe) {
     var liste = (tresor.konfig || {}).marken || [];
     var karte = el('section', { class: 'karte marken-karte', id: 'markenkarte' }, [el('h2', { text: 'Marken' })]);
     function neu() { aufhoeren(); var frisch = markenKarte(tresor); karte.replaceWith(frisch); }
     function aufhoeren() { if (zustand.markenStopp) { zustand.markenStopp(); zustand.markenStopp = null; } }
-    var stopp = { set: function (f) { aufhoeren(); zustand.markenStopp = f; } };
     markeMeldungZeigen(karte);
     /* Ein offener Wurf zuerst - er ist mit dem Scan genommen. */
     liste.forEach(function (m) {
@@ -957,39 +1115,7 @@
           : lage.lage === 'wurf' ? 'Wurf offen' : m.mehrfach ? 'bereit' : 'einmal' })
       ]);
     })));
-    var buehne = el('div', { class: 'marken-buehne' });
-    var meldung = el('p', { class: 'aufgabe-meldung', role: 'status', text: '' });
-    var knoepfe = el('div', { class: 'marken-reihe' });
-    if (T.nfc.moeglich()) {
-      knoepfe.appendChild(el('button', { class: 'knopf', type: 'button', text: 'NFC lesen', onclick: function () {
-        aufhoeren();
-        meldung.className = 'aufgabe-meldung ist-laeuft';
-        meldung.textContent = 'Marke ans Handy halten ...';
-        stopp.set(T.marken.nfcLauschen(async function (code) {
-          if (!code) { meldung.textContent = 'Keine Tresor-Marke.'; return; }
-          aufhoeren();
-          await markeVerarbeiten(code);
-          neu();
-        }, function (fehler) { meldung.className = 'aufgabe-meldung ist-fehler'; meldung.textContent = fehler.message; }));
-      } }));
-    }
-    if (T.marken.qrScanMoeglich()) {
-      knoepfe.appendChild(el('button', { class: 'knopf', type: 'button', text: 'QR scannen', onclick: function () {
-        aufhoeren();
-        meldung.className = 'aufgabe-meldung ist-laeuft';
-        meldung.textContent = 'Kamera auf den Code richten ...';
-        stopp.set(T.marken.qrScannen(buehne, async function (code) {
-          zustand.markenStopp = null;
-          await markeVerarbeiten(code);
-          neu();
-        }, function (fehler) { meldung.className = 'aufgabe-meldung ist-fehler'; meldung.textContent = 'Kamera: ' + fehler.message; }));
-      } }));
-    }
-    karte.appendChild(knoepfe);
-    karte.appendChild(buehne);
-    karte.appendChild(meldung);
-    karte.appendChild(el('p', { class: 'flaut klein', text:
-      'Oder einfach scannen bzw. antippen: Die Kamera-App oder Android öffnen die Marke direkt hier.' }));
+    if (!ohneKnoepfe) scanKnoepfe(karte, neu);
     return karte;
   }
 
@@ -1317,7 +1443,9 @@
         el('button', { class: 'reiter-knopf' + (zustand.spielart !== 'passiv' ? ' ist-aktiv' : ''), type: 'button',
           id: 'spielart-pruefungen', text: 'Mit Prüfungen' }),
         el('button', { class: 'reiter-knopf' + (zustand.spielart === 'passiv' ? ' ist-aktiv' : ''), type: 'button',
-          id: 'spielart-passiv', text: 'Passiv' })
+          id: 'spielart-passiv', text: 'Passiv' }),
+        el('button', { class: 'reiter-knopf' + (zustand.spielart === 'escape' ? ' ist-aktiv' : ''), type: 'button',
+          id: 'spielart-escape', text: 'Escape Room' })
       ]),
       el('p', { class: 'flaut klein', id: 'spielart-hinweis', text: '' })
     ]);
@@ -1398,9 +1526,45 @@
       haFelder()
     ]);
 
+    /* Escape Room: Rahmen und die Posten der Kette. */
+    var postenListe = el('div', { class: 'marken-liste-einrichten' });
+    function postenZeichnen() {
+      util.leeren(postenListe);
+      zustand.posten.forEach(function (m) { postenListe.appendChild(markenZeile(m, postenZeichnen, true)); });
+      $('#posten-drucken').classList.toggle('versteckt', !zustand.posten.length);
+      pruefeBereit();
+      escapeHinweis();
+    }
+    var escapeTeil = el('section', { class: 'karte versteckt', id: 'escapekarte' }, [
+      el('h2', { text: '2 · Die Kette' }),
+      el('div', { class: 'feld' }, [
+        el('label', { for: 'escape-min', text: 'Gelöst offen nach' }),
+        el('select', { id: 'escape-min' }, tresorzeitOptionen(1800))
+      ]),
+      el('div', { class: 'feld' }, [
+        el('label', { for: 'escape-max', text: 'Sonst offen nach' }),
+        el('select', { id: 'escape-max' }, tresorzeitOptionen(86400))
+      ]),
+      el('p', { class: 'flaut klein', text:
+        'Leg Posten an und versteck sie - als QR-Code oder NFC-Marke. Die Reihenfolge ziehe ich beim Verriegeln, '
+        + 'und ich verrate sie nie. Wo die Posten liegen, weißt du. In welcher Folge, nicht. Vor jeder Runde sage ich an, '
+        + 'was ein Fehler kostet. Die Namen sind nur für dich - damit du weißt, was wo liegt.' }),
+      postenListe,
+      el('div', { class: 'marken-reihe' }, [
+        el('button', { class: 'knopf', type: 'button', text: 'Posten hinzufügen', onclick: function () {
+          zustand.posten.push({ code: T.marken.neuerCode(), name: 'Posten ' + (zustand.posten.length + 1) });
+          postenZeichnen();
+        } }),
+        el('button', { class: 'knopf versteckt', type: 'button', id: 'posten-drucken', text: 'Alle drucken',
+          onclick: function () { markenDrucken(zustand.posten, true); } })
+      ]),
+      el('p', { class: 'flaut klein', id: 'escape-hinweis', text: '' })
+    ]);
+
     wurzel.appendChild(geheimTeil);
     wurzel.appendChild(spielartTeil);
     wurzel.appendChild(passivTeil);
+    wurzel.appendChild(escapeTeil);
     wurzel.appendChild(blindTeil);
     wurzel.appendChild(dimensionTeil);
     wurzel.appendChild(stationTeil);
@@ -1626,14 +1790,20 @@
 
     function spielartAnwenden(welche) {
       zustand.spielart = welche;
-      var passiv = welche === 'passiv';
+      var nurPassiv = welche === 'passiv', escape = welche === 'escape';
+      var passiv = nurPassiv || escape;                    // ohne Pruefungen, Geheimnis am Stueck
       $('#spielart-pruefungen').classList.toggle('ist-aktiv', !passiv);
-      $('#spielart-passiv').classList.toggle('ist-aktiv', passiv);
-      $('#spielart-hinweis').textContent = passiv
+      $('#spielart-passiv').classList.toggle('ist-aktiv', nurPassiv);
+      $('#spielart-escape').classList.toggle('ist-aktiv', escape);
+      $('#spielart-hinweis').textContent = nurPassiv
         ? 'Keine Prüfungen. Du setzt einen Rahmen, ich entscheide, wo darin er aufgeht. Ab und zu melde ich mich - '
           + 'mit Nachlass, Aufschlag oder einem Würfel, den du werfen darfst. Das Geheimnis kommt am Ende als Ganzes.'
+        : escape
+        ? 'Eine Kette versteckter Posten, in einer Reihenfolge, die nur ich kenne. Gelöst ist er bald offen, sonst erst spät. '
+          + 'Das Geheimnis kommt am Ende als Ganzes.'
         : 'Prüfungen holen Zeit zurück, Fehler kosten. Das Geheimnis kommt in Fragmenten.';
-      passivTeil.classList.toggle('versteckt', !passiv);
+      passivTeil.classList.toggle('versteckt', !nurPassiv);
+      escapeTeil.classList.toggle('versteckt', !escape);
       [blindTeil, dimensionTeil, zeitTeil, feinTeil, $('#probekarte')].forEach(function (teil) {
         if (teil) teil.classList.toggle('versteckt', passiv);
       });
@@ -1653,6 +1823,11 @@
     }
     $('#spielart-pruefungen').addEventListener('click', function () { spielartAnwenden('pruefungen'); });
     $('#spielart-passiv').addEventListener('click', function () { spielartAnwenden('passiv'); });
+    $('#spielart-escape').addEventListener('click', function () { spielartAnwenden('escape'); });
+    ['#escape-min', '#escape-max'].forEach(function (feld) {
+      $(feld).addEventListener('change', function () { schaetzungAktualisieren(); pruefeBereit(); });
+    });
+    postenZeichnen();
     ['#passiv-min', '#passiv-gedacht', '#passiv-max', '#passiv-dichte', '#passiv-haerte', '#passiv-uhr', '#passiv-drakonisch'].forEach(function (feld) {
       $(feld).addEventListener('change', function () { schaetzungAktualisieren(); pruefeBereit(); });
     });
@@ -1691,6 +1866,26 @@
       + nachDauer(unten) + ', spätestens nach ' + nachDauer(oben)
       + '. Einen Notausgang gibt es nicht: Der Rahmen ist die Zusage. Zum Öffnen braucht es Internet. '
       + 'Löschen des Tresors löscht das Geheimnis.';
+  }
+
+  /* Was die Kette bedeutet. */
+  function escapeHinweis() {
+    if (!$('#escape-hinweis') || !escapeGewaehlt()) return;
+    var konfig = konfigurationLesen(), tz = konfig.tresorzeit, E = T.tresorLogik.ESCAPE;
+    var n = zustand.posten.length;
+    $('#escape-hinweis').textContent = (n < 3 ? 'Mindestens drei Posten. ' : n + ' Posten - ' + fakultaetText(n) + ' mögliche Reihenfolgen. ')
+      + 'Gelöst ist er nach ' + util.dauer(tz.minSekunden) + ' offen, plus jede Zeitstrafe (je '
+      + util.dauer((tz.maxSekunden - tz.minSekunden) * E.strafeAnteil) + '); sonst nach ' + util.dauer(tz.maxSekunden) + '. '
+      + 'Eine Sperre kostet erst ' + E.sperreMin + ' min, dann jedes Mal das Doppelte, höchstens ' + util.dauer(E.sperreMax * 60) + '.';
+    $('#abschluss-warnung').textContent = 'Ab hier öffnet ihn nur noch das Netz - mit gelöster Kette nach '
+      + nachDauer(tz.minSekunden) + ' plus Strafen, sonst nach ' + nachDauer(tz.maxSekunden)
+      + '. Die Codes stehen danach nur noch auf den Posten: erst drucken oder schreiben. Zum Öffnen braucht es Internet.';
+  }
+
+  function fakultaetText(n) {
+    var f = 1;
+    for (var i = 2; i <= n; i++) f *= i;
+    return f.toLocaleString('de-DE');
   }
 
   function artWechsel(welche) {
@@ -1874,12 +2069,13 @@
     if (T.tresorLogik.drandModus(konfig) && zustand.marken.length) {
       konfig.marken = await T.tresorLogik.markenVorbereiten(zustand.marken);
     }
+    if (T.tresorLogik.escapeModus(konfig)) konfig.kette = await T.tresorLogik.ketteVorbereiten(zustand.posten);
     // vor dem Leeren der Bühne auslesen - danach gibt es die Felder nicht mehr
     var passphrase = konfig.mitPassphrase ? $('#passphrase').value : '';
     var art = zustand.art;
     /* Passiv: ein einziges Fragment mit dem ganzen Geheimnis - die Zahl am
      * Stueck, beim Bild nur die schaerfste Stufe. */
-    var passiv = T.tresorLogik.passivModus(konfig);
+    var passiv = T.tresorLogik.passivModus(konfig) || T.tresorLogik.escapeModus(konfig);
     var teile = art === 'foto'
       ? (passiv ? [zustand.bild.stufen[zustand.bild.stufen.length - 1].bild]
                 : zustand.bild.stufen.map(function (stufe) { return stufe.bild; }))
@@ -1908,6 +2104,7 @@
       T.ortAufgaben.vorratLeeren();
       zustand.stationen = [];
       zustand.marken = [];
+      zustand.posten = [];
       zustand.geheimnis = '';
       zustand.bild = null;
       teile = null;
@@ -2024,8 +2221,10 @@
       zustand.fristMeldung = null;
     }
 
-    var passiv = T.tresorLogik.passivModus(tresor.konfig);
-    /* Passiv gibt es keine Fragmente zu zeigen - das Geheimnis kommt am Stueck. */
+    var escape = T.tresorLogik.escapeModus(tresor.konfig);
+    var passiv = T.tresorLogik.passivModus(tresor.konfig) || escape;
+    /* Passiv und im Escape Room gibt es keine Fragmente zu zeigen - das
+     * Geheimnis kommt am Stueck. */
     if (!passiv) {
       wurzel.appendChild(el('section', { class: 'karte band-karte' }, [
         tresor.art === 'foto' ? zeichneBildbuehne(tresor) : zeichneZiffernband(),
@@ -2054,6 +2253,10 @@
       ]));
     } else if (T.tresorLogik.brauchtPassphrase(tresor) && !zustand.passMaterial) {
       wurzel.appendChild(passphraseKarte());
+    } else if (escape) {
+      wurzel.appendChild(escapeKarte(tresor));
+      /* Die Knoepfe der Kette lesen auch Marken - hier keine zweiten. */
+      if (((tresor.konfig || {}).marken || []).length && tresor.freigabe) wurzel.appendChild(markenKarte(tresor, !tresor.freigabe.kette.geloest));
     } else if (passiv) {
       wurzel.appendChild(passivKarte(tresor));
       if (((tresor.konfig || {}).marken || []).length && tresor.freigabe) wurzel.appendChild(markenKarte(tresor));
@@ -2129,7 +2332,8 @@
         : tresor.fragmente[0].schloss
         ? 'Eisern. Jedes Fragment liegt unter einem Bann, den nur Zeit bricht.'
         : 'Nachsichtig. Es hält dich nichts als dein eigener Vorsatz.' }),
-      el('p', { text: passiv ? 'Passiv. Keine Prüfung, nur der Rahmen und was ich darin entscheide.'
+      el('p', { text: escape ? 'Escape Room. Eine Kette, deren Reihenfolge nur ich kenne.'
+        : passiv ? 'Passiv. Keine Prüfung, nur der Rahmen und was ich darin entscheide.'
         : gebunden
         ? gebunden + (gebunden === 1 ? ' Prüfung hält' : ' Prüfungen halten') + ' ein Stück des Schlüssels. Raten kostet.'
         : 'Keine Prüfung hält den Schlüssel. Du hältst dich selbst auf.' }),
@@ -3663,13 +3867,13 @@
       var code = T.marken.codeAus(global.location.hash);
       if (!code) return;
       global.history.replaceState(null, '', global.location.pathname + global.location.search);
-      markeVerarbeiten(code).then(function () { if (zustand.tresor) zeichneTresor(); else zeichneEinrichten(); });
+      codeVerarbeiten(code).then(function () { if (zustand.tresor) zeichneTresor(); else zeichneEinrichten(); });
     });
     var gespeichert = T.speicher.laden();
     if (gespeichert && gespeichert.fragmente) {
       zustand.tresor = gespeichert;
       zustand.laenge = gespeichert.laenge;
-      if (adressCode) markeVerarbeiten(adressCode).then(zeichneTresor);
+      if (adressCode) codeVerarbeiten(adressCode).then(zeichneTresor);
       else zeichneTresor();
       // Lief der Notausgang beim letzten Mal, nimmt er den Faden wieder auf
       var exit = gespeichert.notausgang;

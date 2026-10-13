@@ -491,7 +491,7 @@
       var deckel = exitZug ? exitZug.gezogen : tzMax * DRAND_DECKEL_FAKTOR;
       /* Passiv: Der Rahmen ist eine Zusage - nie frueher, nie spaeter. Die
        * Leiter endet deshalb oben, und das Konto kann nicht darueber hinaus. */
-      if (passivModus(konfig)) deckel = Math.min(deckel, tzMax);
+      if (passivModus(konfig) || escapeModus(konfig)) deckel = Math.min(deckel, tzMax);
       tzMax = Math.min(tzMax, deckel);
       tzMin = Math.min(tzMin, tzMax);
       var tresorzeit = tzMax;                                // Start: ohne eine einzige Pruefung
@@ -513,6 +513,7 @@
         z: null
       };
       if (passivModus(konfig)) freigabe.passiv = passivAnlegen(freigabe, konfig);
+      if (escapeModus(konfig)) freigabe.kette = ketteAnlegen(konfig);
       if (konfig.extern) freigabe.extern = { basis: null, letzte: null, summe: 0 };
       tresorzeit = null;
     }
@@ -1665,6 +1666,134 @@
     return false;
   }
 
+  /* ---------- Spielart Escape Room ----------
+   *
+   * Eine Kette von Posten - Marken wie die anderen (QR oder NFC), nur ohne
+   * eigene Wirkung. Der Spieler legt sie selbst an und versteckt sie; die
+   * Reihenfolge zieht die App beim Verriegeln und verraet sie nie. Wo die
+   * Posten liegen, weiss er. In welcher Folge sie zu scannen sind, nicht.
+   *
+   * Gespeichert wird je Posten ein Pruefwert fuer "gehoert zur Kette" (in
+   * der Reihenfolge des Anlegens, mit Namen) und je Position einer fuer
+   * "dieser Code an dieser Stelle" - ohne Verbindung zwischen beiden. Aus
+   * dem Speicher allein laesst sich die Reihenfolge nicht ablesen; wer jede
+   * Marke mit einer fremden App ausliest und selbst rechnet, schon. Das haelt
+   * den eigenen Impuls auf, keinen Entschlossenen.
+   *
+   * Runden: Zu Beginn jeder Runde zieht die App, was ein Fehler kostet, und
+   * sagt es an. Ein richtiger Scan bringt einen Posten weiter, ein falscher
+   * beendet die Runde:
+   *
+   *   neustart  zurueck auf Anfang, sofort weiter
+   *   sperre    der Stand bleibt, aber gesperrt - 5 min, jedes Mal doppelt,
+   *             hoechstens 2 h
+   *   strafe    der Stand bleibt; 5 % der Spanne kommen auf "fruehestens"
+   *   gnade     nichts. Selten.
+   *
+   * Fremde Codes zaehlen nicht - Herumsuchen ist kein Fehler. Gelöst ruckt
+   * die Freigabe auf "fruehestens" plus die gesammelten Strafen; sonst gilt
+   * "spaetestens". Als Objekt, damit Tests es stauchen koennen. */
+  var ESCAPE = {
+    regeln: [['neustart', 3], ['sperre', 3], ['strafe', 3], ['gnade', 1]],
+    sperreMin: 5, sperreFaktor: 2, sperreMax: 120,
+    strafeAnteil: 0.05,
+    doppelScan: 10                                  // s: dieselbe Marke gleich nochmal ist kein Fehler
+  };
+
+  function escapeModus(konfig) { return !!konfig && konfig.spielart === 'escape'; }
+
+  function escapeKonfiguration(rahmen) {
+    var k = passivKonfiguration(rahmen, { modus: 'aus' }, {});
+    delete k.passiv;
+    k.spielart = 'escape';
+    return k;
+  }
+
+  /* Vor dem Verriegeln: Reihenfolge ziehen, Pruefwerte bilden. posten:
+   * [{ code, name }]. Die Codes selbst kommen nicht in die Konfiguration. */
+  async function ketteVorbereiten(posten) {
+    var reihe = posten.map(function (_, i) { return i; });
+    for (var i = reihe.length - 1; i > 0; i--) {
+      var j = zufallsGanz(0, i);
+      var merk = reihe[i]; reihe[i] = reihe[j]; reihe[j] = merk;
+    }
+    var kette = { namen: [], pruef: [], pos: [] };
+    for (var a = 0; a < posten.length; a++) {
+      kette.namen.push(String(posten[a].name || ('Posten ' + (a + 1))).slice(0, 40));
+      kette.pruef.push(await T.krypto.pruefwert('tresor-marke:' + posten[a].code));
+    }
+    for (var p = 0; p < reihe.length; p++) {
+      kette.pos.push(await T.krypto.pruefwert('tresor-kette:' + p + ':' + posten[reihe[p]].code));
+    }
+    return kette;
+  }
+
+  function regelZiehen() {
+    var summe = ESCAPE.regeln.reduce(function (s, r) { return s + r[1]; }, 0);
+    var x = zufallsAnteil() * summe;
+    for (var i = 0; i < ESCAPE.regeln.length; i++) { x -= ESCAPE.regeln[i][1]; if (x < 0) return ESCAPE.regeln[i][0]; }
+    return 'gnade';
+  }
+
+  function ketteAnlegen(konfig) {
+    return { laenge: ((konfig.kette || {}).pos || []).length, stand: 0, gefunden: [], runde: 1,
+      regel: regelZiehen(), sperren: 0, sperreBis: 0, strafeSek: 0, fehler: 0, geloest: false, letzter: null };
+  }
+
+  /* Was die naechste Sperre kostet - fuer die Ansage. */
+  function ketteSperreSek(k) {
+    return Math.min(ESCAPE.sperreMax, ESCAPE.sperreMin * Math.pow(ESCAPE.sperreFaktor, k.sperren)) * 60;
+  }
+
+  function ketteStrafeSek(tresor) {
+    var r = tresor.freigabe.rahmen;
+    return Math.round((r[1] - r[0]) * ESCAPE.strafeAnteil);
+  }
+
+  /* Ein Code - gehoert er zur Kette, gilt er; sonst null (dann ist er
+   * vielleicht eine gewoehnliche Marke). pruef ist der Mitgliedswert, falls
+   * schon berechnet. */
+  async function ketteScan(tresor, code, jetzt, pruef) {
+    var f = tresor.freigabe, k = f && f.kette, kd = (tresor.konfig || {}).kette;
+    if (!k || !kd) return null;
+    jetzt = jetzt || Date.now();
+    pruef = pruef || await T.krypto.pruefwert('tresor-marke:' + code);
+    var idx = kd.pruef.indexOf(pruef);
+    if (idx === -1) return null;
+    var name = kd.namen[idx];
+    if (k.geloest || f.z) return { schon: true, name: name };
+    if (k.letzter && k.letzter.idx === idx && jetzt - k.letzter.zeit < ESCAPE.doppelScan * 1000) return { doppelt: true, name: name };
+    if (k.sperreBis > jetzt) return { gesperrt: true, bis: k.sperreBis, name: name };
+    var richtig = kd.pos[k.stand] === await T.krypto.pruefwert('tresor-kette:' + k.stand + ':' + code);
+    var vorher = f.konto.zielSek;
+    if (richtig) {
+      k.stand++;
+      k.gefunden.push(idx);
+      k.letzter = { idx: idx, zeit: jetzt };
+      bewegungMerken(tresor, 'posten', vorher, name, { richtig: true, stand: k.stand, laenge: k.laenge });
+      if (k.stand >= k.laenge) {
+        k.geloest = true;
+        var ziel = Math.min(f.rahmen[1], f.rahmen[0] + k.strafeSek);
+        zeitkontoVerschieben(tresor, ziel - f.konto.zielSek, 'kette');
+        return { richtig: true, geloest: true, name: name, stand: k.stand, laenge: k.laenge };
+      }
+      return { richtig: true, name: name, stand: k.stand, laenge: k.laenge };
+    }
+    /* Falsch: Die Runde ist vorbei, ihre Regel greift, die naechste wird gezogen. */
+    var regel = k.regel, folge = { falsch: true, name: name, regel: regel, runde: k.runde };
+    k.fehler++;
+    k.letzter = { idx: idx, zeit: jetzt };
+    if (regel === 'neustart') { k.stand = 0; k.gefunden = []; }
+    else if (regel === 'sperre') { folge.sekunden = ketteSperreSek(k); k.sperren++; k.sperreBis = jetzt + folge.sekunden * 1000; folge.bis = k.sperreBis; }
+    else if (regel === 'strafe') { folge.sekunden = ketteStrafeSek(tresor); k.strafeSek += folge.sekunden; }
+    bewegungMerken(tresor, 'posten', vorher, name, { richtig: false, regel: regel, stand: k.stand, laenge: k.laenge });
+    k.runde++;
+    k.regel = regelZiehen();
+    folge.stand = k.stand;
+    folge.naechsteRegel = k.regel;
+    return folge;
+  }
+
   /* ---------- Marken (NFC und QR) ----------
    *
    * Beim Verriegeln festgelegt: Name, Wirkung, Minuten, einmal oder
@@ -1900,6 +2029,13 @@
     passivWuerfeln: passivWuerfeln,
     passivAblehnen: passivAblehnen,
     externBuchen: externBuchen,
+    ESCAPE: ESCAPE,
+    escapeModus: escapeModus,
+    escapeKonfiguration: escapeKonfiguration,
+    ketteVorbereiten: ketteVorbereiten,
+    ketteScan: ketteScan,
+    ketteSperreSek: ketteSperreSek,
+    ketteStrafeSek: ketteStrafeSek,
     MARKEN_WIRKUNGEN: MARKEN_WIRKUNGEN,
     markenVorbereiten: markenVorbereiten,
     markeLage: markeLage,
