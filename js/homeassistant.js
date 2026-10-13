@@ -27,7 +27,7 @@
   'use strict';
   var T = global.Tresor || (global.Tresor = {});
   var SCHLUESSEL = 'tresor.ha';
-  var STANDARD = { url: '', token: '', zahl: 'input_number.tresor_minuten', grund: 'input_text.tresor_grund' };
+  var STANDARD = { url: '', token: '', zahl: 'input_number.tresor_minuten', grund: 'input_text.tresor_grund', rueck: '' };
 
   function einstellungen() {
     try {
@@ -177,7 +177,40 @@
     });
   }
 
+  /* ---------- Rueckkanal: die App meldet an Home Assistant ----------
+   *
+   * Ueber einen Webhook, nicht ueber die WebSocket-Verbindung: Ein Ereignis
+   * feuern darf dort nur ein Administrator, und das Token soll keiner sein.
+   * Ein Webhook braucht gar kein Token - nur seine geheime ID.
+   *
+   * Gesendet wird als Formular (application/x-www-form-urlencoded) mit
+   * mode 'no-cors': Das ist eine "einfache" Anfrage, der Browser fragt nicht
+   * vorher per CORS nach, und Home Assistant legt die Felder in
+   * trigger.data ab. Die Antwort bleibt unlesbar - geklappt hat es, wenn das
+   * Netz sie zugestellt hat (fetch loest auf statt zu werfen). */
+  function rueckAdresse(e) {
+    var basis = String(e.url || '').trim().replace(/\/+$/, '');
+    if (!basis || !e.rueck) return '';
+    if (!/^[a-z]+:\/\//i.test(basis)) basis = 'https://' + basis;
+    return basis + '/api/webhook/' + encodeURIComponent(String(e.rueck).trim());
+  }
+
+  function rueckSenden(e, daten) {
+    var adresse = rueckAdresse(e);
+    if (!adresse) return Promise.reject(new Error('Kein Webhook eingetragen.'));
+    if (global.location && global.location.protocol === 'https:' && /^http:/i.test(adresse)) {
+      return Promise.reject(new Error('Diese Seite läuft über https - der Webhook muss es auch.'));
+    }
+    var formular = new global.URLSearchParams();
+    Object.keys(daten).forEach(function (k) {
+      if (daten[k] !== undefined && daten[k] !== null) formular.append(k, String(daten[k]));
+    });
+    return global.fetch(adresse, { method: 'POST', mode: 'no-cors', body: formular, keepalive: true });
+  }
+
   T.homeassistant = {
+    rueckAdresse: rueckAdresse,
+    rueckSenden: rueckSenden,
     STANDARD: STANDARD,
     einstellungen: einstellungen,
     einstellungenSichern: einstellungenSichern,

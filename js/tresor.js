@@ -1054,8 +1054,10 @@
     var ausschlag = ausschlagZiehen(tresor.konfig);
     var sekunden = Math.round(Math.min(f.tresorzeit * ausschlagArt(tresor.konfig).deckel, wert.sekunden * ausschlag));
     var konto = freigabeKonto(tresor);
+    var vorher = f.konto.zielSek;
     var ergebnis = konto.verschieben(-sekunden);
     f.konto = konto.stand();
+    bewegungMerken(tresor, 'gutschrift', vorher);
     f.gutgeschrieben.push(schluessel);
     ergebnis.art = 'gutschrift';
     ergebnis.puenktlich = wert.puenktlich;
@@ -1078,8 +1080,10 @@
     var sekunden = drandStrafe(tresor.konfig, fehlversuche, f.tresorzeit, ausschlag);
     if (!sekunden) return null;
     var konto = freigabeKonto(tresor);
+    var vorher = f.konto.zielSek;
     var ergebnis = konto.verschieben(sekunden);
     f.konto = konto.stand();
+    bewegungMerken(tresor, 'strafe', vorher);
     ergebnis.art = 'strafe';
     ergebnis.ausschlag = ausschlag;
     ergebnis.angebot = angebotZiehen(tresor.konfig);
@@ -1088,14 +1092,34 @@
   }
 
   /* Das Zeitkonto direkt verschieben - fuer den Wurf ueber eine Strafe. Nach
-   * vorn geht es nur bis zur gezogenen Tresorzeit, nach hinten bis zum Deckel. */
-  function zeitkontoVerschieben(tresor, sekunden) {
+   * vorn geht es nur bis zur gezogenen Tresorzeit, nach hinten bis zum Deckel.
+   * art und grund landen in der Liste der Bewegungen (Rueckkanal). */
+  function zeitkontoVerschieben(tresor, sekunden, art, grund) {
     var f = tresor.freigabe;
     if (!f || f.z) return null;
     var konto = freigabeKonto(tresor);
+    var vorher = f.konto.zielSek;
     var ergebnis = konto.verschieben(sekunden);
     f.konto = konto.stand();
+    bewegungMerken(tresor, art || 'zeit', vorher, grund);
     return ergebnis;
+  }
+
+  /* Jede Bewegung der Uhr, durchnummeriert - damit der Rueckkanal nach
+   * aussen melden kann, was geschah, auch wenn es mehrere auf einmal waren
+   * (nachgeholte Eingaenge) oder die Seite zwischendurch zu war. Die letzten
+   * zwanzig reichen; aelter wird nichts nachgemeldet. */
+  var BEWEGUNGEN_MAX = 20;
+  function bewegungMerken(tresor, art, vorherSek, grund, extra) {
+    var f = tresor.freigabe;
+    f.bewegungen = f.bewegungen || [];
+    f.bewegungNr = (f.bewegungNr || 0) + 1;
+    f.bewegungen.push(Object.assign({
+      nr: f.bewegungNr, art: art, zeit: Date.now(),
+      sekunden: Math.round(f.konto.zielSek - vorherSek),
+      grund: grund || '', neueZeit: freigabeZiel(tresor).zeit
+    }, extra || {}));
+    if (f.bewegungen.length > BEWEGUNGEN_MAX) f.bewegungen.splice(0, f.bewegungen.length - BEWEGUNGEN_MAX);
   }
 
   /* Kapitulieren: eine Pruefung aufgeben, gegen gewuerfelte Zeit.
@@ -1140,8 +1164,10 @@
       var roh = f.tresorzeit * KAPITULATION.netzAnteil * vielfach;
       var sekunden = Math.round(Math.min(f.tresorzeit * ausschlagArt(tresor.konfig).deckel, roh));
       var konto = freigabeKonto(tresor);
+      var vorher = f.konto.zielSek;
       var ergebnis = konto.verschieben(sekunden);
       f.konto = konto.stand();
+      bewegungMerken(tresor, 'kapitulation', vorher);
       f.gutgeschrieben = f.gutgeschrieben || [];
       f.gutgeschrieben.push(fragment.index + ':' + fragment.aufgaben.indexOf(aufgabe));
       aufgabe.erledigt = true;
@@ -1251,7 +1277,7 @@
     if (art === 'netz') {
       /* Gezaehlt wird, was ankommt: Am Boden des Rahmens ist nichts mehr zu holen. */
       var vorher = tresor.freigabe.konto.zielSek;
-      var zug = zeitkontoVerschieben(tresor, -bissen);
+      var zug = zeitkontoVerschieben(tresor, -bissen, 'stein');
       ergebnis.sekunden = Math.round(vorher - tresor.freigabe.konto.zielSek);
       ergebnis.amBoden = !!(zug && zug.amBoden);
     } else {
@@ -1368,10 +1394,10 @@
   }
 
   /* Bucht und gibt zurueck, was wirklich angekommen ist - am Rand weniger. */
-  function passivBuchen(tresor, sekunden) {
+  function passivBuchen(tresor, sekunden, art) {
     var f = tresor.freigabe;
     var vorher = f.konto.zielSek;
-    var zug = zeitkontoVerschieben(tresor, Math.round(sekunden));
+    var zug = zeitkontoVerschieben(tresor, Math.round(sekunden), art);
     return { sekunden: Math.round(f.konto.zielSek - vorher), amBoden: !!(zug && zug.amBoden),
              amDeckel: !!(zug && zug.amDeckel) };
   }
@@ -1392,11 +1418,11 @@
     p.nr++;
     var e = { nr: p.nr, zeit: zeit, art: art, sekunden: 0 };
     var u = p.einheit * (0.5 + zufallsAnteil());
-    if (art === 'nachlass') Object.assign(e, passivBuchen(tresor, -u));
-    else if (art === 'aufschlag') Object.assign(e, passivBuchen(tresor, u));
+    if (art === 'nachlass') Object.assign(e, passivBuchen(tresor, -u, art));
+    else if (art === 'aufschlag') Object.assign(e, passivBuchen(tresor, u, art));
     else if (art === 'muenze') {
       e.kopf = zufallsAnteil() < 0.5;
-      Object.assign(e, passivBuchen(tresor, e.kopf ? -p.einheit : p.einheit));
+      Object.assign(e, passivBuchen(tresor, e.kopf ? -p.einheit : p.einheit, art));
     } else if (art === 'wurf') {
       e.offen = true;
       p.angebot = { nr: e.nr, zeit: zeit };
@@ -1431,7 +1457,7 @@
     if (!e) return null;
     e.offen = false;
     e.augen = augen;
-    Object.assign(e, passivBuchen(tresor, (PASSIV.wurf[augen] || 0) * p.einheit));
+    Object.assign(e, passivBuchen(tresor, (PASSIV.wurf[augen] || 0) * p.einheit, 'wurf'));
     e.neueZeit = freigabeZiel(tresor).zeit;
     return e;
   }
@@ -1465,12 +1491,19 @@
     x.basis = wert;
     if (!minuten) return null;
     if (zeit >= freigabeZiel(tresor).zeit) return null;
+    grund = String(grund || '').slice(0, 80);
+    /* Einbahnstrasse: Von aussen kommt nur Zeit dazu. Ein Nachlass wird
+     * vermerkt und abgewiesen; der Nullpunkt zieht trotzdem nach, sonst
+     * zaehlte das Zurueckdrehen beim naechsten Anstieg doppelt. */
+    var abgewiesen = minuten < 0 && !!(tresor.konfig || {}).externNurDazu;
     var vorher = f.konto.zielSek;
-    var zug = zeitkontoVerschieben(tresor, Math.round(minuten * 60));
+    var zug = abgewiesen ? null : zeitkontoVerschieben(tresor, Math.round(minuten * 60), 'extern', grund);
+    if (abgewiesen) bewegungMerken(tresor, 'extern', vorher, grund, { abgewiesen: true, minuten: minuten });
     var e = {
-      art: 'extern', zeit: zeit, minuten: minuten, grund: String(grund || '').slice(0, 80),
+      art: 'extern', zeit: zeit, minuten: minuten, grund: grund,
       sekunden: Math.round(f.konto.zielSek - vorher),
       amBoden: !!(zug && zug.amBoden), amDeckel: !!(zug && zug.amDeckel),
+      abgewiesen: abgewiesen,
       neueZeit: freigabeZiel(tresor).zeit
     };
     x.summe = (x.summe || 0) + e.sekunden;
@@ -1613,6 +1646,10 @@
     passivWuerfeln: passivWuerfeln,
     passivAblehnen: passivAblehnen,
     externBuchen: externBuchen,
+    neueBewegungen: function (tresor, seit) {
+      var f = tresor && tresor.freigabe;
+      return ((f && f.bewegungen) || []).filter(function (b) { return b.nr > (seit || 0); });
+    },
     STEIN: STEIN,
     steinArt: steinArt,
     steinBissen: steinBissen,

@@ -62,6 +62,99 @@
     if (!erzwingen && jetzt - zustand.letzteSicherung < 1500) return;
     zustand.letzteSicherung = jetzt;
     T.speicher.sichern(zustand.tresor);
+    rueckkanalPflegen();
+  }
+
+  /* ---------------- Rueckkanal ----------------
+   * Was die App an Home Assistant meldet. Gemerkt wird im Tresor, was schon
+   * draussen ist (tresor.rueck): So kommt nach, was waehrend einer Funkstille
+   * geschah, und nichts doppelt. Gesendet wird der Reihe nach; schlaegt es
+   * fehl, ruht der Kanal eine Minute. */
+  var RUECK_TEXT = { gutschrift: 'gutschrift', strafe: 'verschoben', kapitulation: 'kapitulation', stein: 'stein',
+    nachlass: 'nachlass', aufschlag: 'aufschlag', muenze: 'muenze', angebot: 'angebot', verriegelt: 'verriegelt' };
+
+  /* "12 min" liest eine Sprachausgabe schlecht - also ausgeschrieben. */
+  function sprechDauer(sek) {
+    return util.dauer(Math.abs(sek)).replace(/(\d+) min/g, '$1 Minuten').replace(/(\d+) h/g, '$1 Stunden')
+      .replace(/(\d+) s\b/g, '$1 Sekunden').replace(/(^| )1 Minuten/, '$11 Minute').replace(/(^| )1 Stunden/, '$11 Stunde')
+      .replace(/(^| )1 Sekunden/, '$11 Sekunde');
+  }
+
+  function rueckDunkel(tresor) {
+    var k = tresor.konfig || {};
+    return T.tresorLogik.passivModus(k) ? !k.passiv.uhr : (!!k.blind && !k.blindUhr);
+  }
+
+  function rueckNachricht(tresor, art, b) {
+    var dunkel = rueckDunkel(tresor), f = tresor.freigabe;
+    var d = { art: art, tresor: tresor.id, spielart: T.tresorLogik.passivModus(tresor.konfig) ? 'passiv' : 'pruefungen',
+      zeit_ts: Math.round(((b && b.zeit) || Date.now()) / 1000) };
+    var satz = '';
+    if (b) {
+      d.richtung = b.abgewiesen ? 'abgewiesen' : b.sekunden < 0 ? 'frueher' : b.sekunden > 0 ? 'spaeter' : 'gleich';
+      if (b.grund) d.grund = b.grund;
+      if (!dunkel) d.sekunden = b.sekunden;
+      var kat = RUECK_TEXT[art] || (b.sekunden < 0 ? 'nachlass' : b.sekunden > 0 ? 'aufschlag' : 'stille');
+      satz = b.abgewiesen ? T.stimme.sag('abgewiesen') : T.stimme.sag(kat) + ' ' + (!b.sekunden ? 'Keine Änderung.'
+        : dunkel ? (b.sekunden < 0 ? 'Früher.' : 'Später.')
+        : sprechDauer(b.sekunden) + (b.sekunden < 0 ? ' früher.' : ' später.'));
+      if (b.grund) satz = b.grund + '. ' + satz;
+    } else {
+      satz = art === 'freigabe' ? 'Der Tresor ist offen.' : T.stimme.sag(RUECK_TEXT[art] || 'stille');
+    }
+    d.text = satz;
+    if (f && !f.z && !dunkel && art !== 'freigabe') {
+      var ziel = T.tresorLogik.freigabeZiel(tresor).zeit;
+      d.freigabe_ts = Math.round(ziel / 1000);
+      d.rest_sekunden = Math.max(0, Math.round((ziel - Date.now()) / 1000));
+    }
+    return d;
+  }
+
+  /* Was noch hinaus muss, in Reihenfolge. */
+  function rueckOffen(tresor) {
+    var r = tresor.rueck || {};
+    var liste = [];
+    if (!r.verriegelt) liste.push({ merke: function (x) { x.verriegelt = true; }, daten: rueckNachricht(tresor, 'verriegelt') });
+    T.tresorLogik.neueBewegungen(tresor, r.nr).forEach(function (b) {
+      liste.push({ merke: function (x) { x.nr = Math.max(x.nr || 0, b.nr); }, daten: rueckNachricht(tresor, b.art, b) });
+    });
+    var p = tresor.freigabe && tresor.freigabe.passiv;
+    if (p && p.angebot && p.angebot.nr !== r.angebot) {
+      var nr = p.angebot.nr;
+      liste.push({ merke: function (x) { x.angebot = nr; }, daten: rueckNachricht(tresor, 'angebot') });
+    }
+    if (T.tresorLogik.alleOffen(tresor) && !r.freigabe) {
+      liste.push({ merke: function (x) { x.freigabe = true; }, daten: rueckNachricht(tresor, 'freigabe') });
+    }
+    return liste;
+  }
+
+  function rueckkanalPflegen() {
+    var tresor = zustand.tresor;
+    if (!tresor || zustand.rueckLaeuft || Date.now() < (zustand.rueckRuheBis || 0)) return;
+    var e = T.homeassistant.einstellungen();
+    if (!T.homeassistant.rueckAdresse(e)) return;
+    var liste = rueckOffen(tresor);
+    if (!liste.length) return;
+    zustand.rueckLaeuft = true;
+    (function weiter(i) {
+      if (i >= liste.length || zustand.tresor !== tresor) {
+        zustand.rueckLaeuft = false;
+        T.speicher.sichern(tresor);
+        if (zustand.tresor === tresor && rueckOffen(tresor).length) rueckkanalPflegen();
+        return;
+      }
+      T.homeassistant.rueckSenden(e, liste[i].daten).then(function () {
+        tresor.rueck = tresor.rueck || {};
+        liste[i].merke(tresor.rueck);
+        weiter(i + 1);
+      }).catch(function () {
+        zustand.rueckLaeuft = false;
+        zustand.rueckRuheBis = Date.now() + 60000;
+        T.speicher.sichern(tresor);
+      });
+    })(0);
   }
 
   function aufraeumen() {
@@ -342,7 +435,10 @@
 
   function konfigurationLesen() {
     var k = konfigurationRoh();
-    if (externGewaehlt()) k.extern = true;
+    if (externGewaehlt()) {
+      k.extern = true;
+      if ($('#extern-richtung').value === 'dazu') k.externNurDazu = true;
+    }
     return k;
   }
 
@@ -639,6 +735,7 @@
   /* Was zuletzt von aussen kam, in einer Zeile. Unter Willkuer bzw. ohne Uhr
    * nur die Richtung. */
   function externText(e, nurRichtung) {
+    if (e.abgewiesen) return (e.grund ? e.grund + ': ' : '') + 'Nachlass abgewiesen.';
     var was = !e.sekunden ? (e.amBoden ? 'früher geht es nicht' : e.amDeckel ? 'später geht es nicht' : 'keine Änderung')
       : nurRichtung ? (e.sekunden < 0 ? 'früher' : 'später')
       : (e.sekunden < 0 ? '−' + util.dauer(-e.sekunden) : '+' + util.dauer(e.sekunden));
@@ -657,7 +754,8 @@
     }
     function lesen() {
       return { url: $('#ha-url').value.trim(), token: $('#ha-token').value.trim(),
-        zahl: $('#ha-zahl').value.trim() || T.homeassistant.STANDARD.zahl, grund: $('#ha-grund').value.trim() };
+        zahl: $('#ha-zahl').value.trim() || T.homeassistant.STANDARD.zahl, grund: $('#ha-grund').value.trim(),
+        rueck: $('#ha-rueck').value.trim() };
     }
     var kasten = el('div', { class: 'ha-felder' }, [
       feld('ha-url', 'Adresse von Home Assistant', e.url, { type: 'url', placeholder: 'https://…' }),
@@ -675,6 +773,21 @@
         if (zustand.tresor) haVerbindungPflegen(true);
       } }),
       meldung,
+      feld('ha-rueck', 'Rückkanal: Webhook-ID (optional)', e.rueck, { type: 'text', placeholder: 'tresor-…' }),
+      el('button', { class: 'knopf', type: 'button', id: 'ha-rueck-pruefen', text: 'Rückkanal testen', onclick: function () {
+        var neu = lesen();
+        T.homeassistant.einstellungenSichern(neu);
+        meldung.className = 'aufgabe-meldung';
+        meldung.textContent = 'Sende ...';
+        T.homeassistant.rueckSenden(neu, { art: 'test', text: 'Probe. Ich höre dich.', zeit_ts: Math.round(Date.now() / 1000) })
+          .then(function () {
+            meldung.className = 'aufgabe-meldung ist-gut';
+            meldung.textContent = 'Abgeschickt. Ob Home Assistant es angenommen hat, zeigt dort die Automation (Ablaufverfolgung).';
+          }).catch(function (fehler) {
+            meldung.className = 'aufgabe-meldung ist-fehler';
+            meldung.textContent = 'Nicht angekommen: ' + fehler.message;
+          });
+      } }),
       el('p', { class: 'flaut klein', text:
         'Das Token liegt nur in diesem Browser - nicht im Tresor, nicht in einer Sicherung. Es öffnet dein ganzes Home Assistant; '
         + 'leg dafür am besten einen eigenen Benutzer an. Die Seite läuft über https, Home Assistant muss deshalb auch über https '
@@ -1054,7 +1167,20 @@
         'Eine Zahl in Home Assistant: Steigt sie, kommt Zeit dazu, fällt sie, geht Zeit weg - je Einheit eine Minute. '
         + 'Was sie bewegt, regelst du dort: ein Webhook, eine NFC-Marke, ein Beacon, eine Tür. Öffnen kann Home Assistant '
         + 'den Tresor nicht. Was passiert, während die App zu ist, wird beim nächsten Öffnen nachgeholt.' }),
-      el('div', { id: 'extern-felder', class: 'versteckt' }, [haFelder()])
+      el('div', { id: 'extern-felder', class: 'feld versteckt' }, [
+        el('label', { for: 'extern-richtung', text: 'Was Home Assistant darf' }),
+        el('select', { id: 'extern-richtung' }, [
+          el('option', { value: 'beide' }, 'Zeit geben und nehmen'),
+          el('option', { value: 'dazu' }, 'nur Zeit dazugeben – Einbahnstraße')
+        ]),
+        el('p', { class: 'flaut klein', text:
+          'Einbahnstraße: Ein Nachlass von außen wird vermerkt und abgewiesen. Dein eigenes Home Assistant kann dich dann '
+          + 'nicht herunterschummeln - wohl aber Zeit draufpacken. Gilt ab dem Verriegeln.' })
+      ]),
+      el('p', { class: 'flaut klein', text:
+        'Rückkanal: Trägst du unten eine Webhook-ID ein, meldet die App jede Bewegung der Uhr an Home Assistant - '
+        + 'für Licht, Lautsprecher oder später die Kiste. Das geht auch ohne den Schalter oben.' }),
+      haFelder()
     ]);
 
     wurzel.appendChild(geheimTeil);
@@ -1619,6 +1745,7 @@
     aufraeumen();
     var tresor = zustand.tresor;
     haVerbindungPflegen();
+    rueckkanalPflegen();
 
     // Läuft eine tresorweite Höchstzeit ab - auch bei geschlossener App?
     if (T.tresorLogik.fristAbgelaufen(tresor)) {
@@ -1775,8 +1902,12 @@
       el('button', { class: 'knopf gefahr', type: 'button', text: 'Tresor löschen', onclick: tresorLoeschen })
     ]));
 
-    if ((tresor.konfig || {}).extern && tresor.freigabe && !fertig) {
-      lade.appendChild(el('section', { class: 'karte' }, [el('h2', { text: 'Home Assistant' }), haFelder()]));
+    if (tresor.freigabe && !fertig) {
+      lade.appendChild(el('section', { class: 'karte' }, [el('h2', { text: 'Home Assistant' }),
+        el('p', { class: 'flaut klein', text: (tresor.konfig || {}).extern
+          ? 'Dieser Tresor hört auf Home Assistant' + ((tresor.konfig || {}).externNurDazu ? ' - nur in eine Richtung: Zeit dazu.' : '.')
+          : 'Dieser Tresor hört nicht auf Home Assistant. Der Rückkanal geht trotzdem.' }),
+        haFelder()]));
     }
     lade.appendChild(sicherungsKarte());
     var verlauf = verlaufKarte();
@@ -2583,7 +2714,7 @@
           /* Fuer beide dieselbe Bewegung: Gewonnen zieht die Freigabe um den
            * Betrag nach vorn (Strafe weg / Gutschrift doppelt), verloren um
            * den halben nach hinten (Strafe x1,5 / Gutschrift halbiert). */
-          var zug = T.tresorLogik.zeitkontoVerschieben(tresor, gewonnen ? -betrag : Math.round(betrag * 0.5));
+          var zug = T.tresorLogik.zeitkontoVerschieben(tresor, gewonnen ? -betrag : Math.round(betrag * 0.5), 'wurf');
           b.nachWurf = zug ? zug.gewuenscht : 0;
           sichern(true);
           takt();

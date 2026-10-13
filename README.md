@@ -1052,6 +1052,81 @@ Tracker* als Sensor herein und lösen genauso über einen Zustands-Trigger aus.
 Die Zahl **nicht zurücksetzen**, solange ein Tresor läuft: Ein Sprung von 250
 auf 0 wären 250 Minuten früher.
 
+### Einbahnstraße
+
+Das Home Assistant gehört meist dem Spieler selbst – er könnte die Zahl
+senken und sich bis an die Untergrenze herunterschummeln. Unter „Was Home
+Assistant darf" lässt sich deshalb beim Verriegeln **„nur Zeit dazugeben"**
+wählen. Ein Nachlass von außen wird dann vermerkt („Nachlass abgewiesen.") und
+nicht gebucht; der Nullpunkt rückt trotzdem nach, damit ein späterer Anstieg
+nur zählt, was wirklich dazukam.
+
+Was sie nicht verhindert: Steigt die Zahl, während die App zu ist, und dreht
+man sie vor dem nächsten Öffnen wieder zurück, sieht die App nur den Saldo.
+Dagegen helfen erst Codes, die eine andere Person signiert.
+
+### Rückkanal: die App meldet an Home Assistant
+
+Mit einer **Webhook-ID** (Feld „Rückkanal" in der Karte *Von außen* oder unter
+*Verwaltung*) meldet die App jede Bewegung der Uhr an Home Assistant – das
+geht auch ohne den Schalter „darf die Zeit bewegen". Damit kann das Haus
+antworten: Licht, Lautsprecher, später die Kiste.
+
+Gesendet wird per `POST` als Formular an `/api/webhook/<ID>`; in der
+Automation stehen die Felder unter `trigger.data`. Ein Webhook braucht kein
+Token – ein Ereignis über die WebSocket-API zu feuern dürfte nur ein
+Administrator. Die ID ist das Geheimnis, also lang und zufällig wählen.
+
+| Feld | Inhalt |
+|---|---|
+| `art` | `verriegelt`, `gutschrift`, `strafe`, `wurf`, `kapitulation`, `stein`, `nachlass`, `aufschlag`, `muenze`, `extern`, `angebot`, `freigabe`, `test` |
+| `richtung` | `frueher`, `spaeter`, `gleich`, `abgewiesen` (bei Bewegungen) |
+| `sekunden` | gebuchte Sekunden, negativ = früher |
+| `grund` | bei `extern` der Grund aus Home Assistant |
+| `text` | ein fertiger Satz des Game Masters zum Vorlesen, Dauern ausgeschrieben („10 Minuten später.") |
+| `freigabe_ts`, `rest_sekunden` | Freigabe als Unix-Zeit und Restzeit |
+| `spielart`, `tresor`, `zeit_ts` | `passiv`/`pruefungen`, Tresor-ID, Zeitpunkt |
+
+Ohne sichtbare Uhr – Willkür ohne Uhr, Passiv ohne Uhr – fehlen `sekunden`,
+`freigabe_ts` und `rest_sekunden`, und `text` nennt nur die Richtung. Sonst
+stünde in Home Assistant, was die App verschweigt.
+
+Gemeldet wird, solange die App offen ist. Was in einer Funkstille geschah,
+geht beim nächsten Mal hinterher – bis zu 20 Bewegungen, in Reihenfolge, nichts
+doppelt. Schlägt das Senden fehl, versucht es die App nach einer Minute
+wieder. Ob Home Assistant angenommen hat, kann der Browser nicht sehen
+(die Antwort eines fremden Servers bleibt ihm verschlossen); „Rückkanal
+testen" schickt eine Probe, die in der Ablaufverfolgung der Automation
+auftaucht.
+
+```yaml
+alias: Tresor meldet sich
+triggers:
+  - trigger: webhook
+    webhook_id: tresor-rueck-ein-anderes-langes-wort
+    allowed_methods: [POST]
+    local_only: false
+actions:
+  # der Game Master spricht durchs Haus
+  - action: tts.speak
+    target: { entity_id: tts.google_translate_de_com }
+    data:
+      media_player_entity_id: media_player.wohnzimmer
+      message: "{{ trigger.data.text }}"
+  # später: Flur blinkt rot
+  - if: "{{ trigger.data.richtung == 'spaeter' }}"
+    then:
+      - action: light.turn_on
+        target: { entity_id: light.flur }
+        data: { color_name: red, flash: short }
+  # Freigabezeit fürs Dashboard (nur mit sichtbarer Uhr)
+  - if: "{{ trigger.data.freigabe_ts is defined }}"
+    then:
+      - action: input_datetime.set_datetime
+        target: { entity_id: input_datetime.tresor_freigabe }
+        data: { timestamp: "{{ trigger.data.freigabe_ts | int }}" }
+```
+
 ## Willkür
 
 Der harte Modus. Er hieß zuerst „Blindgang" – ein schlechtes Wort, weil es auf

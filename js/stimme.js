@@ -142,6 +142,12 @@
       'Kontrolle. Nichts zu melden.',
       'Ich sehe dich. Weiter.'
     ],
+    /* Einbahnstrasse: Nachlass von aussen abgewiesen */
+    abgewiesen: [
+      'Nachlass von außen? Nicht bei mir.',
+      'Abgelehnt. Hier wird nichts geschenkt.',
+      'Jemand wollte dir Zeit erlassen. Ich nicht.'
+    ],
     angebot: [
       'Ein Wurf ist frei. Deine Entscheidung.',
       'Du darfst würfeln. Oder es lassen.',

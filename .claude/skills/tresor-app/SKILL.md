@@ -137,6 +137,15 @@ Nullpunkt (`freigabe.extern.basis`), danach Unterschied × 60 s aufs Konto;
 gepflegt von `haVerbindungPflegen()` (überlebt Neuzeichnen). Test:
 `test-homeassistant.js` fälscht HA mit `page.routeWebSocket`. Ein echtes HA
 gibt es in der Sandbox nicht – das offen sagen.
+**Einbahnstraße** (`konfig.externNurDazu`): negative Unterschiede werden als
+`abgewiesen` vermerkt, nicht gebucht; Nullpunkt zieht nach.
+**Rückkanal**: Jede Kontobewegung landet über `bewegungMerken` in
+`freigabe.bewegungen` (nr, art, sekunden, grund; letzte 20). Neue Stellen, die
+die Uhr bewegen, müssen über `zeitkontoVerschieben(t, sek, art)` gehen oder
+`bewegungMerken` rufen – sonst sieht Home Assistant sie nicht. `app.js`
+(`rueckkanalPflegen`, aus `sichern()`) schickt per Webhook (`fetch` no-cors,
+Formular) und merkt in `tresor.rueck`, was draußen ist. Ohne sichtbare Uhr
+keine Beträge/Zeiten nach draußen (`rueckDunkel`). Test: `test-rueckkanal.js`.
 
 **Willkür** = `konfig.blind` (in der Oberfläche "Willkür", früher "Meine
 Regeln"). Die App zieht Regeln selbst, zeigt **keine Beträge, keine
