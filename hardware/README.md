@@ -132,7 +132,8 @@ konstruiert.
 | 3 | **Servohorn + Schräubchen** | liegen dem Servo bei – siehe unten. Das einarmige Horn braucht sein **äußerstes Loch bei 16 mm** von der Mitte; es wird auf 1,6 mm aufgebohrt | – |
 | 4 | **Elko 1000 µF, ≥ 6,3 V** | radial, Raster 5 mm | 0,50 € |
 | 5 | **M2-Schraube, 10–14 mm** | Zylinderkopf; sie schneidet ihr Gewinde im Horn selbst, eine Mutter braucht es nicht | 0,20 € |
-| 6 | **Dupont-Litzen** | **männlich/weiblich**, 10–20 cm. Am besten ein gemischter Satz – für den Kondensator sind zwei weiblich/weibliche praktisch | 2 € |
+| 6 | **Dupont-Litzen** | **männlich/weiblich**, 10–20 cm, dazu ein paar **männlich/männlich** – ein gemischter Satz | 2 € |
+| 6a | **Mini-Steckbrett** | das kleinste genügt: Der 5V-Pin ist nur einmal da, Servo und Elko brauchen ihn beide (siehe *Verdrahtung*). Alternativ WAGO 221-413 oder Lötkolben | 1 € |
 | 7 | **USB-Kabel + 5-V-Netzteil, ≥ 1 A** | **Datenkabel**, kein reines Ladekabel. Steckertyp prüfen: ältere DevKits haben Micro-USB | 5 € |
 | 8 | **Kabelbinder, klein** | hält die Platine auf ihrem Mittelsteg, durch den Tunnel darin | – |
 | 9 | **PETG-Filament, ca. 180 g** | **kein PLA** – das kriecht unter Dauerlast | 4 € |
@@ -172,9 +173,12 @@ Die Servolitze endet in einer **dreipoligen Buchse**, das DevKit hat
 auf dem Board auch nicht nebeneinander. Deshalb **männlich/weiblich**:
 weibliches Ende auf den Boardpin, männliches Ende in die Servobuchse.
 
-Für den Kondensator sind zusätzlich zwei **weiblich/weibliche** Litzen
-nützlich: eine von 5V, eine von GND, und in deren freie Enden steckst du die
-beiden Beinchen. Hält ohne Löten. Ein gemischter Satz deckt beides ab.
+Der Kondensator muss an **5V und GND** – und den 5V-Pin hat das Board nur
+einmal, dort sitzt schon das Servo. Zwei Buchsen passen nicht auf einen Stift.
+Für den Test treffen sich deshalb 5V, GND, Servo und Elko auf einem
+**Mini-Steckbrett** (plus zwei Litzen **männlich/männlich**, siehe
+[Schaltplan](servotest/schaltplan.png)); für die Box siehe *Verdrahtung*.
+Ein gemischter Litzensatz deckt alles ab.
 
 
 ### Welches Board genau
@@ -252,8 +256,8 @@ sagt, liegt es fast immer daran und nicht am Board.
 **Servo mit Zubehör.** Ohne das Wellenschräubchen rutscht das Horn irgendwann
 durch. Siehe den Abschnitt oben.
 
-**Nicht kaufen:** Servotester, Breadboard, Netzteilplatine. Drei Litzen gehen
-direkt vom Board ans Servo.
+**Nicht kaufen:** Servotester, großes Breadboard, Netzteilplatine. Ein
+Mini-Steckbrett für 5V und GND reicht.
 
 ### Nur fürs Prüfstück
 
@@ -545,6 +549,19 @@ GPIO 18, 19, 21, 22 und 23 sind unverdächtig.
 
 Der Kondensator kommt **zwischen 5V und GND, möglichst nah am Servo** –
 langes Bein an 5V.
+
+Der 5V-Pin ist nur einmal da, Servo und Elko brauchen ihn beide. GND gibt es
+dreimal, das ist kein Problem. Für 5V in der Box, von einfach bis dauerhaft:
+
+- **Mini-Steckbrett** wie beim [Servotest](servotest/schaltplan.png) – passt
+  ins Fach unter dem Zwischenboden, festkleben.
+- **WAGO-Klemme** (221-413, drei Leiter): je eine Litze vom Board-5V, vom
+  Servo und vom Elko-Plusbein hinein. Dupont-Enden vorher abknipsen und
+  abisolieren.
+- **Löten:** Elko-Beine direkt an rot und braun der Servolitze, Lötstellen mit
+  Schrumpfschlauch. Dann reichen wieder drei Litzen zum Board.
+
+Danach die Teile mit Heißkleber festsetzen, damit nichts am Riegel schleift.
 
 Das USB-Kabel versorgt die Platine, das Servo hängt an deren 5V-Pin. Achte auf
 ein Netzteil mit mindestens 1 A; ein SG90 zieht beim Anlaufen kurz ein halbes,

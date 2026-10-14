@@ -60,6 +60,7 @@ das in Antworten nicht verschweigen.
 | `kollision.scad` | Kollisionsfälle (Rumpf, Laschen, Arm, Stift gegen Körper/Riegel, beide Endlagen) und `fall="ansicht"` für `servo-sitz.png`; `pruefung.py` rendert sie (`--schnell` überspringt) |
 | `ansicht.scad` | Gesamtbilder `gesamt-offen.png` / `gesamt-zu.png` (Servo, Platine, Kabel, Elko, Deckel) |
 | `TESTANLEITUNG.md` | Servotest am Prüfstück Schritt für Schritt (IDE, Verdrahtung, Ablauf, Fehlerbilder, was zurückmelden) |
+| `servotest/schaltplan.py` | erzeugt `schaltplan.svg` (Verdrahtung Servotest); PNG daraus per Playwright-Screenshot 1000×850 |
 | `servotest/servotest.ino` | Arduino-Testprogramm (ESP32Servo): Mitte/zu/auf (±23°), Zahl+Enter = Winkel (begrenzt ±31°), nachstellen, 20er-Dauertest, fährt langsam und macht `detach`. **Nicht die Firmware**, hier nie kompiliert (keine Toolchain erreichbar) |
 | `*.stl`, `*.png` | fertige Druckdateien und Vorschaubilder |
 | `README.md` | Nutzer-Doku: Funktionsweise, Einkaufszettel, Drucken, Zusammenbau, Verdrahtung, Toleranzen |
@@ -120,7 +121,7 @@ Querschlitz), Wellenschräubchen, erst von Hand, dann `z`/`a`/`d`, Deckel.
 - Servo: braun → GND, rot → 5V/VIN, orange → **GPIO 18** (keine
   Strapping-Pins 0/2/12/15). **Elko 1000 µF** zwischen 5V und GND nah am Servo,
   sonst Brownout-Neustart beim Anfahren. Netzteil ≥ 1 A.
-- Dupont **männlich/weiblich** (Servobuchse ↔ Boardpin); zwei w/w für den Elko.
+- Dupont **männlich/weiblich** (Servobuchse ↔ Boardpin). **Nur ein 5V-Pin** → Servo-Plus und Elko treffen sich auf einem Mini-Steckbrett (2× m/m dazu), in der Box alternativ WAGO 221-413 oder gelötet. Plan: `servotest/schaltplan.py` → `.svg`/`.png` (PNG per Playwright aus dem SVG).
 - Platine auf 21-mm-Mittelsteg (Stifte nach unten, Dupont darunter), 28 mm
   Steckerraum, 13-mm-Kabelloch in der **rechten** Wand auf Buchsenhöhe,
   Kabelbinder durch den Stegtunnel. Darüber der Zwischenboden.

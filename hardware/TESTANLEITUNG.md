@@ -17,8 +17,9 @@ durch?). Die zweite Stufe nur, wenn die erste sauber war.
 | M2-Schraube, 10–14 mm | der Stift; dazu ein **1,6-mm-Bohrer** |
 | ESP32 DevKit | mit angelöteten Stiftleisten |
 | USB-**Daten**kabel | kein reines Ladekabel – häufigster Grund, wenn der Rechner nichts erkennt |
-| 3 Dupont-Litzen männlich/weiblich | Servobuchse ↔ Boardpins |
-| Elko 1000 µF, ≥ 6,3 V | plus 2 Litzen weiblich/weiblich, um ihn anzustecken |
+| Dupont-Litzen | 3× männlich/weiblich, 2× männlich/männlich |
+| Mini-Steckbrett | das kleinste genügt – dort treffen sich 5V, GND, Servo und Elko |
+| Elko 1000 µF, ≥ 6,3 V | steckt im Steckbrett |
 | Rechner | mit der Arduino-IDE 2 |
 
 ## Stufe 1 – ohne Strom
@@ -72,16 +73,32 @@ meist ohne.
 
 ### Verdrahten – ohne USB
 
-| Servo-Litze | an DevKit-Pin |
-|---|---|
-| braun (Minus) | **GND** |
-| rot (Plus) | **5V** (auf manchen Boards „VIN") |
-| orange (Signal) | **GPIO 18** (Beschriftung „D18" oder „18") |
+![Schaltplan Servotest](servotest/schaltplan.png)
 
-Den **Elko** zwischen 5V und GND stecken, über zwei weiblich/weibliche Litzen:
-**langes Bein an 5V**, das Bein an der Seite mit dem hellen Streifen (Minus)
-an GND. Verpolt kann er platzen. Einmal alles nachzählen, dann erst USB
-anstecken.
+Das Board hat **nur einen 5V-Pin**. An ihm müssen Servo und Elko hängen – zwei
+Buchsen passen aber nicht auf einen Stift. Deshalb treffen sich 5V und GND auf
+einem **Mini-Steckbrett**:
+
+| Von | Nach | Litze |
+|---|---|---|
+| Servo orange (Signal) | **GPIO 18** (Beschriftung „G18", „D18" oder „18") | männlich/weiblich |
+| Servo rot (Plus) | Steckbrett, Reihe **+5V** | männlich/männlich |
+| Servo braun (Minus) | Steckbrett, Reihe **GND** | männlich/männlich |
+| Board **5V** (auf manchen Boards „VIN") | Steckbrett, Reihe +5V | männlich/weiblich |
+| Board **GND** (einer der drei) | Steckbrett, Reihe GND | männlich/weiblich |
+
+Weibliche Enden kommen auf die Boardstifte – die zeigen nach unten, also von
+unten aufstecken. Männliche Enden in die Servobuchse und ins Steckbrett.
+
+Den **Elko** ins Steckbrett: **langes Bein in die +5V-Reihe**, das Bein an der
+Seite mit dem hellen Streifen (Minus) in die GND-Reihe. Verpolt kann er
+platzen. Einmal alles nachzählen, dann erst USB anstecken.
+
+**Ohne Steckbrett** geht der erste Test auch ohne Elko: orange an G18, rot an
+5V, braun an GND, je eine Litze männlich/weiblich. Für ein paar Fahrten ohne
+Last reicht das meist. Startet das Board beim Anfahren neu, fehlt der Elko.
+
+Der Plan wird aus `servotest/schaltplan.py` erzeugt (`python3 schaltplan.py`).
 
 ### Aufspielen
 
@@ -111,7 +128,7 @@ Zeile"** einstellen. Es erscheint die Hilfe des Testprogramms.
 - **Ruckeln oder Stocken unterwegs:** Reibung im Tunnel oder der Stift
   streift am Schlitz – Stelle merken.
 - **Die Hilfe erscheint plötzlich neu:** Das Board ist neu gestartet, weil die
-  Spannung beim Anfahren einbricht. Elko-Sitz prüfen, anderes USB-Netzteil
+  Spannung beim Anfahren einbricht. Elko-Sitz prüfen (oder ihn nachrüsten), anderes USB-Netzteil
   oder einen anderen USB-Port (mindestens 1 A).
 - **Servo wird warm:** Es arbeitet gegen eine Klemmung. Sofort `m`, USB ab.
 
