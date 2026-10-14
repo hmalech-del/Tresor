@@ -115,7 +115,7 @@ Querschlitz), Wellenschräubchen, erst von Hand, dann `z`/`a`/`d`, Deckel.
   sonst Brownout-Neustart beim Anfahren. Netzteil ≥ 1 A.
 - Dupont **männlich/weiblich** (Servobuchse ↔ Boardpin); zwei w/w für den Elko.
 - Platine auf 21-mm-Mittelsteg (Stifte nach unten, Dupont darunter), 28 mm
-  Steckerraum, 12-mm-Kabelloch in der **rechten** Wand auf Buchsenhöhe,
+  Steckerraum, 13-mm-Kabelloch in der **rechten** Wand auf Buchsenhöhe,
   Kabelbinder durch den Stegtunnel. Darüber der Zwischenboden.
 
 ## Geplante Firmware (noch nicht geschrieben)

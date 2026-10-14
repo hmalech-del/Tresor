@@ -468,7 +468,7 @@ und das Servo nie gegen einen Riegel fährt, der noch nicht richtig liegt.
    Tunnel festziehen und/oder einen Tropfen Heißkleber zwischen Steg und
    Platinenunterseite setzen. Die Dupont-Buchsen auf den Stiften mit je einem
    Tropfen sichern – sie rutschen sonst beim Hantieren ab.
-2. **USB-Kabel** von außen durch das 12-mm-Loch in der rechten Wand schieben –
+2. **USB-Kabel** von außen durch das 13-mm-Loch in der rechten Wand schieben –
    der Stecker passt hindurch – und einstecken. Es liegt in einer Flucht mit
    der Buchse; 28 mm Platz zwischen Platine und Wand reichen für den Stecker.
 3. **Servo einsetzen – noch nicht kleben.** Das Kabel kommt an der
