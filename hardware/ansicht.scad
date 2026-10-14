@@ -43,7 +43,7 @@ module usb() {
 module servokabel() {
   z = boden + servo_unten + 4;
   punkte = [[servo_achse_x - servo_achse_versatz, wand + servo_achse_y, z],
-            [-block_b / 2 - 4, wand + servo_achse_y, z],
+            [block_x0 - 4, wand + servo_achse_y, z],
             [-innen_x / 2 + 4, wand + servo_achse_y + 4, z],
             [-innen_x / 2 + 4, wand + platine_mitte_y, z],
             [platine_x0 - 6, wand + platine_mitte_y, z]];

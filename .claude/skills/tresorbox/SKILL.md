@@ -37,6 +37,10 @@ unter der Platine + Abknicken), Kabelbinder-Tunnel knapp unter der Oberkante,
 Kabelloch mit hochgewandert (Mitte 24,2). Neues Teil **`zwischenboden`**
 (Platte auf vier Beinen über der Elektronik, Unterkante 28,7 über dem
 USB-Stecker, kopfüber gedruckt), Nutzraum jetzt 119 × 41 × 14 mm ≈ 69 cm³.
+**Block gekürzt (14. 10., Nutzer: „zu wuchtig“):** `block_x0 -48`,
+`block_x1 = bohrung_ende + 5,5` (= +15), 63 statt 96 mm breit; rechts vorn ein
+tiefes Fach 45 × 38 × 45; der Zwischenboden hat dort statt Bein eine Schürze
+bis zum Boden. Block-Enden immer über `block_x0`/`block_x1`, nie `±block_b/2`.
 `pruefung.py` prüft Steg/Buchsen, Kabelloch unter dem Deckelrand, Beine frei
 von Platine/Stecker/Servokabel. Bilder: `ansicht.scad` mit `ansicht` = offen |
 zu | boden, Kamera `0,0,0,50,0,20,0 --viewall --autocenter`. Die große Kiste ist noch nicht gedruckt,

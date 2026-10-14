@@ -183,7 +183,7 @@ aussen_z = innen_z + boden;
 
 /* ---------- Lage des Verschlusses ---------- */
 block_y   = 38;              // Tiefe des Blocks: Zunge plus Servorumpf
-block_b   = 96;
+block_x0  = -48;             // linkes Blockende - links davon 12 mm fuer das Servokabel an der Wand
 riegel_z  = 28;              // Hoehe der Riegelachse ueber dem Boden
 zunge_y   = 23;              // Mitte der Zunge, von der Innenwand aus
 
@@ -235,6 +235,14 @@ bohrung_z0 = riegel_z - riegel_h / 2 - spiel_riegel / 2;   // Unterkante
 riegel_spitze_zu = zunge_d / 2 + 3.5;
 /* Bis hierher (x) ist die Bohrung links der Zunge oben offen, siehe koerper(). */
 einlege_ende = -(zunge_d / 2 + 5);
+
+/* Der Block endet rechts 5,5 mm hinter der Riegelbohrung (die 3 mm hinter
+ * der verriegelten Spitze aufhoert). Bis zum 14. 10. lief er mit 96 mm fast
+ * ueber die ganze Breite - rechts der Zunge 33 mm massiver Kunststoff ohne
+ * Aufgabe. Jetzt ist dort ein tiefes Fach. */
+bohrung_ende = riegel_spitze_zu + 3;
+block_x1  = bohrung_ende + 5.5;
+block_b   = block_x1 - block_x0;
 schlitz_von_links = riegel_l - (riegel_spitze_zu - servo_achse_x) + stift_radius * sin(schwenk);
 
 /* ---------- Gemeinsame Aussparungen ----------
@@ -287,7 +295,7 @@ module koerper() {
       }
       // 2 mm unter dem Deckelrand bleiben, sonst setzt der Deckel auf dem
       // Block auf statt auf den Waenden
-      translate([-block_b/2, wand, boden]) cube([block_b, block_y, innen_z - rand_h - 2]);
+      translate([block_x0, wand, boden]) cube([block_b, block_y, innen_z - rand_h - 2]);
 
       // Mittelsteg fuer die Platine
       translate([platine_x0 + (platine_x - steg_l) / 2, wand + platine_mitte_y - steg_b / 2, boden])
@@ -296,7 +304,7 @@ module koerper() {
 
     zungenschlitz_cut();
     // Links offen, damit sich der Riegel von innen einschieben laesst
-    bohrung_cut(-block_b/2 - 1, block_b/2 + riegel_spitze_zu + 4);
+    bohrung_cut(block_x0 - 1, bohrung_ende - (block_x0 - 1));
     /* Einlegerinne: Links der Zunge ist die Bohrung nach oben offen.
      *
      * Vorher war sie ein geschlossener Tunnel, der am linken Blockende
@@ -309,8 +317,8 @@ module koerper() {
      * sich an der Decke abstuetzen. Weiter links traegt sie nichts. Der
      * Riegel wird von oben in die Rinne gelegt und nach rechts in den kurzen
      * Tunnel geschoben; die untere Haelfte der Bohrung fuehrt ihn weiter. */
-    translate([-block_b/2 - 1, wand + zunge_y - bohrung_b/2, boden + riegel_z])
-      cube([block_b/2 + 1 + einlege_ende, bohrung_b, innen_z]);
+    translate([block_x0 - 1, wand + zunge_y - bohrung_b/2, boden + riegel_z])
+      cube([einlege_ende - (block_x0 - 1), bohrung_b, innen_z]);
 
     // Servotasche, nach oben offen: Rumpf von oben einsetzen
     translate([servo_achse_x - servo_achse_versatz - spiel_servo,
@@ -336,10 +344,10 @@ module koerper() {
      * kann. Es tritt am linken Blockende aus, wo zwischen Block und Wand Platz
      * ist. 9 mm breit und 6 mm hoch: Der dreipolige Stecker (etwa 8 x 2,6 mm)
      * passt flach hindurch. */
-    translate([-block_b/2 - 1, wand + servo_achse_y - kabel_kanal_b/2, boden + servo_unten])
-      cube([block_b/2 + 1 + servo_achse_x - servo_achse_versatz - spiel_servo + 0.1, kabel_kanal_b, kabel_kanal_h]);
-    translate([-block_b/2 - 1, wand + servo_achse_y - kabel_kanal_b/2, boden + servo_unten])
-      cube([kabel_schlitz_bis - (-block_b/2 - 1), kabel_kanal_b, innen_z]);
+    translate([block_x0 - 1, wand + servo_achse_y - kabel_kanal_b/2, boden + servo_unten])
+      cube([servo_achse_x - servo_achse_versatz - spiel_servo + 0.1 - (block_x0 - 1), kabel_kanal_b, kabel_kanal_h]);
+    translate([block_x0 - 1, wand + servo_achse_y - kabel_kanal_b/2, boden + servo_unten])
+      cube([kabel_schlitz_bis - (block_x0 - 1), kabel_kanal_b, innen_z]);
     /* Der Kabelansatz steht an der Stirnseite ab. Setzt man das Servo von
      * oben ein, muss er an der Laschenstufe vorbei - bisher war die dort
      * geschlossen, und das Servo liess sich nur hineinhebeln (14. 10.). Jetzt
@@ -389,7 +397,12 @@ zb_x      = innen_x - 2 * zb_luft;
 zb_y      = innen_y - block_y - 2 * zb_luft;
 zb_bein   = 6;
 /* Beinpositionen (Mitte, innen_x-Koordinaten, y ab Blockrueckseite) */
-zb_beine  = [[-45, 4], [-45, zb_y - 4], [53, 4], [53, zb_y - 4]];
+zb_beine  = [[-45, 4], [-45, zb_y - 4], [53, zb_y - 4]];
+/* Vorn rechts steht statt eines Beins eine Schuerze bis zum Boden: Dort liegt
+ * jetzt das tiefe Fach neben dem Block, und ohne sie rutschte, was man
+ * hineinlegt, unter den Zwischenboden in die Elektronik. */
+zb_schuerze_x0 = block_x1 + zb_luft;                    // innen_x-Koordinate, ab hier bis zur rechten Wand
+zb_schuerze_d  = 2;
 
 module zwischenboden() {
   difference() {
@@ -397,6 +410,7 @@ module zwischenboden() {
       cube([zb_x, zb_y, zb_d]);
       for (b = zb_beine)
         translate([b[0] + zb_x/2 - zb_bein/2, b[1] - zb_bein/2, 0]) cube([zb_bein, zb_bein, zb_unten + zb_d]);
+      translate([zb_schuerze_x0 + zb_x/2, 0, 0]) cube([zb_x/2 - zb_schuerze_x0, zb_schuerze_d, zb_unten + zb_d]);
     }
     // Griffloch, zum Herausheben
     translate([zb_x/2 - 12, zb_y/2 - 5, -1]) cube([24, 10, zb_d + 2]);
@@ -480,7 +494,7 @@ module mechanik() {
   spitze = (zustand == "zu") ? riegel_spitze_zu : riegel_spitze_zu - riegel_weg;
   intersection() {
     koerper();
-    translate([-block_b/2 - 1, 0, boden + 8]) cube([block_b + 2, block_y + wand, innen_z]);
+    translate([block_x0 - 1, 0, boden + 8]) cube([block_b + 2, block_y + wand, innen_z]);
   }
   color("SteelBlue")
     translate([-zunge_d/2, wand + zunge_y - zunge_b/2, boden + innen_z - zunge_l])
@@ -544,7 +558,7 @@ module pruefstueck() {
       /* Nur bis zur Blockoberkante: Darueber stuende sonst ein duenner
        * Streifen der Kistenwand hoch. */
       translate([links, vorn, boden])
-        cube([(riegel_spitze_zu + 10) - links, wand + zunge_y + scheibe/2 - vorn, innen_z - rand_h - 2]);
+        cube([block_x1 - links, wand + zunge_y + scheibe/2 - vorn, innen_z - rand_h - 2]);
     }
   /* Riegel und Zunge liegen daneben, mit Abstand zur Hinterkante des
    * Ausschnitts - nicht zu scheibe gerechnet. Der Ausschnitt beginnt bei

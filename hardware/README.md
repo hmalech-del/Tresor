@@ -41,7 +41,9 @@ daneben der Elko.*
 ![Tresorbox mit Zwischenboden](gesamt-boden.png)
 
 *Mit eingesetztem Zwischenboden: Die Elektronik liegt darunter, oben ist
-eine ebene Fläche für den Inhalt. Durch das Griffloch hebt man ihn heraus.*
+eine ebene Fläche für den Inhalt. Durch das Griffloch hebt man ihn heraus.
+Rechts vorn neben dem Block das tiefe Fach; die Schürze des Zwischenbodens
+schließt es nach hinten ab.*
 
 ![Tresorbox zu](gesamt-zu.png)
 
@@ -624,18 +626,24 @@ den Deckel nicht freigegeben hätte; und eine Zunge, unter deren Riegelloch nur
 
 ## Was hineinpasst
 
-Der Verschlussblock steht vorn über die volle Breite und frisst die ersten
-38 mm der Tiefe – **48 % bei der kleinen Kiste**. Übrig bleibt:
+Der Verschlussblock sitzt vorn links: 63 mm breit, 38 mm tief. Er reicht
+nur so weit, wie die Mechanik ihn braucht – rechts endet er 5,5 mm hinter
+der Riegelbohrung. Bis zum 14. 10. lief er mit 96 mm fast über die ganze
+Breite, und rechts der Zunge waren 33 mm massiver Kunststoff ohne Aufgabe.
 
 | | |
 |---|---|
 | Innenraum brutto | 120 × 80 × 45 mm = 432 cm³ |
-| davon Block | 120 × 38 × 39 mm |
-| darunter Elektronik | bis 28,7 mm hoch, unter dem Zwischenboden |
-| **nutzbar** | **119 × 41 mm, 14 mm hoch (am Rand 10) ≈ 69 cm³** |
+| davon Block | 63 × 38 × 39 mm, vorn links |
+| darunter Elektronik | hinten, bis 28,7 mm hoch, unter dem Zwischenboden |
+| **Zwischenboden** | **119 × 41 mm, 14 mm hoch (am Rand 10) ≈ 69 cm³** |
+| **Fach rechts vorn** | **45 × 38 mm, volle 45 mm hoch ≈ 75 cm³** |
+| zusammen | ≈ 143 cm³ |
 
-Eine Grundfläche wie eine Postkarte, 14 mm hoch: ein paar Schlüssel, ein
-gefalteter Zettel, ein USB-Stick, eine flache Uhr. **Kein Handy** – das ist
+Auf dem Zwischenboden: ein paar Schlüssel, ein gefalteter Zettel, ein
+USB-Stick, eine flache Uhr. Im tiefen Fach daneben: ein Autoschlüssel, ein
+Schlüsselbund, etwas Dickeres. Eine Schürze am Zwischenboden trennt das Fach
+von der Elektronik – nichts rutscht darunter. **Kein Handy** – das ist
 160 × 75 mm und scheitert an der Tiefe. Mehr Höhe gibt `innen_z`: Jeder
 Millimeter mehr kommt eins zu eins oben drauf (55 statt 45 → 24 mm frei).
 

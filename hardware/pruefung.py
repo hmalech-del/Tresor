@@ -24,7 +24,8 @@ riegel_b, riegel_h, riegel_l = p("riegel_b"), p("riegel_h"), p("riegel_l")
 servo_x, servo_y, servo_z = p("servo_x"), p("servo_y"), p("servo_z")
 servo_achse_versatz = p("servo_achse_versatz")
 stift_radius, stift_d, schwenk = p("stift_radius"), p("stift_d"), p("schwenk")
-block_y, block_b, riegel_z, zunge_y = p("block_y"), p("block_b"), p("riegel_z"), p("zunge_y")
+block_y, riegel_z, zunge_y = p("block_y"), p("riegel_z"), p("zunge_y")
+block_x0 = p("block_x0")
 servo_achse_x, rand_h = p("servo_achse_x"), p("rand_h")
 s_riegel, s_decke = p("spiel_riegel"), p("spiel_decke")
 s_zunge, s_rand, s_servo = p("spiel_zunge"), p("spiel_rand"), p("spiel_servo")
@@ -38,8 +39,10 @@ spitze_zu = zunge_d / 2 + 3.5
 spitze_auf = spitze_zu - weg
 schlitz_von_links = riegel_l - (spitze_zu - servo_achse_x) + stift_radius * math.sin(math.radians(schwenk))
 block_h = innen_z - rand_h - 2
-bohrung_links = -block_b / 2 - 1
-bohrung_rechts = bohrung_links + block_b / 2 + spitze_zu + 4
+bohrung_links = block_x0 - 1
+bohrung_rechts = spitze_zu + 3
+block_x1 = bohrung_rechts + 5.5
+block_b = block_x1 - block_x0
 
 fehler = []
 def pruefe(name, bedingung, text):
@@ -69,8 +72,8 @@ pruefe("Riegel schmaler als die Zunge",
 # Tunnel an der Zunge ihn halten. Frueher gab es keine Rinne, und der Riegel
 # haette durch 12 mm Platz zwischen Block und Wand gemusst.
 einlege_ende = -(zunge_d / 2 + 5)
-rinne = einlege_ende - (-block_b / 2)
-platz_links = (innen_x - block_b) / 2
+rinne = einlege_ende - block_x0
+platz_links = block_x0 + innen_x / 2
 pruefe("Riegel laesst sich einsetzen", rinne >= riegel_l * 0.8 or platz_links >= riegel_l + 5,
        f"Rinne {rinne:.0f} mm von oben offen, Riegel {riegel_l:.0f} mm (links nur {platz_links:.0f} mm Platz)")
 decke = -(zunge_d / 2 + s_zunge) - einlege_ende
@@ -155,8 +158,15 @@ pruefe("Block bleibt unter dem Deckelrand", block_h + 1.5 < innen_z - rand_h + 0
 pruefe("Zunge reicht unter den Riegel",
        zunge_l > (innen_z - riegel_z) + riegel_h / 2 + 3,
        f"Zunge {zunge_l} lang, Riegel sitzt {innen_z - riegel_z:.0f} mm unter dem Deckel")
-pruefe("Block passt in die Kiste", block_b < innen_x - 8 and block_y < innen_y - 8,
-       f"Block {block_b}x{block_y} in {innen_x}x{innen_y}")
+pruefe("Block passt in die Kiste", block_x0 > -innen_x / 2 + 8 and block_x1 < innen_x / 2 and block_y < innen_y - 8,
+       f"Block {block_b:.1f}x{block_y} in {innen_x}x{innen_y}, von {block_x0:+.0f} bis {block_x1:+.1f}")
+# Rechts hinter der Riegelbohrung muss Wand stehen: Zieht jemand am Deckel,
+# stuetzt sich der Riegel rechts der Zunge an der Bohrungsdecke ab.
+pruefe("Wand hinter dem Bohrungsende", block_x1 - bohrung_rechts >= 5,
+       f"{block_x1 - bohrung_rechts:.1f} mm; Riegelspitze verriegelt bei {spitze_zu:+.1f}, Bohrung bis {bohrung_rechts:+.1f}")
+fach_b = innen_x / 2 - block_x1
+pruefe("Neben dem Block ein tiefes Fach", fach_b >= 30,
+       f"{fach_b:.0f} x {block_y} mm, volle Hoehe {innen_z} mm")
 
 print("\nToleranzen")
 pruefe("Zunge fuehrt, Rand ist lose",
@@ -285,6 +295,12 @@ for bx, by in beine:
 hoehe = innen_z - zb_oben
 pruefe("Ueber dem Zwischenboden bleibt Platz", hoehe >= 12,
        f"{zb_x:.0f} x {zb_y:.0f} mm, {hoehe:.0f} mm hoch (am Rand {hoehe - rand_h:.0f}) = {zb_x*zb_y*hoehe/1000:.0f} cm3 - ein paar Schluessel")
+schuerze_y1 = block_y + zb_luft + p("zb_schuerze_d")
+pruefe("Schuerze des Zwischenbodens vor der Platine", schuerze_y1 < y0 - 1,
+       f"Schuerze bis y {schuerze_y1:.1f}, Platine ab {y0:.0f}")
+fach = (innen_x / 2 - block_x1 - zb_luft) * block_y * innen_z / 1000
+print(f"  [info] Fach neben dem Block        {innen_x/2 - block_x1:.0f} x {block_y:.0f} x {innen_z:.0f} mm = {fach:.0f} cm3")
+print(f"  [info] Nutzraum zusammen           {zb_x*zb_y*hoehe/1000 + fach:.0f} cm3")
 print(f"  [info] Der Block frisst             {block_y:.0f} von {innen_y:.0f} mm Tiefe "
       f"({block_y/innen_y*100:.0f} %)")
 handy_x, handy_y = 160, 75
