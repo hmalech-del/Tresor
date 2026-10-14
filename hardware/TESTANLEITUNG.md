@@ -75,6 +75,12 @@ meist ohne.
 
 ![Schaltplan Servotest](servotest/schaltplan.png)
 
+**Board so halten wie im Plan:** Beschriftung lesbar, USB-Buchse rechts, der
+Blechdeckel des ESP32-Moduls links. Liegt die Buchse links, steht die Schrift
+auf dem Kopf – und jeder Pin sitzt an der gegenüberliegenden Stelle. Zur
+Kontrolle: 5V ist der Pin direkt an der Buchse in der Reihe mit 3V3, CMD und
+EN; G18 liegt in der Reihe mit CLK, zwischen G5 und G19.
+
 Das Board hat **nur einen 5V-Pin**. An ihm müssen Servo und Elko hängen – zwei
 Buchsen passen aber nicht auf einen Stift. Deshalb treffen sich 5V und GND auf
 einem **Mini-Steckbrett**:
