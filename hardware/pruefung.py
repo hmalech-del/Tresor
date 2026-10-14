@@ -233,12 +233,52 @@ pruefe("Kabelloch liegt auf Buchsenhoehe",
        abs(buchse_z - (sockel_h + 1.6 + 1.6)) < 1.0,
        f"Lochmitte {buchse_z:.1f} ueber Boden, Buchsenmitte {sockel_h + 3.2:.1f}")
 
+# Die Stifte zeigen nach unten (gemessen 14. 10.: Board mit Stiften 12 mm
+# hoch). Das Board liegt auf einem Mittelsteg, die Dupont-Buchsen haengen
+# unter den Stiften.
+rand_h = p("rand_h")
+pruefe("Kabelloch bleibt unter dem Deckelrand",
+       buchse_z + kabel_d / 2 < innen_z - rand_h - 1,
+       f"Lochoberkante {buchse_z + kabel_d/2:.1f}, Deckelrand ab {innen_z - rand_h:.0f} ueber Boden")
+pruefe("Dupont-Buchsen passen unter die Platine",
+       sockel_h >= 2.5 + 14 + 3,
+       f"{sockel_h:.0f} mm; Leiste 2,5 + Buchse 14 = 16,5 mm, dazu Platz zum Abknicken")
+steg_b = pw("steg_b")
+for wahl in masse_y:
+    luecke = masse_y[wahl] / 2 - 1.3 - 1.25 - steg_b[wahl] / 2
+    pruefe(f"Steg {wahl} laesst die Buchsen frei", luecke >= 3,
+           f"{luecke:.1f} mm zwischen Steg und Dupont-Buchse je Seite")
+
 print("\nNutzraum")
-platine_x, platine_y = masse_x["supermini"], masse_y["supermini"]
-brutto = innen_x * frei_y * innen_z / 1000
-netto = (innen_x * frei_y * innen_z - (platine_x + stecker_raum) * platine_y * 15) / 1000
-pruefe("Hinter dem Block bleibt Platz", frei_y > 25,
-       f"{innen_x:.0f} x {frei_y:.0f} x {innen_z:.0f} mm = {netto:.0f} cm3 nach Abzug der Elektronikecke")
+zb_unten = buchse_z + 3.5 + 1
+zb_oben = zb_unten + p("zb_d")
+zb_luft = p("zb_luft")
+zb_x, zb_y = innen_x - 2 * zb_luft, innen_y - block_y - 2 * zb_luft
+px, py = masse_x["devkit"], masse_y["devkit"]
+x0 = innen_x / 2 - stecker_raum - px                       # Platinenmitte-Koordinaten wie im Modell
+y0 = innen_y - py - 5
+pruefe("Zwischenboden liegt ueber Platine und USB-Stecker",
+       zb_unten > sockel_h + 1.6 + 3.2 and zb_unten > buchse_z + 3.5,
+       f"Unterkante {zb_unten:.1f}, Platine mit Modul bis {sockel_h + 4.8:.1f}, Stecker bis {buchse_z + 3.5:.1f}")
+pruefe("Zwischenboden bleibt unter dem Deckelrand", zb_oben < innen_z - rand_h,
+       f"Oberkante {zb_oben:.1f}, Rand ab {innen_z - rand_h:.0f}")
+beine = [tuple(float(v) for v in m) for m in re.findall(r"\[(-?[\d.]+), (-?[\d.]+)\]",
+         re.search(r"^zb_beine\s*=\s*(\[.*\]);", quelle, re.M).group(1).replace("zb_y - ", "-"))]
+def bein_frei(bx, by):
+    # by: ab Blockrueckseite (+ Luft); negativ = von hinten gezaehlt
+    yb = block_y + zb_luft + (by if by > 0 else zb_y + by)
+    x_lo, x_hi, y_lo, y_hi = bx - 3, bx + 3, yb - 3, yb + 3
+    platine = not (x_hi < x0 - 1 or x_lo > x0 + px + 1 or y_hi < y0 - 1 or y_lo > y0 + py + 1)
+    stecker = not (x_hi < x0 + px or y_hi < y0 + py / 2 - 6.5 or y_lo > y0 + py / 2 + 6.5)   # 11 mm breit, 1 mm Luft
+    kabel_wand = x_lo < -innen_x / 2 + 8                     # Servokabel an der linken Wand
+    kabel_quer = (y_lo < y0 + py / 2 + 3 and y_hi > y0 + py / 2 - 3 and x_hi < x0)
+    return not (platine or stecker or kabel_wand or kabel_quer), yb
+for bx, by in beine:
+    ok, yb = bein_frei(bx, by)
+    pruefe(f"Bein bei x {bx:+.0f}, y {yb:.0f} frei", ok, "nicht auf Platine, Stecker oder Servokabel")
+hoehe = innen_z - zb_oben
+pruefe("Ueber dem Zwischenboden bleibt Platz", hoehe >= 12,
+       f"{zb_x:.0f} x {zb_y:.0f} mm, {hoehe:.0f} mm hoch (am Rand {hoehe - rand_h:.0f}) = {zb_x*zb_y*hoehe/1000:.0f} cm3 - ein paar Schluessel")
 print(f"  [info] Der Block frisst             {block_y:.0f} von {innen_y:.0f} mm Tiefe "
       f"({block_y/innen_y*100:.0f} %)")
 handy_x, handy_y = 160, 75
@@ -250,7 +290,7 @@ print("\nDateien")
 # koennen sie aber veralten: Genau das war der Fall, als koerper.stl noch
 # ohne Platinensockel im Repo lag. Also nachsehen, ob sie juenger sind.
 scad = pathlib.Path(__file__).with_name("tresorbox.scad")
-for name in ("koerper", "deckel", "riegel", "pruefstueck", "pruefriegel"):
+for name in ("koerper", "deckel", "riegel", "pruefstueck", "pruefriegel", "zwischenboden"):
     datei = scad.with_name(name + ".stl")
     if not datei.exists():
         pruefe(f"{name}.stl vorhanden", False, "fehlt - openscad laufen lassen")
@@ -281,7 +321,7 @@ def teile_in(datei):
 
 for name, soll, was in (("pruefstueck", 3, "Blockausschnitt, Riegel, Zunge"),
                         ("riegel", 1, "ein Stueck"), ("deckel", 1, "ein Stueck"),
-                        ("pruefriegel", 1, "ein Stueck")):
+                        ("pruefriegel", 1, "ein Stueck"), ("zwischenboden", 1, "Platte mit vier Beinen")):
     datei = scad.with_name(name + ".stl")
     if datei.exists():
         n = teile_in(datei)

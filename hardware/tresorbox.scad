@@ -141,10 +141,20 @@ platine = "devkit";          // devkit | supermini
 platine_x = (platine == "devkit") ? 55 : 24;   // Laenge, zeigt zur Buchse hin
 platine_y = (platine == "devkit") ? 28 : 19;   // Breite
 
-/* Der Sockel hebt die Platine an, damit die USB-Buchse auf Hoehe des
- * Kabellochs liegt. Laege das Board flach auf dem Boden, saesse die Buchse
- * bei etwa 3 mm - das Loch muesste dann in den Boden schneiden. */
-sockel_h  = 4;
+/* Die Platine liegt auf einem schmalen Mittelsteg zwischen ihren beiden
+ * Stiftreihen, nicht auf einem vollen Sockel: Die Stifte zeigen nach UNTEN
+ * (gemessen am Board des Nutzers, 14. 10.: mit Stiften 12 mm hoch; die
+ * Stiftleiste traegt 2,5 mm Kunststoff, darunter rund 6 mm Stift). Der erste
+ * Entwurf hatte einen 4 mm hohen Vollsockel - darauf haette das Board auf
+ * seinen Stiftspitzen gewackelt, und keine Dupont-Buchse haette Platz
+ * gehabt.
+ *
+ * Hoehe: Eine Dupont-Buchse ist 14 mm lang und sitzt auf dem Stift bis an
+ * die Leiste, reicht also 2,5 + 14 = 16,5 mm unter die Platine. Dazu ein paar
+ * Millimeter, damit das Kabel unten seitlich abknicken kann: 21 mm. */
+sockel_h  = 21;
+steg_b    = (platine == "devkit") ? 14 : 7;     // zwischen den Stiftreihen (2,54 mm Raster, 22 bzw. 15 mm frei)
+steg_l    = (platine == "devkit") ? 33 : 14;    // mittig; die USB-Buchse hat unten Laschen, die bleiben frei
 
 /* Platz zwischen dem Buchsenende der Platine und der Innenwand. Ein
  * USB-Stecker ist mit Umspritzung etwa 25 mm lang und laesst sich in einem
@@ -271,9 +281,9 @@ module koerper() {
       // Block auf statt auf den Waenden
       translate([-block_b/2, wand, boden]) cube([block_b, block_y, innen_z - rand_h - 2]);
 
-      // Sockel fuer die Platine
-      translate([platine_x0, wand + platine_y0, boden])
-        cube([platine_x, platine_y, sockel_h]);
+      // Mittelsteg fuer die Platine
+      translate([platine_x0 + (platine_x - steg_l) / 2, wand + platine_mitte_y - steg_b / 2, boden])
+        cube([steg_l, steg_b, sockel_h]);
     }
 
     zungenschlitz_cut();
@@ -354,9 +364,38 @@ module koerper() {
     translate([innen_x/2 - 1, wand + platine_mitte_y, boden + buchse_z])
       rotate([0, 90, 0]) cylinder(d = kabel_d, h = wand + 3);
 
-    // Kabelbinder-Tunnel quer durch den Sockel
-    translate([platine_x0 + platine_x/2 - 1.5, wand + platine_y0 - 1, boden + 1])
-      cube([3, platine_y + 2, 2]);
+    // Kabelbinder-Tunnel quer durch den Steg, knapp unter der Platine
+    translate([platine_x0 + platine_x/2 - 1.5, wand + platine_mitte_y - steg_b/2 - 1, boden + sockel_h - 5])
+      cube([3, steg_b + 2, 2.5]);
+  }
+}
+
+/* ---------- Zwischenboden ----------
+ * Eine Platte auf vier Beinen ueber der Elektronik, hinter dem Block. Sie
+ * gibt den Inhalt eine ebene Flaeche - ein paar Schluessel liegen nicht auf
+ * Platine und Kabeln - und verdeckt, was darunter liegt. Herausnehmbar: Mit
+ * dem Griffloch hebt man sie an. Die Beine stehen da, wo nichts laeuft: nicht
+ * auf der Platine, nicht im USB-Stecker, nicht im Servokabel (das laeuft an
+ * der linken Wand und auf Platinenhoehe quer herueber). Gedruckt wird sie
+ * kopfueber, Platte auf dem Bett - ohne Stuetzen. */
+zb_luft   = 0.6;                                        // ringsum zu Wand und Block
+zb_d      = 2;                                          // Plattendicke
+zb_unten  = buchse_z + 3.5 + 1;                         // ueber dem eingesteckten USB-Stecker (7 mm hoch) mit 1 mm Luft
+zb_x      = innen_x - 2 * zb_luft;
+zb_y      = innen_y - block_y - 2 * zb_luft;
+zb_bein   = 6;
+/* Beinpositionen (Mitte, innen_x-Koordinaten, y ab Blockrueckseite) */
+zb_beine  = [[-45, 4], [-45, zb_y - 4], [53, 4], [53, zb_y - 4]];
+
+module zwischenboden() {
+  difference() {
+    union() {
+      cube([zb_x, zb_y, zb_d]);
+      for (b = zb_beine)
+        translate([b[0] + zb_x/2 - zb_bein/2, b[1] - zb_bein/2, 0]) cube([zb_bein, zb_bein, zb_unten + zb_d]);
+    }
+    // Griffloch, zum Herausheben
+    translate([zb_x/2 - 12, zb_y/2 - 5, -1]) cube([24, 10, zb_d + 2]);
   }
 }
 
@@ -546,4 +585,5 @@ else if (teil == "mechanik") mechanik();
 else if (teil == "koerper") koerper();
 else if (teil == "deckel") deckel();
 else if (teil == "riegel") riegel();
+else if (teil == "zwischenboden") zwischenboden();          // kopfueber: Platte unten, Beine nach oben
 else if (teil == "alles") baugruppe();   // "nichts": fuer kollision.scad

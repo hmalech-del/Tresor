@@ -34,8 +34,14 @@ Querschlitz.*
 
 *Deckel abgehoben (er schwebt hinter der Kiste, die Zunge hängt darunter).
 Vorn im Block das Servo mit Hornarm und der Riegel (gelb), dahinter die
-Platine mit USB-Stecker zur rechten Wand, links das Servokabel an der Wand
-entlang, daneben der Elko.*
+Platine mit USB-Stecker zur rechten Wand – sie liegt auf einem Mittelsteg,
+die Stifte zeigen nach unten –, links das Servokabel an der Wand entlang,
+daneben der Elko.*
+
+![Tresorbox mit Zwischenboden](gesamt-boden.png)
+
+*Mit eingesetztem Zwischenboden: Die Elektronik liegt darunter, oben ist
+eine ebene Fläche für den Inhalt. Durch das Griffloch hebt man ihn heraus.*
 
 ![Tresorbox zu](gesamt-zu.png)
 
@@ -126,7 +132,7 @@ konstruiert.
 | 5 | **M2-Schraube, 10–14 mm** | Zylinderkopf; sie schneidet ihr Gewinde im Horn selbst, eine Mutter braucht es nicht | 0,20 € |
 | 6 | **Dupont-Litzen** | **männlich/weiblich**, 10–20 cm. Am besten ein gemischter Satz – für den Kondensator sind zwei weiblich/weibliche praktisch | 2 € |
 | 7 | **USB-Kabel + 5-V-Netzteil, ≥ 1 A** | **Datenkabel**, kein reines Ladekabel. Steckertyp prüfen: ältere DevKits haben Micro-USB | 5 € |
-| 8 | **Kabelbinder, klein** | Zugentlastung, kommt durch den Tunnel im Platinensockel | – |
+| 8 | **Kabelbinder, klein** | hält die Platine auf ihrem Mittelsteg, durch den Tunnel darin | – |
 | 9 | **PETG-Filament, ca. 180 g** | **kein PLA** – das kriecht unter Dauerlast | 4 € |
 
 **Zusammen rund 21 €**, ohne Filament 17 € – inklusive des zweiten Boards.
@@ -278,12 +284,25 @@ Das 1-mm-Loch auf 1,6 mm aufbohren, die Schraube von oben eindrehen – sie
 schneidet ihr Gewinde selbst, ein Tropfen Sekundenkleber sichert sie. Die
 Länge ist unkritisch, unter der Bohrung liegt ein Freigang.
 
-**Das Kabelloch sitzt rechts, nicht hinten.** Die Platine steht auf einem
-4 mm hohen Sockel, damit die USB-Buchse auf Lochhöhe liegt, und 28 mm vor der
-Wand, damit der Stecker überhaupt Platz hat – überspritzt ist er etwa 25 mm
-lang und lässt sich in einem 3 mm dünnen Wandloch nicht um die Ecke kippen.
-Kabel durchfädeln, bei offenem Deckel einstecken, Schlaufe zurückziehen, mit
-dem Kabelbinder durch den Tunnel im Sockel sichern.
+**Die Platine liegt auf einem Mittelsteg, 21 mm hoch.** Die Stiftleisten der
+DevKits sind nach unten gelötet (gemessen am Board: mit Stiften 12 mm hoch).
+Ein voller Sockel ginge deshalb nicht – das Board stünde auf seinen
+Stiftspitzen. Der Steg ist 14 mm breit und liegt zwischen den beiden
+Stiftreihen; die Stifte hängen frei daneben, und unter ihnen ist Platz für
+aufgesteckte Dupont-Buchsen (2,5 mm Leiste + 14 mm Buchse = 16,5 mm, dazu
+Luft zum Abknicken des Kabels). Ein Kabelbinder durch den Tunnel knapp unter
+der Oberkante hält das Board fest.
+
+**Das Kabelloch sitzt rechts, nicht hinten**, auf Höhe der USB-Buchse
+(Lochmitte 24 mm über dem Boden) und 28 mm vor der Wand, damit der Stecker
+überhaupt Platz hat – überspritzt ist er etwa 25 mm lang und lässt sich in
+einem 3 mm dünnen Wandloch nicht um die Ecke kippen.
+
+**Zwischenboden.** Damit der Inhalt nicht auf Platine und Kabeln liegt, gibt
+es eine Platte auf vier Beinen (`zwischenboden.stl`), die hinter dem Block
+über der Elektronik steht – Unterkante 28,7 mm, über dem eingesteckten
+USB-Stecker. Die Beine stehen dort, wo nichts läuft: nicht auf der Platine,
+nicht im Stecker, nicht im Servokabel. Herausnehmbar, mit Griffloch.
 
 **Netzteil mit mindestens 1 A.** Ein SG90 zieht beim Anlaufen kurz ein halbes
 Ampere. Am Handy-Ladegerät mit 500 mA startet der ESP32 neu.
@@ -291,7 +310,7 @@ Ampere. Am Handy-Ladegerät mit 500 mA startet der ESP32 neu.
 ## Drucken
 
 **Die fertigen STL liegen neben dieser Datei** – `koerper.stl`, `deckel.stl`,
-`riegel.stl`, `pruefstueck.stl` und `pruefriegel.stl`. Du brauchst OpenSCAD nur, wenn du am Modell
+`riegel.stl`, `zwischenboden.stl`, `pruefstueck.stl` und `pruefriegel.stl`. Du brauchst OpenSCAD nur, wenn du am Modell
 etwas änderst. `pruefung.py` schlägt Alarm, sobald eine STL älter ist als
 `tresorbox.scad` – genau das war sie einmal, als der Platinensockel dazukam.
 
@@ -301,6 +320,7 @@ Selbst erzeugen:
 openscad -D 'teil="koerper"' -o koerper.stl tresorbox.scad
 openscad -D 'teil="deckel"'  -o deckel.stl  tresorbox.scad
 openscad -D 'teil="riegel"'  -o riegel.stl  tresorbox.scad
+openscad -D 'teil="zwischenboden"' -o zwischenboden.stl tresorbox.scad
 ```
 
 | | Lage | Stützen |
@@ -308,6 +328,7 @@ openscad -D 'teil="riegel"'  -o riegel.stl  tresorbox.scad
 | Körper | wie konstruiert, Öffnung nach oben | nein |
 | Deckel | flach, Zunge nach oben | nein |
 | Riegel | liegend | nein |
+| Zwischenboden | kopfüber: Platte aufs Bett, Beine nach oben (so liegt die STL schon) | nein |
 
 0,2 mm Schichten, **4 Perimeter**, 30 % Füllung. Bauraum: 126 × 86 × 48 mm.
 Keines der Teile braucht Stützmaterial – Servotasche und Zungenschlitz sind
@@ -437,8 +458,12 @@ und das Servo nie gegen einen Riegel fährt, der noch nicht richtig liegt.
 
 **Elektronik zuerst – solange die Kiste leer ist:**
 
-1. **Platine auf den Sockel** (hinten rechts), mit dem Kabelbinder durch den
-   Tunnel im Sockel festziehen. Die USB-Buchse zeigt zur rechten Wand.
+1. **Dupont-Litzen zuerst auf die Platine:** Die Stifte zeigen nach unten,
+   von oben kommt man an sie nicht mehr heran. Die weiblichen Enden auf 5V,
+   GND und GPIO 18 stecken (siehe *Verdrahtung*), dann die **Platine auf den
+   Mittelsteg** (hinten rechts) legen – die Litzen hängen neben dem Steg nach
+   unten – und mit dem Kabelbinder durch den Tunnel im Steg festziehen. Die
+   USB-Buchse zeigt zur rechten Wand.
 2. **USB-Kabel** von außen durch das 12-mm-Loch in der rechten Wand schieben –
    der Stecker passt hindurch – und einstecken. Es liegt in einer Flucht mit
    der Buchse; 28 mm Platz zwischen Platine und Wand reichen für den Stecker.
@@ -477,7 +502,9 @@ und das Servo nie gegen einen Riegel fährt, der noch nicht richtig liegt.
    jede Richtung: Der Riegel muss ohne Haken laufen. Dann `z` und `a`, mit
    `+`/`-` nachstellen, zum Schluss `d` (20 Zyklen). Ein Servo, das gegen einen
    klemmenden Riegel drückt, zieht 700 mA, wird heiß und stirbt.
-10. **Deckel aufsetzen**, `z` – die Zunge darf sich nicht mehr herausziehen
+10. **Zwischenboden einsetzen** – Platte oben, Beine nach unten, hinter den
+    Block. Er steht lose; zum Nachsehen mit dem Finger am Griffloch anheben.
+11. **Deckel aufsetzen**, `z` – die Zunge darf sich nicht mehr herausziehen
     lassen. `a` – sie geht frei.
 
 ## Verdrahtung
@@ -580,22 +607,29 @@ Der Verschlussblock steht vorn über die volle Breite und frisst die ersten
 |---|---|
 | Innenraum brutto | 120 × 80 × 45 mm = 432 cm³ |
 | davon Block | 120 × 38 × 39 mm |
-| **nutzbar** | **120 × 42 × 45 mm ≈ 220 cm³** |
+| darunter Elektronik | bis 28,7 mm hoch, unter dem Zwischenboden |
+| **nutzbar** | **119 × 41 mm, 14 mm hoch (am Rand 10) ≈ 69 cm³** |
 
-Abzüglich der Platinenecke hinten rechts (24 × 19 mm Grundfläche). Das ist
-eine Grundfläche wie eine Postkarte, 45 mm hoch: Schlüssel, ein gefalteter
-Zettel, ein USB-Stick, eine Uhr, eine Tafel Schokolade. **Kein Handy** – das
-ist 160 × 75 mm und scheitert an der Tiefe.
+Eine Grundfläche wie eine Postkarte, 14 mm hoch: ein paar Schlüssel, ein
+gefalteter Zettel, ein USB-Stick, eine flache Uhr. **Kein Handy** – das ist
+160 × 75 mm und scheitert an der Tiefe. Mehr Höhe gibt `innen_z`: Jeder
+Millimeter mehr kommt eins zu eins oben drauf (55 statt 45 → 24 mm frei).
+
+Früher stand hier „120 × 42 × 45 mm ≈ 220 cm³". Das stimmte nur, solange die
+Platine flach auf 4 mm lag – mit nach unten gelöteten Stiften und
+Dupont-Buchsen darunter braucht die Elektronik knapp 29 mm Höhe.
 
 `pruefung.py` rechnet den Nutzraum bei jeder Parameteränderung mit aus.
 
 ### Für ein Handy
 
 ```
-innen_x = 175;  innen_y = 125;  innen_z = 25;
+innen_x = 175;  innen_y = 125;  innen_z = 45;
 ```
 
-Damit bleiben 175 × 87 mm frei. In der ersten Fassung stand hier
+Damit bleiben 175 × 87 mm frei, 14 mm hoch über dem Zwischenboden – ein
+Handy ist 8–9 mm dick. (Hier stand einmal `innen_z = 25`; seit die Platine
+auf dem 21-mm-Steg liegt, ginge das nicht mehr.) In der ersten Fassung stand hier
 `innen_y = 85` – nach Abzug des Blocks wären das 47 mm freie Tiefe gewesen,
 und ein Handy ist 75 breit. Es hätte nicht hineingepasst.
 

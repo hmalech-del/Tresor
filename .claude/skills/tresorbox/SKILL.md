@@ -28,7 +28,18 @@ Stirnseite stieß beim Einsetzen von oben an die geschlossene Laschenstufe
 `kabel_steig_b 6` durch die Laschenstufe auf der Kabelseite, dort keine
 Schraube mehr (nur die rechte Lasche wird geschraubt). Neuer Kollisionsfall
 `einsetzen` (Rumpf, Laschen, Kabelansatz senkrecht von oben; ohne Schlitz
-schlägt er an). Wieder nicht gedruckt. Die große Kiste ist noch nicht gedruckt,
+schlägt er an). Wieder nicht gedruckt. **Ebenfalls 14. 10.:** Board des
+Nutzers gemessen (ESP32 DevKit 38 Pin, USB-C, 55 lang inkl. Buchse, laut Foto
+~28 breit – der Nutzer schrieb 4,8, vermutlich verlesen, nachgefragt; mit
+Stiften 12 hoch, **Stifte nach unten**). Darum statt 4-mm-Vollsockel ein
+**Mittelsteg** (`steg_b` 14, `steg_l` 33, `sockel_h` 21: Dupont-Buchsen 16,5
+unter der Platine + Abknicken), Kabelbinder-Tunnel knapp unter der Oberkante,
+Kabelloch mit hochgewandert (Mitte 24,2). Neues Teil **`zwischenboden`**
+(Platte auf vier Beinen über der Elektronik, Unterkante 28,7 über dem
+USB-Stecker, kopfüber gedruckt), Nutzraum jetzt 119 × 41 × 14 mm ≈ 69 cm³.
+`pruefung.py` prüft Steg/Buchsen, Kabelloch unter dem Deckelrand, Beine frei
+von Platine/Stecker/Servokabel. Bilder: `ansicht.scad` mit `ansicht` = offen |
+zu | boden, Kamera `0,0,0,50,0,20,0 --viewall --autocenter`. Die große Kiste ist noch nicht gedruckt,
 **Firmware gibt es keine**. Alles über die Mechanik hinaus ist ungetestet –
 das in Antworten nicht verschweigen.
 
@@ -36,7 +47,7 @@ das in Antworten nicht verschweigen.
 
 | Datei | Wofür |
 |---|---|
-| `tresorbox.scad` | das parametrische Modell; alle Maße oben als Variablen, `teil = koerper \| deckel \| riegel \| pruefstueck \| pruefriegel \| alles` |
+| `tresorbox.scad` | das parametrische Modell; alle Maße oben als Variablen, `teil = koerper \| deckel \| riegel \| zwischenboden \| pruefstueck \| pruefriegel \| alles` |
 | `pruefung.py` | rechnet die kritischen Beziehungen nach (Riegel durch Zunge und wieder frei, Stift/Schlitz in beiden Endlagen, Servo in der Wand, Platinensockel, Kabelloch, Nutzraum, STL-Aktualität, Zahl getrennter Teile je STL – das Prüfstück muss drei haben; einmal war die Zunge mit dem Block verschmolzen; Abstand Spitze→Querschlitz am kurzen Riegel gleich dem langen – er war einmal am falschen Ende gekürzt) |
 | `kurbelschleife.py` → `.svg` | Zeichnung des Getriebes aus denselben Parametern |
 | `kollision.scad` | Kollisionsfälle (Rumpf, Laschen, Arm, Stift gegen Körper/Riegel, beide Endlagen) und `fall="ansicht"` für `servo-sitz.png`; `pruefung.py` rendert sie (`--schnell` überspringt) |
@@ -93,8 +104,9 @@ Querschlitz), Wellenschräubchen, erst von Hand, dann `z`/`a`/`d`, Deckel.
   Strapping-Pins 0/2/12/15). **Elko 1000 µF** zwischen 5V und GND nah am Servo,
   sonst Brownout-Neustart beim Anfahren. Netzteil ≥ 1 A.
 - Dupont **männlich/weiblich** (Servobuchse ↔ Boardpin); zwei w/w für den Elko.
-- Platine auf 4-mm-Sockel, 28 mm Steckerraum, 12-mm-Kabelloch in der
-  **rechten** Wand, Zugentlastung per Kabelbinder durch den Sockeltunnel.
+- Platine auf 21-mm-Mittelsteg (Stifte nach unten, Dupont darunter), 28 mm
+  Steckerraum, 12-mm-Kabelloch in der **rechten** Wand auf Buchsenhöhe,
+  Kabelbinder durch den Stegtunnel. Darüber der Zwischenboden.
 
 ## Geplante Firmware (noch nicht geschrieben)
 

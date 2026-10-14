@@ -1,10 +1,12 @@
 /* Ansichten der ganzen Tresorbox fuer die README - mit Servo, Horn, Stift,
  * Riegel, Platine, Elko und Kabeln. Nur in der Vorschau farbig:
  *
- *   xvfb-run -a openscad -D 'fall="offen"' --camera=... -o gesamt-offen.png ansicht.scad
+ *   xvfb-run -a openscad -D 'ansicht="offen"' --camera=0,0,0,55,0,200,0 --viewall --autocenter \
+ *     --imgsize=643,804 -o gesamt-offen.png ansicht.scad   (ebenso "zu", "boden")
  *
- * Faelle: offen (Deckel abgehoben), zu (geschlossen). Gekaufte Teile sind
- * vereinfacht: Quader und Zylinder in ihren echten Massen.
+ * Faelle: offen (Deckel abgehoben), zu (geschlossen), boden (Deckel ab,
+ * Zwischenboden eingesetzt). Gekaufte Teile sind vereinfacht: Quader und
+ * Zylinder in ihren echten Massen.
  */
 include <kollision.scad>
 fall = "keine";
@@ -16,8 +18,13 @@ module platine() {
     color("DarkGreen") cube([platine_x, platine_y, 1.6]);
     // ESP32-Modul mit Blechhaube, an der Seite gegenueber der USB-Buchse
     color("Silver") translate([1, (platine_y - 18) / 2, 1.6]) cube([25.5, 18, 3.2]);
-    // Stiftleisten an beiden Laengsseiten
-    for (y = [1, platine_y - 3.5]) color("Black") translate([3, y, -8.5]) cube([platine_x - 6, 2.5, 8.5]);
+    // Stiftleisten an beiden Laengsseiten, Stifte nach unten (gemessen: mit Stiften 12 mm hoch)
+    for (y = [1, platine_y - 3.5]) {
+      color("Gold") translate([3, y, -2.5]) cube([platine_x - 6, 2.5, 2.5]);
+      color("Silver") for (i = [0 : 18]) translate([3.5 + i * 2.54, y + 1, -8.5]) cube([0.6, 0.6, 6]);
+    }
+    // drei Dupont-Buchsen unten an 5V, GND und GPIO 18 (vereinfacht, eine Seite)
+    for (i = [2, 3, 7]) color("DimGray") translate([3 + i * 2.54, 1, -16.5]) cube([2.5, 2.5, 14]);
     // USB-Buchse an der rechten Stirnseite
     color("Gainsboro") translate([platine_x - 6, platine_y / 2 - 4, 1.6]) cube([6.5, 8, 3.2]);
   }
@@ -47,6 +54,11 @@ module servokabel() {
   color("RoyalBlue") translate([platine_x0 - 8, wand + platine_y0 + 4, boden]) cylinder(d = 8, h = 13);
 }
 
+module zwischenboden_drin() {
+  // gedruckt wird er kopfueber - hier umgedreht an seinem Platz
+  translate([-zb_x/2, wand + block_y + zb_luft, boden + zb_unten + zb_d]) mirror([0, 0, 1]) zwischenboden();
+}
+
 module innenleben() {
   color("Purple") rumpf();
   color("MediumOrchid") laschen();
@@ -62,7 +74,9 @@ module innenleben() {
 
 color("Khaki") koerper();
 innenleben();
+if (ansicht == "boden") color("Tan") zwischenboden_drin();
 /* Offen: Der Deckel schwebt hinter der Kiste, damit er den Blick nicht
  * verdeckt - die Zunge haengt dabei sichtbar nach unten. */
 color("SteelBlue")
+  if (ansicht != "boden")
   translate([0, ansicht == "offen" ? aussen_y + 20 : 0, boden + innen_z + (ansicht == "offen" ? deckel_hub : 0)]) deckel();
