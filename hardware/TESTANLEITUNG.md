@@ -12,7 +12,7 @@ durch?). Die zweite Stufe nur, wenn die erste sauber war.
 
 | | |
 |---|---|
-| Prüfstück | die aktuelle Fassung (ab 13. 10.: etwas mehr Spiel für Riegel und Zunge) |
+| Prüfstück | die aktuelle Fassung (ab 14. 10.: Servotasche 23 mm lang, Schlitz für den Kabelansatz) |
 | Servo MG90S | mit dem **einarmigen Horn** und dem kleinen Wellenschräubchen |
 | M2-Schraube, 10–14 mm | der Stift; dazu ein **1,6-mm-Bohrer** |
 | ESP32 DevKit | mit angelöteten Stiftleisten |
@@ -32,10 +32,13 @@ durch?). Die zweite Stufe nur, wenn die erste sauber war.
    Mitte) mit 1,6 mm aufbohren. M2-Schraube von oben eindrehen, bis der Kopf
    aufliegt – sie schneidet ihr Gewinde selbst. Ein Tropfen Sekundenkleber
    sichert sie.
-3. **Servo einsetzen.** Erst den Stecker in die Tasche hängen und flach durch
-   den Kanal am Taschenboden nach links hinausschieben. Dann das Servo von
-   oben einsetzen, Laschen auf ihre Stufe. Für den Test reicht es ohne
-   Schrauben – drück es mit dem Daumen auf die Stufe.
+3. **Servo einsetzen.** Stecker und Kabel von oben in den Kanal links neben
+   der Tasche legen. Dann das Servo **gerade von oben** einsetzen: Der
+   abstehende Kabelansatz gleitet durch den senkrechten Schlitz in der
+   linken Laschenstufe mit nach unten – hebeln muss man nichts mehr (am
+   ersten Prüfstück musste man; die Tasche war 1 mm zu kurz und die Stufe
+   über dem Kabel geschlossen). Für den Test reicht es ohne Schraube – drück
+   es mit dem Daumen auf die Stufe.
 4. **Riegel so legen, dass die Spitze mitten im Zungenschlitz steht.** Dann
    liegt sein Querschlitz unter der Stelle, wo der Stift in Mittelstellung
    ankommt.

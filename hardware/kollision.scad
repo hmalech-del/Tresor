@@ -6,7 +6,7 @@
  *
  *   openscad -D 'fall="rumpf_koerper"' -o x.stl kollision.scad
  *
- * Faelle: rumpf_koerper, laschen_koerper, rumpf_riegel_zu, rumpf_riegel_auf,
+ * Faelle: einsetzen, rumpf_koerper, laschen_koerper, rumpf_riegel_zu, rumpf_riegel_auf,
  *         arm_koerper_zu, arm_koerper_mitte, arm_koerper_auf,
  *         arm_riegel_zu, arm_riegel_auf, stift_koerper_zu, stift_koerper_auf
  */
@@ -46,6 +46,29 @@ module riegel_in(zu) {
 zu_w = -schwenk;
 auf_w = schwenk;
 
+/* Der Kabelansatz an der Stirnseite der Wellenseite: steht etwa 4 mm ab,
+ * 4,5 mm breit, 3 mm hoch, Mitte 4 mm ueber dem Rumpfboden. */
+module kabelansatz() {
+  translate([servo_achse_x - servo_achse_versatz - 4, wand + servo_achse_y - 2.25, boden + servo_unten + 2.5])
+    cube([4, 4.5, 3]);
+}
+/* Einsetzen: Rumpf, Laschen und Kabelansatz fahren senkrecht von oben in
+ * ihre Lage. Am 14. 10. ging das nicht - der Ansatz stiess an die
+ * geschlossene Laschenstufe, das Servo liess sich nur hineinhebeln. Etwas
+ * schmaler gerechnet als echt (0,2 mm je Seite), damit Beruehrung an den
+ * Taschenwaenden nicht als Kollision zaehlt. */
+module einsetzen() {
+  hull() {
+    for (dz = [0, 45]) translate([0, 0, dz]) {
+      translate([servo_achse_x - servo_achse_versatz + 0.2, wand + servo_achse_y - servo_y/2 + 0.2, boden + servo_unten + 0.2])
+        cube([servo_x - 0.4, servo_y - 0.4, servo_z]);
+    }
+  }
+  hull() for (dz = [0, 45]) translate([0, 0, dz]) laschen();
+  hull() for (dz = [0, 45]) translate([0, 0, dz]) kabelansatz();
+}
+
+if (fall == "einsetzen") intersection() { koerper(); einsetzen(); }
 if (fall == "rumpf_koerper") intersection() { koerper(); rumpf(); }
 if (fall == "laschen_koerper") intersection() { koerper(); laschen(); }
 if (fall == "rumpf_riegel_zu") intersection() { riegel_in(true); rumpf(); }

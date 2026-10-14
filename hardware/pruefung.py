@@ -119,9 +119,21 @@ flansch_x, flansch_z = p("servo_flansch_x"), p("servo_flansch_z")
 loch_abstand = p("servo_loch_abstand")
 kanal_h = p("kabel_kanal_h")
 schlitz_bis = servo_mitte_x - flansch_x / 2 - s_servo - 1
-loch_links = servo_mitte_x - loch_abstand / 2
-pruefe("Laschenschraube links hat Material", schlitz_bis < loch_links - 2.5,
-       f"Kabelschlitz endet bei {schlitz_bis:+.1f}, Schraubloch bei {loch_links:+.1f}")
+loch_rechts = servo_mitte_x + loch_abstand / 2
+tasche_rechts = servo_achse_x - p("servo_achse_versatz") + servo_x + p("spiel_servo_ende")
+pruefe("Laschenschraube rechts hat Material", loch_rechts - 0.8 > tasche_rechts + 1.0,
+       f"Vorbohrung {loch_rechts - 0.8:+.1f} bis {loch_rechts + 0.8:+.1f}, Tasche endet bei {tasche_rechts:+.1f}")
+# Der Kabelansatz steht an der Stirnseite ab und muss beim Einsetzen von oben
+# an der Laschenstufe vorbei. Am 14. 10. liess sich das Servo nur
+# hineinhebeln: Die Stufe war ueber dem Kabel geschlossen.
+steig_b = p("kabel_steig_b")
+polster = (servo_y + 2 * s_servo - steig_b) / 2
+pruefe("Kabelansatz gleitet senkrecht durch die Laschenstufe", steig_b >= 5.5,
+       f"Schlitz {steig_b:.1f} mm breit; Kabel mit Ansatz etwa 4-5 mm")
+pruefe("Lasche liegt auf der Kabelseite noch auf", polster >= 3,
+       f"zwei Polster je {polster:.1f} mm breit neben dem Schlitz")
+pruefe("Rumpf hat Spiel in der Tasche (23 x 12 gemessen)", s_servo >= 0.5 and servo_x >= 23,
+       f"Tasche {servo_x + s_servo + p('spiel_servo_ende'):.2f} x {servo_y + 2*s_servo:.1f} mm")
 pruefe("Kabelkanal bleibt unter der Vorbohrung",
        servo_unten + kanal_h < servo_unten + flansch_z - 6 - 2,
        f"Kanal bis {servo_unten + kanal_h:.1f}, Vorbohrung ab {servo_unten + flansch_z - 6:.1f} ueber dem Boden")
@@ -295,7 +307,7 @@ if lang.exists() and kurz.exists():
 # Kollisionen am echten Modell: Servo, Laschen, Hornarm und Stift gegen
 # Koerper und Riegel, in beiden Endlagen. Rechnet OpenSCAD (dauert etwa
 # eine Minute); mit --schnell uebersprungen.
-FAELLE = [("rumpf_koerper", "Rumpf in der Tasche"), ("laschen_koerper", "Laschen auf der Stufe"),
+FAELLE = [("einsetzen", "Servo samt Kabelansatz senkrecht einsetzbar"), ("rumpf_koerper", "Rumpf in der Tasche"), ("laschen_koerper", "Laschen auf der Stufe"),
           ("rumpf_riegel_zu", "Rumpf neben dem Riegel (zu)"), ("rumpf_riegel_auf", "Rumpf neben dem Riegel (auf)"),
           ("arm_koerper_zu", "Hornarm frei (zu)"), ("arm_koerper_mitte", "Hornarm frei (Mitte)"),
           ("arm_koerper_auf", "Hornarm frei (auf)"), ("arm_riegel_zu", "Arm ueber dem Riegel (zu)"),

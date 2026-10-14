@@ -120,7 +120,7 @@ konstruiert.
 | # | Teil | Worauf achten | ca. |
 |---|---|---|---|
 | 1 | **ESP32 DevKitC**, 30 oder 38 Pin | Platine bis 55 × 28 mm. **Stiftleisten vorverlötet** – sonst brauchst du einen Lötkolben. Gleich **zwei** nehmen | 6 € |
-| 2 | **Servo MG90S** (9 g) | gemessen: Rumpf 22 × 12 × 22 mm, über die Laschen 32 mm, Laschen 17 mm über dem Boden. Der billigere **SG90** ist fast maßgleich, hat aber Plastikgetriebe | 3 € |
+| 2 | **Servo MG90S** (9 g) | gemessen: Rumpf 23 × 12 mm Grundfläche, 22 mm hoch, über die Laschen 32 mm, Laschen 17 mm über dem Boden. Der billigere **SG90** ist fast maßgleich, hat aber Plastikgetriebe | 3 € |
 | 3 | **Servohorn + Schräubchen** | liegen dem Servo bei – siehe unten. Das einarmige Horn braucht sein **äußerstes Loch bei 16 mm** von der Mitte; es wird auf 1,6 mm aufgebohrt | – |
 | 4 | **Elko 1000 µF, ≥ 6,3 V** | radial, Raster 5 mm | 0,50 € |
 | 5 | **M2-Schraube, 10–14 mm** | Zylinderkopf; sie schneidet ihr Gewinde im Horn selbst, eine Mutter braucht es nicht | 0,20 € |
@@ -139,7 +139,7 @@ Im Tütchen eines MG90S oder SG90 liegen üblicherweise:
 |---|---|---|
 | **3 Hörner** (einarmig, zweiarmig, Kreuz) | **das einarmige** | trägt den M2-Mitnehmer |
 | **1 Schräubchen** für die Abtriebswelle | **ja** | hält das Horn auf der Verzahnung. Fehlt es, arbeitet sich das Horn los |
-| **2 Blechschrauben** für die Flansche | **ja** | schrauben das Servo in die Tasche |
+| **2 Blechschrauben** für die Flansche | **ja** | eine davon schraubt das Servo in die Tasche (rechte Lasche) |
 | 2 Gummitüllen + 2 Messinghülsen | nein | Schwingungsdämpfung für Modellflieger |
 
 **Das Schräubchen für die Welle ist das kritische Teil.** Ohne es sitzt das
@@ -375,9 +375,10 @@ das Servo in seine Tasche passt, der Stift im Querschlitz läuft und der
 Hub reicht. Genau das lässt sich an keinem Bildschirm prüfen.
 
 **Stufe 1 – ohne Strom.** Horn vorbereiten wie unter *Zusammenbau*, Schritt 1
-(äußerstes Loch auf 1,6 mm, M2-Schraube von oben eindrehen). Servo von oben in
-die Tasche, das Kabel samt Stecker unten durch den Kabelkanal nach links
-hinaus, Laschen auf ihre Stufe. Riegel in die Bohrung, Querschlitz unter die Stelle, wo der Stift
+(äußerstes Loch auf 1,6 mm, M2-Schraube von oben eindrehen). Kabel samt
+Stecker in den Kanal links legen, Servo gerade von oben in die Tasche – der
+Kabelansatz gleitet durch den Schlitz in der Laschenstufe –, Laschen auf ihre
+Stufe. Riegel in die Bohrung, Querschlitz unter die Stelle, wo der Stift
 hinkommt. Dann das Horn aufstecken (noch nicht festschrauben), sodass der
 Stift in den Querschlitz fällt. Zunge mit der Schulter auf den Block setzen.
 Das Horn **sanft** von Hand drehen, jeweils nur gut 20° aus der Mitte –
@@ -442,12 +443,13 @@ und das Servo nie gegen einen Riegel fährt, der noch nicht richtig liegt.
    der Stecker passt hindurch – und einstecken. Es liegt in einer Flucht mit
    der Buchse; 28 mm Platz zwischen Platine und Wand reichen für den Stecker.
 3. **Servo einsetzen.** Das Kabel kommt an der Wellenseite (links) unten aus
-   dem Servo. Zuerst den Stecker in die Tasche hängen und flach durch den
-   Kabelkanal am Taschenboden nach links schieben – nach 6 mm unter der
-   Laschenstufe kommt er im offenen Schlitz heraus und tritt am linken
-   Blockende aus. Dann das Servo von oben einsetzen; die Laschen liegen auf
-   ihrer Stufe. Mit den beiden beiliegenden Blechschrauben festschrauben
-   (vorgebohrt).
+   dem Servo. Stecker und Kabel von oben in den Kabelkanal links neben der
+   Tasche legen, dann das Servo **gerade von oben** einsetzen: Der
+   abstehende Kabelansatz gleitet durch den senkrechten Schlitz in der
+   linken Laschenstufe mit nach unten, nichts muss gehebelt werden. Die
+   Laschen liegen auf ihrer Stufe, die linke auf zwei Polstern beidseits des
+   Schlitzes. Nur die **rechte** Lasche wird geschraubt (eine beiliegende
+   Blechschraube, vorgebohrt) – links liefe die Schraube in den Schlitz.
 4. **Servokabel zur Platine.** Vom linken Blockende an der linken Wand entlang
    nach hinten (12 mm Platz zwischen Block und Wand). Mit
    männlich/weiblichen Dupont-Litzen an die Platine, Elko dazu – siehe
@@ -509,13 +511,14 @@ Die Passungen sind **nach Aufgabe getrennt**, nicht über einen Wert geregelt:
 
 | Parameter | | wofür |
 |---|---|---|
-| `spiel_riegel` | 0,35 | Gleitsitz des Riegels in seiner Bohrung |
+| `spiel_riegel` | 0,45 | Gleitsitz des Riegels in seiner Bohrung (0,35 lief am ersten Druck etwas schwer) |
 | `spiel_decke` | 0,8 | zusätzlich oben – die Bohrungsdecke ist eine Brücke |
-| `spiel_zunge` | 0,5 | Zunge in ihren Schlitz; **dieses Merkmal führt** |
-| `spiel_loch_y` | 1,0 | Riegel durch das Loch der Zunge, quer |
-| `spiel_loch_z` | 0,5 | … und hoch |
-| `spiel_rand` | 0,8 | Deckelrand – bewusst lose |
-| `spiel_servo` | 0,5 | Servotasche; gehalten wird es von den Schrauben |
+| `spiel_zunge` | 0,6 | Zunge in ihren Schlitz; **dieses Merkmal führt** |
+| `spiel_loch_y` | 1,1 | Riegel durch das Loch der Zunge, quer |
+| `spiel_loch_z` | 0,6 | … und hoch |
+| `spiel_rand` | 0,9 | Deckelrand – bewusst lose |
+| `spiel_servo` | 0,6 | Servotasche, seitlich und an der Kabelseite (0,5 war am gemessenen 23-mm-Rumpf zu knapp) |
+| `spiel_servo_ende` | 0,35 | Servotasche am Ende gegenüber dem Kabel – dahinter sitzt die Vorbohrung |
 
 Drei Überlegungen stecken dahinter:
 

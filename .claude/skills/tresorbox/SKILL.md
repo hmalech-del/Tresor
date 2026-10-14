@@ -20,7 +20,15 @@ Riegelbahn (Achse nur 7,7 mm neben der Riegelmitte). Jetzt: Stift im
 äußersten Loch (r = 16), Schwenk ±23,4°, Achse 15,3 mm neben dem Riegel,
 Zunge 23 mm tief (vorher 20), M2-Stift statt M3, Hornfreiraum als Fächer,
 Kabelkanal unten an der Wellenseite nach links aus dem Block (nicht nach oben: dort liegt die Lasche mit Schraubloch – ein erster Entwurf hatte das falsch), Einlegerinne links der Zunge (vorher hätte sich der Riegel nie einsetzen lassen: Tunnel ab Blockende, nur 12 mm Platz), Prüfstück in voller Blockhöhe
-(61×85×39 mm). Der Nutzer muss alles neu drucken; noch nicht gedruckt. Die große Kiste ist noch nicht gedruckt,
+(61×85×39 mm). **14. 10.:** Das neu gedruckte Prüfstück nahm das Servo nicht
+auf – Grundfläche gemessen **23 × 12** (nicht 22), und der Kabelansatz an der
+Stirnseite stieß beim Einsetzen von oben an die geschlossene Laschenstufe
+(„reinhebeln“). Jetzt: `servo_x 23`, `spiel_servo 0.6`, am anderen Ende
+`spiel_servo_ende 0.35` (dahinter die Vorbohrung), senkrechter Schlitz
+`kabel_steig_b 6` durch die Laschenstufe auf der Kabelseite, dort keine
+Schraube mehr (nur die rechte Lasche wird geschraubt). Neuer Kollisionsfall
+`einsetzen` (Rumpf, Laschen, Kabelansatz senkrecht von oben; ohne Schlitz
+schlägt er an). Wieder nicht gedruckt. Die große Kiste ist noch nicht gedruckt,
 **Firmware gibt es keine**. Alles über die Mechanik hinaus ist ungetestet –
 das in Antworten nicht verschweigen.
 

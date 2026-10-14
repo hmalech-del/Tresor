@@ -82,7 +82,8 @@ spiel_loch_y = 1.1;          // Riegel durch das Loch der Zunge, quer (>= Riegel
 spiel_loch_z = 0.6;          // ... und hoch (mehr als der Gleitsitz)
 spiel_loch   = spiel_loch_z; // Rueckfall
 spiel_rand   = 0.9;          // Deckelrand - bewusst lose, weiter als die Zunge
-spiel_servo  = 0.5;          // Servotasche; gehalten wird es von den Schrauben
+spiel_servo  = 0.6;          // Servotasche; gehalten wird es von der Schraube (0,5 war am gemessenen Rumpf zu knapp, 14. 10.)
+spiel_servo_ende = 0.35;     // nur am Ende gegenueber dem Kabel: dahinter sitzt die Vorbohrung, die Wand bleibt so ueber 1 mm
 spiel        = spiel_riegel; // Rueckfall fuer alte Formeln
 
 /* ---------- Verschluss ---------- */
@@ -102,7 +103,7 @@ riegel_l   = 40;             // Riegel: Laenge (X)
  * Achse modelliert. So fiel nicht auf, dass sein Rumpf in der Bahn des
  * Riegels stand. Jetzt: gemessene Masse, und pruefung.py rechnet den Rumpf
  * gegen den Riegel. */
-servo_x = 22;                // Rumpflaenge ohne Laschen
+servo_x = 23;                // Rumpflaenge ohne Laschen - am Boden gemessen 23 x 12 (14. 10.; vorher 22, die Tasche war zu kurz)
 servo_y = 12;                // Rumpfbreite
 servo_z = 22;                // Boden bis Gehaeuseoberkante, ohne Wellenaufbau
 servo_flansch_x = 32;        // ueber die Laschen
@@ -192,6 +193,7 @@ servo_unten   = servo_oben - servo_z;
 servo_mitte_x = servo_achse_x - servo_achse_versatz + servo_x / 2;
 kabel_kanal_b = 9;
 kabel_kanal_h = 6;
+kabel_steig_b = 6;           // senkrechter Schlitz durch die Laschenstufe fuer den Kabelansatz
 /* Bis hierher (x) ist der Kabelkanal nach oben offen - 1 mm vor der Laschenstufe. */
 kabel_schlitz_bis = servo_mitte_x - servo_flansch_x / 2 - spiel_servo - 1;
 
@@ -295,16 +297,19 @@ module koerper() {
     // Servotasche, nach oben offen: Rumpf von oben einsetzen
     translate([servo_achse_x - servo_achse_versatz - spiel_servo,
                wand + servo_achse_y - servo_y/2 - spiel_servo, boden + servo_unten])
-      cube([servo_x + 2*spiel_servo, servo_y + 2*spiel_servo, innen_z]);
+      cube([servo_x + spiel_servo + spiel_servo_ende, servo_y + 2*spiel_servo, innen_z]);
     /* Die Laschen liegen auf einer Stufe; gehalten wird das Servo von den
      * zwei Schrauben, die mitgeliefert werden. */
     translate([servo_mitte_x - servo_flansch_x/2 - spiel_servo,
                wand + servo_achse_y - servo_y/2 - spiel_servo, boden + servo_unten + servo_flansch_z])
       cube([servo_flansch_x + 2*spiel_servo, servo_y + 2*spiel_servo, innen_z]);
-    for (s = [-1, 1])
-      translate([servo_mitte_x + s * servo_loch_abstand/2, wand + servo_achse_y,
-                 boden + servo_unten + servo_flansch_z - 6])
-        cylinder(d = 1.6, h = 7);
+    /* Nur noch eine Schraube, an der Lasche gegenueber dem Kabel: Auf der
+     * Kabelseite laeuft der Schlitz genau dort, wo ihr Loch laege. Das Servo
+     * haelt trotzdem - es steckt im Rumpf in der Tasche, und die Kraft des
+     * Hornarms drueckt quer, nicht nach oben. */
+    translate([servo_mitte_x + servo_loch_abstand/2, wand + servo_achse_y,
+               boden + servo_unten + servo_flansch_z - 6])
+      cylinder(d = 1.6, h = 7);
     /* Das Kabel kommt an der Wellenseite heraus, 4 mm ueber dem Rumpfboden.
      * Nach oben kann es dort nicht: Genau darueber liegt die Lasche mit ihrem
      * Schraubloch. Ein erster Entwurf hatte dort einen senkrechten Schlitz -
@@ -321,6 +326,13 @@ module koerper() {
       cube([block_b/2 + 1 + servo_achse_x - servo_achse_versatz - spiel_servo + 0.1, kabel_kanal_b, kabel_kanal_h]);
     translate([-block_b/2 - 1, wand + servo_achse_y - kabel_kanal_b/2, boden + servo_unten])
       cube([kabel_schlitz_bis - (-block_b/2 - 1), kabel_kanal_b, innen_z]);
+    /* Der Kabelansatz steht an der Stirnseite ab. Setzt man das Servo von
+     * oben ein, muss er an der Laschenstufe vorbei - bisher war die dort
+     * geschlossen, und das Servo liess sich nur hineinhebeln (14. 10.). Jetzt
+     * ein senkrechter Schlitz durch die Stufe bis hinunter in den Kanal; die
+     * Lasche liegt beidseits davon auf zwei Polstern. */
+    translate([kabel_schlitz_bis - 0.1, wand + servo_achse_y - kabel_steig_b/2, boden + servo_unten])
+      cube([servo_achse_x - servo_achse_versatz - spiel_servo - kabel_schlitz_bis + 0.2, kabel_steig_b, innen_z]);
 
     /* Freiraum fuer den Hornarm: ein Faecher, nicht ein Kreis. Der Arm ist
      * 18 mm lang und schwenkt nur +-23,4 Grad zum Riegel hin; ein voller
