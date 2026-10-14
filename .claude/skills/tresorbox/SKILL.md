@@ -41,6 +41,9 @@ USB-Stecker, kopfüber gedruckt), Nutzraum jetzt 119 × 41 × 14 mm ≈ 69 cm³.
 `block_x1 = bohrung_ende + 5,5` (= +15), 63 statt 96 mm breit; rechts vorn ein
 tiefes Fach 45 × 38 × 45; der Zwischenboden hat dort statt Bein eine Schürze
 bis zum Boden. Block-Enden immer über `block_x0`/`block_x1`, nie `±block_b/2`.
+**Kabeltülle** (14. 10., Nutzer: Loch nach dem Einfädeln zu groß): zwei
+Halbschalen (`kabeltuelle.stl`) um das eingesteckte Kabel, ins 13-mm-Loch,
+verklebt; offen bleibt `kabel_seil_d` 4,6.
 `pruefung.py` prüft Steg/Buchsen, Kabelloch unter dem Deckelrand, Beine frei
 von Platine/Stecker/Servokabel. Bilder: `ansicht.scad` mit `ansicht` = offen |
 zu | boden, Kamera `0,0,0,50,0,20,0 --viewall --autocenter`. Die große Kiste ist noch nicht gedruckt,
@@ -51,7 +54,7 @@ das in Antworten nicht verschweigen.
 
 | Datei | Wofür |
 |---|---|
-| `tresorbox.scad` | das parametrische Modell; alle Maße oben als Variablen, `teil = koerper \| deckel \| riegel \| zwischenboden \| pruefstueck \| pruefriegel \| alles` |
+| `tresorbox.scad` | das parametrische Modell; alle Maße oben als Variablen, `teil = koerper \| deckel \| riegel \| zwischenboden \| kabeltuelle \| pruefstueck \| pruefriegel \| alles` |
 | `pruefung.py` | rechnet die kritischen Beziehungen nach (Riegel durch Zunge und wieder frei, Stift/Schlitz in beiden Endlagen, Servo in der Wand, Platinensockel, Kabelloch, Nutzraum, STL-Aktualität, Zahl getrennter Teile je STL – das Prüfstück muss drei haben; einmal war die Zunge mit dem Block verschmolzen; Abstand Spitze→Querschlitz am kurzen Riegel gleich dem langen – er war einmal am falschen Ende gekürzt) |
 | `kurbelschleife.py` → `.svg` | Zeichnung des Getriebes aus denselben Parametern |
 | `kollision.scad` | Kollisionsfälle (Rumpf, Laschen, Arm, Stift gegen Körper/Riegel, beide Endlagen) und `fall="ansicht"` für `servo-sitz.png`; `pruefung.py` rendert sie (`--schnell` überspringt) |

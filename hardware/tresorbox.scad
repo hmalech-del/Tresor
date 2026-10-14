@@ -141,6 +141,13 @@ riegel_weg = 2 * stift_radius * sin(schwenk);   // 12,7 mm
  * misst mit Umspritzung etwa 11 x 7 mm; mit 6,5 mm bekaeme man das Kabel gar
  * nicht erst hinein, denn einfaedeln laesst es sich von keiner Seite. */
 kabel_d   = 13;               // 12 + 1 mm Luft, falls die Platine nicht ganz in der Flucht klebt
+/* Das Loch muss nur einmal den Stecker durchlassen. Danach steckt nur noch das
+ * Kabel darin, und 13 mm waeren ein Fenster in die Kiste. Zwei gedruckte
+ * Halbschalen (kabeltuelle) werden um das eingesteckte Kabel gelegt, ins Loch
+ * gedrueckt und verklebt - es bleibt nur der Kabeldurchmesser. */
+kabel_seil_d = 4.6;          // USB-C-Kabel: 3,5-4,5 mm; vor dem Druck nachmessen
+tuelle_spiel = 0.3;          // im Loch - der Heisskleber fuellt den Rest
+tuelle_kragen = 4;           // so viel steht der Kragen aussen ueber das Loch hinaus
 
 /* Welche Platine eingebaut wird, entscheidet nur das Bett - nicht die Kiste.
  * Hinter dem Block liegen 120 x 42 mm freier Boden; da passt jedes gaengige
@@ -417,6 +424,30 @@ module zwischenboden() {
   }
 }
 
+/* ---------- Kabeltuelle ----------
+ * Zwei Halbschalen: ein Zapfen, der die Wand fuellt, und aussen ein Kragen,
+ * der das Loch abdeckt. In der Mitte das Kabel. Gedruckt liegen beide flach,
+ * Kragen aufs Bett - ohne Stuetzen. */
+module tuelle_ganz() {
+  difference() {
+    union() {
+      cylinder(d = kabel_d - 2 * tuelle_spiel, h = wand, $fn = 64);
+      translate([0, 0, wand]) cylinder(d = kabel_d + 2 * tuelle_kragen, h = 1.6, $fn = 64);
+    }
+    translate([0, 0, -1]) cylinder(d = kabel_seil_d, h = wand + 4, $fn = 48);
+  }
+}
+module kabeltuelle() {
+  r = (kabel_d + 2 * tuelle_kragen) / 2;
+  for (i = [0, 1])
+    translate([i * (2 * r + 4), 0, 0])
+      translate([0, 0, wand + 1.6]) mirror([0, 0, 1])       // Kragen aufs Bett
+        intersection() {
+          tuelle_ganz();
+          translate([-r - 1, 0, -1]) cube([2 * r + 2, r + 1, wand + 4]);
+        }
+}
+
 module zunge() {
   difference() {
     translate([-zunge_d/2, wand + zunge_y - zunge_b/2, -zunge_l])
@@ -603,5 +634,6 @@ else if (teil == "mechanik") mechanik();
 else if (teil == "koerper") koerper();
 else if (teil == "deckel") deckel();
 else if (teil == "riegel") riegel();
-else if (teil == "zwischenboden") zwischenboden();          // kopfueber: Platte unten, Beine nach oben
+else if (teil == "zwischenboden") zwischenboden();
+else if (teil == "kabeltuelle") kabeltuelle();               // zwei Halbschalen, Kragen unten          // kopfueber: Platte unten, Beine nach oben
 else if (teil == "alles") baugruppe();   // "nichts": fuer kollision.scad

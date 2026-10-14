@@ -253,6 +253,11 @@ pruefe("Kabelloch liegt auf Buchsenhoehe",
 # hoch). Das Board liegt auf einem Mittelsteg, die Dupont-Buchsen haengen
 # unter den Stiften.
 rand_h = p("rand_h")
+seil_d, t_spiel = p("kabel_seil_d"), p("tuelle_spiel")
+pruefe("Kabeltuelle schliesst das Loch bis aufs Kabel",
+       kabel_d - 2 * t_spiel - seil_d >= 2 * 3 and seil_d >= 3.5,
+       f"Loch {kabel_d:.0f} mm fuer den Stecker, danach offen nur noch {seil_d} mm (Tuellenwand je "
+       f"{(kabel_d - 2*t_spiel - seil_d)/2:.1f} mm)")
 pruefe("Kabelloch bleibt unter dem Deckelrand",
        buchse_z + kabel_d / 2 < innen_z - rand_h - 1,
        f"Lochoberkante {buchse_z + kabel_d/2:.1f}, Deckelrand ab {innen_z - rand_h:.0f} ueber Boden")
@@ -312,7 +317,7 @@ print("\nDateien")
 # koennen sie aber veralten: Genau das war der Fall, als koerper.stl noch
 # ohne Platinensockel im Repo lag. Also nachsehen, ob sie juenger sind.
 scad = pathlib.Path(__file__).with_name("tresorbox.scad")
-for name in ("koerper", "deckel", "riegel", "pruefstueck", "pruefriegel", "zwischenboden"):
+for name in ("koerper", "deckel", "riegel", "pruefstueck", "pruefriegel", "zwischenboden", "kabeltuelle"):
     datei = scad.with_name(name + ".stl")
     if not datei.exists():
         pruefe(f"{name}.stl vorhanden", False, "fehlt - openscad laufen lassen")
@@ -343,7 +348,8 @@ def teile_in(datei):
 
 for name, soll, was in (("pruefstueck", 3, "Blockausschnitt, Riegel, Zunge"),
                         ("riegel", 1, "ein Stueck"), ("deckel", 1, "ein Stueck"),
-                        ("pruefriegel", 1, "ein Stueck"), ("zwischenboden", 1, "Platte mit vier Beinen")):
+                        ("pruefriegel", 1, "ein Stueck"), ("zwischenboden", 1, "Platte mit Beinen und Schuerze"),
+                        ("kabeltuelle", 2, "zwei Halbschalen")):
     datei = scad.with_name(name + ".stl")
     if datei.exists():
         n = teile_in(datei)

@@ -313,7 +313,7 @@ Ampere. Am Handy-Ladegerät mit 500 mA startet der ESP32 neu.
 ## Drucken
 
 **Die fertigen STL liegen neben dieser Datei** – `koerper.stl`, `deckel.stl`,
-`riegel.stl`, `zwischenboden.stl`, `pruefstueck.stl` und `pruefriegel.stl`. Du brauchst OpenSCAD nur, wenn du am Modell
+`riegel.stl`, `zwischenboden.stl`, `kabeltuelle.stl`, `pruefstueck.stl` und `pruefriegel.stl`. Du brauchst OpenSCAD nur, wenn du am Modell
 etwas änderst. `pruefung.py` schlägt Alarm, sobald eine STL älter ist als
 `tresorbox.scad` – genau das war sie einmal, als der Platinensockel dazukam.
 
@@ -324,6 +324,7 @@ openscad -D 'teil="koerper"' -o koerper.stl tresorbox.scad
 openscad -D 'teil="deckel"'  -o deckel.stl  tresorbox.scad
 openscad -D 'teil="riegel"'  -o riegel.stl  tresorbox.scad
 openscad -D 'teil="zwischenboden"' -o zwischenboden.stl tresorbox.scad
+openscad -D 'teil="kabeltuelle"' -o kabeltuelle.stl tresorbox.scad
 ```
 
 | | Lage | Stützen |
@@ -332,6 +333,7 @@ openscad -D 'teil="zwischenboden"' -o zwischenboden.stl tresorbox.scad
 | Deckel | flach, Zunge nach oben | nein |
 | Riegel | liegend | nein |
 | Zwischenboden | kopfüber: Platte aufs Bett, Beine nach oben (so liegt die STL schon) | nein |
+| Kabeltülle | zwei Halbschalen, Kragen aufs Bett | nein |
 
 0,2 mm Schichten, **4 Perimeter**, 30 % Füllung. Bauraum: 126 × 86 × 48 mm.
 Keines der Teile braucht Stützmaterial – Servotasche und Zungenschlitz sind
@@ -471,7 +473,12 @@ und das Servo nie gegen einen Riegel fährt, der noch nicht richtig liegt.
    Platinenunterseite setzen. Die Dupont-Buchsen auf den Stiften mit je einem
    Tropfen sichern – sie rutschen sonst beim Hantieren ab.
 2. **USB-Kabel** von außen durch das 13-mm-Loch in der rechten Wand schieben –
-   der Stecker passt hindurch – und einstecken. Es liegt in einer Flucht mit
+   der Stecker passt hindurch – und einstecken. Dann die **Kabeltülle**: die
+   beiden Halbschalen von außen um das Kabel legen, in das Loch drücken (der
+   Kragen liegt außen an der Wand) und mit einem Ring Heißkleber fixieren.
+   Offen bleibt nur noch der Kabeldurchmesser, und das Kabel hat eine
+   Zugentlastung. Zum Tauschen des Kabels den Kleber erwärmen und die Tülle
+   herausziehen. Es liegt in einer Flucht mit
    der Buchse; 28 mm Platz zwischen Platine und Wand reichen für den Stecker.
 3. **Servo einsetzen – noch nicht kleben.** Das Kabel kommt an der
    Wellenseite (links) unten aus dem Servo. Stecker und Kabel von oben in den
@@ -563,7 +570,9 @@ Die Passungen sind **nach Aufgabe getrennt**, nicht über einen Wert geregelt:
 | `spiel_servo` | 0,8 | Servotasche ringsum – lose, das Servo wird nach dem Ausrichten geklebt |
 | `spiel_servo_ende` | 0,8 | … am Ende gegenüber dem Kabel (eigener Wert, falls dort einmal wieder eine Schraube sitzen soll) |
 | `zb_luft` | 1,0 | Zwischenboden zu Wand und Block – steht lose |
-| `kabel_d` | 13 | Kabelloch: USB-C-Stecker 11 × 7 mm plus Luft für eine nicht ganz fluchtende Platine |
+| `kabel_d` | 13 | Kabelloch: USB-C-Stecker 11 × 7 mm plus Luft für eine nicht ganz fluchtende Platine – nur fürs Einfädeln |
+| `kabel_seil_d` | 4,6 | Loch der Kabeltülle: danach bleibt nur das Kabel. **Dein Kabel nachmessen** (USB-C meist 3,5–4,5 mm) |
+| `tuelle_spiel` | 0,3 | Kabeltülle im Wandloch – der Heißkleber füllt den Rest |
 
 **Was nur sitzen muss, bekommt Spiel und Heißkleber.** Genau sind nur
 Riegel, Bohrung und Zunge – sie entscheiden, ob das Schloss hält und läuft.
