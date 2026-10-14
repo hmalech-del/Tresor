@@ -94,8 +94,9 @@ pruefe("Querschlitz passt in den Riegel", schlitz_laenge < riegel_b - 1,
 
 print("\nPlatz im Koerper")
 servo_vorn = servo_achse_y - servo_y / 2 - s_servo
-pruefe("Servotasche bricht nicht durch", servo_vorn > 1.0,
-       f"Tasche beginnt {servo_vorn:.1f} mm hinter der Innenwand")
+# Wand und Block sind ein Stueck: zaehlt, was zwischen Tasche und aussen steht.
+pruefe("Servotasche bricht nicht durch", servo_vorn + wand >= 3.5,
+       f"vor der Tasche {servo_vorn + wand:.2f} mm Material (Wand {wand:.0f} + Block {servo_vorn:.2f})")
 pruefe("Servo passt in die Blocktiefe", servo_achse_y + servo_y / 2 + s_servo < block_y - 1,
        f"Rumpf endet bei {servo_achse_y + servo_y/2:.1f}, Block ist {block_y} tief")
 # Rumpf und Riegel duerfen sich nicht schneiden. Diese Pruefung fehlte - und
@@ -121,8 +122,13 @@ kanal_h = p("kabel_kanal_h")
 schlitz_bis = servo_mitte_x - flansch_x / 2 - s_servo - 1
 loch_rechts = servo_mitte_x + loch_abstand / 2
 tasche_rechts = servo_achse_x - p("servo_achse_versatz") + servo_x + p("spiel_servo_ende")
-pruefe("Laschenschraube rechts hat Material", loch_rechts - 0.8 > tasche_rechts + 1.0,
-       f"Vorbohrung {loch_rechts - 0.8:+.1f} bis {loch_rechts + 0.8:+.1f}, Tasche endet bei {tasche_rechts:+.1f}")
+# Zwischen Servotasche und Riegelbohrung muss eine Wand stehen bleiben -
+# mehr Spiel in der Tasche (Heisskleber statt Passung) frisst sie auf.
+tasche_hinten = servo_achse_y + servo_y / 2 + s_servo
+bohrung_vorn = zunge_y - riegel_b / 2 - s_riegel
+pruefe("Wand zwischen Servotasche und Riegelbohrung", bohrung_vorn - tasche_hinten >= 1.0,
+       f"{bohrung_vorn - tasche_hinten:.2f} mm")
+
 # Der Kabelansatz steht an der Stirnseite ab und muss beim Einsetzen von oben
 # an der Laschenstufe vorbei. Am 14. 10. liess sich das Servo nur
 # hineinhebeln: Die Stufe war ueber dem Kabel geschlossen.
@@ -132,7 +138,7 @@ pruefe("Kabelansatz gleitet senkrecht durch die Laschenstufe", steig_b >= 5.5,
        f"Schlitz {steig_b:.1f} mm breit; Kabel mit Ansatz etwa 4-5 mm")
 pruefe("Lasche liegt auf der Kabelseite noch auf", polster >= 3,
        f"zwei Polster je {polster:.1f} mm breit neben dem Schlitz")
-pruefe("Rumpf hat Spiel in der Tasche (23 x 12 gemessen)", s_servo >= 0.5 and servo_x >= 23,
+pruefe("Rumpf hat Spiel in der Tasche (23 x 12 gemessen)", s_servo >= 0.6 and servo_x >= 23,
        f"Tasche {servo_x + s_servo + p('spiel_servo_ende'):.2f} x {servo_y + 2*s_servo:.1f} mm")
 pruefe("Kabelkanal bleibt unter der Vorbohrung",
        servo_unten + kanal_h < servo_unten + flansch_z - 6 - 2,
@@ -165,9 +171,9 @@ pruefe("Riegel liegt auf, klappert aber nicht",
 pruefe("Riegelloch weiter als der Gleitsitz",
        s_loch_z > s_riegel + 0.1,
        f"Loch {s_loch_z} mm hoch gegen Bohrung {s_riegel} mm")
-pruefe("Servotasche verlaesst sich auf die Schrauben",
-       s_servo >= 0.4,
-       f"{s_servo} mm - Klone streuen um bis zu 0,3 mm")
+pruefe("Servotasche lose genug zum Kleben",
+       s_servo >= 0.6,
+       f"{s_servo} mm - Klone streuen um bis zu 0,3 mm, Heisskleber fuellt den Rest")
 # Der entscheidende Stapel: quer addieren sich zwei Lagefehler
 stapel = s_zunge + s_riegel
 pruefe("Lagefehler passen quer ins Riegelloch",

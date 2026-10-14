@@ -134,6 +134,7 @@ konstruiert.
 | 7 | **USB-Kabel + 5-V-Netzteil, ≥ 1 A** | **Datenkabel**, kein reines Ladekabel. Steckertyp prüfen: ältere DevKits haben Micro-USB | 5 € |
 | 8 | **Kabelbinder, klein** | hält die Platine auf ihrem Mittelsteg, durch den Tunnel darin | – |
 | 9 | **PETG-Filament, ca. 180 g** | **kein PLA** – das kriecht unter Dauerlast | 4 € |
+| 10 | **Heißklebepistole + Sticks** | fixiert Servo, Platine, Elko und Kabel – alles, was nur sitzen muss | – |
 
 **Zusammen rund 21 €**, ohne Filament 17 € – inklusive des zweiten Boards.
 
@@ -145,7 +146,7 @@ Im Tütchen eines MG90S oder SG90 liegen üblicherweise:
 |---|---|---|
 | **3 Hörner** (einarmig, zweiarmig, Kreuz) | **das einarmige** | trägt den M2-Mitnehmer |
 | **1 Schräubchen** für die Abtriebswelle | **ja** | hält das Horn auf der Verzahnung. Fehlt es, arbeitet sich das Horn los |
-| **2 Blechschrauben** für die Flansche | **ja** | eine davon schraubt das Servo in die Tasche (rechte Lasche) |
+| **2 Blechschrauben** für die Flansche | nein | das Servo wird geklebt, siehe *Zusammenbau* |
 | 2 Gummitüllen + 2 Messinghülsen | nein | Schwingungsdämpfung für Modellflieger |
 
 **Das Schräubchen für die Welle ist das kritische Teil.** Ohne es sitzt das
@@ -462,23 +463,26 @@ und das Servo nie gegen einen Riegel fährt, der noch nicht richtig liegt.
    von oben kommt man an sie nicht mehr heran. Die weiblichen Enden auf 5V,
    GND und GPIO 18 stecken (siehe *Verdrahtung*), dann die **Platine auf den
    Mittelsteg** (hinten rechts) legen – die Litzen hängen neben dem Steg nach
-   unten – und mit dem Kabelbinder durch den Tunnel im Steg festziehen. Die
-   USB-Buchse zeigt zur rechten Wand.
+   unten. Die USB-Buchse zeigt zur rechten Wand; das Board so schieben, dass
+   sie mittig hinter dem Kabelloch sitzt, dann mit dem Kabelbinder durch den
+   Tunnel festziehen und/oder einen Tropfen Heißkleber zwischen Steg und
+   Platinenunterseite setzen. Die Dupont-Buchsen auf den Stiften mit je einem
+   Tropfen sichern – sie rutschen sonst beim Hantieren ab.
 2. **USB-Kabel** von außen durch das 12-mm-Loch in der rechten Wand schieben –
    der Stecker passt hindurch – und einstecken. Es liegt in einer Flucht mit
    der Buchse; 28 mm Platz zwischen Platine und Wand reichen für den Stecker.
-3. **Servo einsetzen.** Das Kabel kommt an der Wellenseite (links) unten aus
-   dem Servo. Stecker und Kabel von oben in den Kabelkanal links neben der
-   Tasche legen, dann das Servo **gerade von oben** einsetzen: Der
-   abstehende Kabelansatz gleitet durch den senkrechten Schlitz in der
-   linken Laschenstufe mit nach unten, nichts muss gehebelt werden. Die
+3. **Servo einsetzen – noch nicht kleben.** Das Kabel kommt an der
+   Wellenseite (links) unten aus dem Servo. Stecker und Kabel von oben in den
+   Kabelkanal links neben der Tasche legen, dann das Servo **gerade von oben**
+   einsetzen: Der abstehende Kabelansatz gleitet durch den senkrechten Schlitz
+   in der linken Laschenstufe mit nach unten, nichts muss gehebelt werden. Die
    Laschen liegen auf ihrer Stufe, die linke auf zwei Polstern beidseits des
-   Schlitzes. Nur die **rechte** Lasche wird geschraubt (eine beiliegende
-   Blechschraube, vorgebohrt) – links liefe die Schraube in den Schlitz.
+   Schlitzes. Die Tasche hat ringsum 0,8 mm Spiel – das Servo sitzt locker,
+   und so soll es bis Schritt 9 bleiben.
 4. **Servokabel zur Platine.** Vom linken Blockende an der linken Wand entlang
-   nach hinten (12 mm Platz zwischen Block und Wand). Mit
-   männlich/weiblichen Dupont-Litzen an die Platine, Elko dazu – siehe
-   *Verdrahtung*. Nicht über den Block legen: Über dem Zungenschlitz in der
+   nach hinten (12 mm Platz zwischen Block und Wand), mit zwei, drei Tropfen
+   Heißkleber an der Wand fixieren. Mit männlich/weiblichen Dupont-Litzen an
+   die Platine, Elko dazu und auf den Boden kleben – siehe *Verdrahtung*. Nicht über den Block legen: Über dem Zungenschlitz in der
    Mitte und dem Hornarm hat ein Kabel nichts zu suchen.
 5. **Testprogramm aufspielen** (`servotest/`, über dasselbe USB-Kabel am
    Rechner) und `m` senden: Das Servo steht in der Mitte.
@@ -498,13 +502,23 @@ und das Servo nie gegen einen Riegel fährt, der noch nicht richtig liegt.
    aufsetzen. Dann das **beiliegende Schräubchen in die Abtriebswelle
    drehen**; ohne das rutscht das Horn nach ein paar Dutzend Schaltspielen
    durch.
-9. **Von Hand prüfen, dann mit Strom.** Erst sanft am Horn drehen, gut 20° in
+9. **Ausrichten, dann kleben.** `m` senden: Das Servo steht in der Mitte,
+   der Stift im Querschlitz zieht es in seine Lage – lose in der Tasche
+   richtet es sich selbst nach dem Riegel aus. Jetzt mit `z` und `a` ein paar
+   Mal hin und her fahren; das Servo darf dabei in der Tasche mitwandern.
+   Zum Schluss wieder `m`, dann **Heißkleber**: je Lasche zwei Tropfen auf die
+   Stufe, dazu ein Tropfen in den Spalt an der Stirnseite gegenüber dem
+   Kabel. Abkühlen lassen. So kostet das Spiel der Tasche keinen Hub – das
+   Servo klebt dort, wo der Riegel es haben will.
+   *(Lösen geht: kurz mit dem Föhn erwärmen oder Isopropanol in den Spalt.)*
+10. **Von Hand prüfen, dann mit Strom.** Erst sanft am Horn drehen, gut 20° in
    jede Richtung: Der Riegel muss ohne Haken laufen. Dann `z` und `a`, mit
    `+`/`-` nachstellen, zum Schluss `d` (20 Zyklen). Ein Servo, das gegen einen
    klemmenden Riegel drückt, zieht 700 mA, wird heiß und stirbt.
-10. **Zwischenboden einsetzen** – Platte oben, Beine nach unten, hinter den
-    Block. Er steht lose; zum Nachsehen mit dem Finger am Griffloch anheben.
-11. **Deckel aufsetzen**, `z` – die Zunge darf sich nicht mehr herausziehen
+11. **Zwischenboden einsetzen** – Platte oben, Beine nach unten, hinter den
+    Block. Er steht lose (1 mm Luft ringsum); zum Nachsehen mit dem Finger am
+    Griffloch anheben.
+12. **Deckel aufsetzen**, `z` – die Zunge darf sich nicht mehr herausziehen
     lassen. `a` – sie geht frei.
 
 ## Verdrahtung
@@ -544,8 +558,18 @@ Die Passungen sind **nach Aufgabe getrennt**, nicht über einen Wert geregelt:
 | `spiel_loch_y` | 1,1 | Riegel durch das Loch der Zunge, quer |
 | `spiel_loch_z` | 0,6 | … und hoch |
 | `spiel_rand` | 0,9 | Deckelrand – bewusst lose |
-| `spiel_servo` | 0,6 | Servotasche, seitlich und an der Kabelseite (0,5 war am gemessenen 23-mm-Rumpf zu knapp) |
-| `spiel_servo_ende` | 0,35 | Servotasche am Ende gegenüber dem Kabel – dahinter sitzt die Vorbohrung |
+| `spiel_servo` | 0,8 | Servotasche ringsum – lose, das Servo wird nach dem Ausrichten geklebt |
+| `spiel_servo_ende` | 0,8 | … am Ende gegenüber dem Kabel (eigener Wert, falls dort einmal wieder eine Schraube sitzen soll) |
+| `zb_luft` | 1,0 | Zwischenboden zu Wand und Block – steht lose |
+| `kabel_d` | 13 | Kabelloch: USB-C-Stecker 11 × 7 mm plus Luft für eine nicht ganz fluchtende Platine |
+
+**Was nur sitzen muss, bekommt Spiel und Heißkleber.** Genau sind nur
+Riegel, Bohrung und Zunge – sie entscheiden, ob das Schloss hält und läuft.
+Servo, Platine, Elko, Kabel und Zwischenboden dagegen haben reichlich Luft
+und werden geklebt oder stehen lose. Das hat sich im NFC-Leser-Projekt
+bewährt: Ein Druck, der 0,3 mm danebenliegt, kostet dann nichts, und beim
+Servo ist das Spiel sogar ein Vorteil – es richtet sich vor dem Kleben am
+Riegel aus.
 
 Drei Überlegungen stecken dahinter:
 

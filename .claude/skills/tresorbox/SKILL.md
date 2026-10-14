@@ -74,12 +74,22 @@ Hornarm greift 1,2 mm über dem Riegel hinüber. Nur zwei Endlagen, kein Gelenk.
 **Deckel:** Stülpdeckel, gerade aufgesetzt, kein Scharnier (Zunge fällt
 senkrecht; mit Scharnier liefe sie auf einem Bogen).
 
+## Grundsatz: Heißkleber statt Passung (Nutzer, 14. 10.)
+
+Was nur sitzen muss, bekommt reichlich Spiel und wird mit Heißkleber fixiert
+(hat sich im NFC-Leser-Projekt des Nutzers bewährt): Servotasche 0,8 ringsum,
+**Servo ohne Schraube**, erst nach dem Ausrichten geklebt (Horn im Riegel,
+`m`, ein paar Mal `z`/`a`, dann kleben – es richtet sich selbst aus),
+Kabelschlitz 7, Kabelloch 13, Zwischenboden 1,0 Luft, Platine/Elko/Kabel
+geklebt. **Genau bleiben nur Riegel, Bohrung, Zunge.** Neue Teile nach
+demselben Muster entwerfen.
+
 ## Toleranzen – getrennt nach Aufgabe
 
 `spiel_riegel 0.45` (Gleitsitz; 0,35 lief am ersten Druck etwas schwer, 13. 10.), `spiel_decke 0.8` (Bohrungsdecke ist eine
 Brücke und sackt), `spiel_zunge 0.6` (**führendes** Merkmal), `spiel_loch_y 1.1`
 (quer stapeln sich Riegel- und Zungenspiel), `spiel_loch_z 0.6`,
-`spiel_rand 0.9` (Deckelrand bewusst lose), `spiel_servo 0.5`. Grundsatz: nur
+`spiel_rand 0.9` (Deckelrand bewusst lose), `spiel_servo 0.8` (geklebt). Grundsatz: nur
 ein Merkmal führt, alle anderen sind lose. Das **Prüfstück** (61 × 85 × 39 mm, volle Blockhöhe mit ganzer Servotasche; drei getrennte Teile; die kurze Zunge hat eine Schulter, die sie auf Deckelhöhe hält, und steht beim Druck auf ihr;
 ~1 h) testet genau diese Passungen, gebaut aus denselben Modulen; die
 Tabelle "Befund → Stellschraube" steht in der README.

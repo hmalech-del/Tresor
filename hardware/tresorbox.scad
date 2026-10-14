@@ -82,8 +82,16 @@ spiel_loch_y = 1.1;          // Riegel durch das Loch der Zunge, quer (>= Riegel
 spiel_loch_z = 0.6;          // ... und hoch (mehr als der Gleitsitz)
 spiel_loch   = spiel_loch_z; // Rueckfall
 spiel_rand   = 0.9;          // Deckelrand - bewusst lose, weiter als die Zunge
-spiel_servo  = 0.6;          // Servotasche; gehalten wird es von der Schraube (0,5 war am gemessenen Rumpf zu knapp, 14. 10.)
-spiel_servo_ende = 0.35;     // nur am Ende gegenueber dem Kabel: dahinter sitzt die Vorbohrung, die Wand bleibt so ueber 1 mm
+/* Was nur sitzen muss, bekommt reichlich Spiel und wird mit Heisskleber
+ * fixiert - so hat es sich im NFC-Leser-Projekt des Nutzers bewaehrt (14. 10.).
+ * Genau bleibt nur, was die Mechanik ausmacht: Riegel, Bohrung, Zunge.
+ *
+ * Das Servo wird nicht mehr geschraubt, sondern geklebt - und zwar erst,
+ * wenn Horn und Riegel schon ineinander greifen und das Servo in der Mitte
+ * steht. Dann richtet es sich selbst aus; das Spiel der Tasche kostet keinen
+ * Hub. */
+spiel_servo  = 0.8;          // Servotasche ringsum (0,5 war am gemessenen 23-mm-Rumpf zu knapp)
+spiel_servo_ende = 0.8;      // am Ende gegenueber dem Kabel - frei, seit keine Schraube mehr dahinter sitzt
 spiel        = spiel_riegel; // Rueckfall fuer alte Formeln
 
 /* ---------- Verschluss ---------- */
@@ -132,7 +140,7 @@ riegel_weg = 2 * stift_radius * sin(schwenk);   // 12,7 mm
 /* Das Loch muss den STECKER durchlassen, nicht das Kabel. Ein USB-C-Stecker
  * misst mit Umspritzung etwa 11 x 7 mm; mit 6,5 mm bekaeme man das Kabel gar
  * nicht erst hinein, denn einfaedeln laesst es sich von keiner Seite. */
-kabel_d   = 12;
+kabel_d   = 13;               // 12 + 1 mm Luft, falls die Platine nicht ganz in der Flucht klebt
 
 /* Welche Platine eingebaut wird, entscheidet nur das Bett - nicht die Kiste.
  * Hinter dem Block liegen 120 x 42 mm freier Boden; da passt jedes gaengige
@@ -203,7 +211,7 @@ servo_unten   = servo_oben - servo_z;
 servo_mitte_x = servo_achse_x - servo_achse_versatz + servo_x / 2;
 kabel_kanal_b = 9;
 kabel_kanal_h = 6;
-kabel_steig_b = 6;           // senkrechter Schlitz durch die Laschenstufe fuer den Kabelansatz
+kabel_steig_b = 7;           // senkrechter Schlitz durch die Laschenstufe fuer den Kabelansatz (Ansatz ~4,5 mm)
 /* Bis hierher (x) ist der Kabelkanal nach oben offen - 1 mm vor der Laschenstufe. */
 kabel_schlitz_bis = servo_mitte_x - servo_flansch_x / 2 - spiel_servo - 1;
 
@@ -313,13 +321,9 @@ module koerper() {
     translate([servo_mitte_x - servo_flansch_x/2 - spiel_servo,
                wand + servo_achse_y - servo_y/2 - spiel_servo, boden + servo_unten + servo_flansch_z])
       cube([servo_flansch_x + 2*spiel_servo, servo_y + 2*spiel_servo, innen_z]);
-    /* Nur noch eine Schraube, an der Lasche gegenueber dem Kabel: Auf der
-     * Kabelseite laeuft der Schlitz genau dort, wo ihr Loch laege. Das Servo
-     * haelt trotzdem - es steckt im Rumpf in der Tasche, und die Kraft des
-     * Hornarms drueckt quer, nicht nach oben. */
-    translate([servo_mitte_x + servo_loch_abstand/2, wand + servo_achse_y,
-               boden + servo_unten + servo_flansch_z - 6])
-      cylinder(d = 1.6, h = 7);
+    /* Keine Schraubloecher mehr: Das Servo wird auf die Laschenstufe
+     * geklebt (Heisskleber, zwei Tropfen je Lasche). Auf der Kabelseite liefe
+     * eine Schraube ohnehin in den Schlitz. */
     /* Das Kabel kommt an der Wellenseite heraus, 4 mm ueber dem Rumpfboden.
      * Nach oben kann es dort nicht: Genau darueber liegt die Lasche mit ihrem
      * Schraubloch. Ein erster Entwurf hatte dort einen senkrechten Schlitz -
@@ -378,7 +382,7 @@ module koerper() {
  * auf der Platine, nicht im USB-Stecker, nicht im Servokabel (das laeuft an
  * der linken Wand und auf Platinenhoehe quer herueber). Gedruckt wird sie
  * kopfueber, Platte auf dem Bett - ohne Stuetzen. */
-zb_luft   = 0.6;                                        // ringsum zu Wand und Block
+zb_luft   = 1.0;                                        // ringsum zu Wand und Block - steht lose
 zb_d      = 2;                                          // Plattendicke
 zb_unten  = buchse_z + 3.5 + 1;                         // ueber dem eingesteckten USB-Stecker (7 mm hoch) mit 1 mm Luft
 zb_x      = innen_x - 2 * zb_luft;

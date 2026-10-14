@@ -12,7 +12,7 @@ durch?). Die zweite Stufe nur, wenn die erste sauber war.
 
 | | |
 |---|---|
-| Prüfstück | die aktuelle Fassung (ab 14. 10.: Servotasche 23 mm lang, Schlitz für den Kabelansatz) |
+| Prüfstück | die aktuelle Fassung (ab 14. 10.: Servotasche 23 mm lang mit 0,8 mm Spiel, Schlitz für den Kabelansatz) |
 | Servo MG90S | mit dem **einarmigen Horn** und dem kleinen Wellenschräubchen |
 | M2-Schraube, 10–14 mm | der Stift; dazu ein **1,6-mm-Bohrer** |
 | ESP32 DevKit | mit angelöteten Stiftleisten |
@@ -37,8 +37,9 @@ durch?). Die zweite Stufe nur, wenn die erste sauber war.
    abstehende Kabelansatz gleitet durch den senkrechten Schlitz in der
    linken Laschenstufe mit nach unten – hebeln muss man nichts mehr (am
    ersten Prüfstück musste man; die Tasche war 1 mm zu kurz und die Stufe
-   über dem Kabel geschlossen). Für den Test reicht es ohne Schraube – drück
-   es mit dem Daumen auf die Stufe.
+   über dem Kabel geschlossen). Die Tasche hat ringsum 0,8 mm Spiel: Für den
+   Test **nicht kleben** – drück es mit dem Daumen auf die Stufe. In der
+   großen Kiste wird es erst geklebt, wenn es am Riegel ausgerichtet ist.
 4. **Riegel so legen, dass die Spitze mitten im Zungenschlitz steht.** Dann
    liegt sein Querschlitz unter der Stelle, wo der Stift in Mittelstellung
    ankommt.
