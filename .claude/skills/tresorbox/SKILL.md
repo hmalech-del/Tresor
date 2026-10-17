@@ -121,7 +121,7 @@ Querschlitz), Wellenschräubchen, erst von Hand, dann `z`/`a`/`d`, Deckel.
 - Servo: braun → GND, rot → 5V/VIN, orange → **GPIO 18** (keine
   Strapping-Pins 0/2/12/15). **Elko 1000 µF** zwischen 5V und GND nah am Servo,
   sonst Brownout-Neustart beim Anfahren. Netzteil ≥ 1 A.
-- Dupont **männlich/weiblich** (Servobuchse ↔ Boardpin). **Nur ein 5V-Pin** → Servo-Plus und Elko treffen sich auf einem Mini-Steckbrett (2× m/m dazu), in der Box alternativ WAGO 221-413 oder gelötet. Plan: `servotest/schaltplan.py` → `.svg`/`.png` (PNG per Playwright aus dem SVG).
+- Dupont **männlich/weiblich** (Servobuchse ↔ Boardpin). **Nur ein 5V-Pin** → Servo-Plus und Elko treffen sich auf einem Mini-Steckbrett: Servostecker (ein 3-poliger, nicht drei lose Litzen) auf 3er-Stiftleiste, Board über 3× m/w in dieselben 5er-Spalten (Mini-Steckbrett hat keine Längsschienen!), in der Box alternativ WAGO 221-413 oder gelötet. Plan: `servotest/schaltplan.py` → `.svg`/`.png` (PNG per Playwright aus dem SVG).
 - Platine auf 21-mm-Mittelsteg (Stifte nach unten, Dupont darunter), 28 mm
   Steckerraum, 13-mm-Kabelloch in der **rechten** Wand auf Buchsenhöhe,
   Kabelbinder durch den Stegtunnel. Darüber der Zwischenboden.

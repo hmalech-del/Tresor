@@ -133,7 +133,7 @@ konstruiert.
 | 4 | **Elko 1000 µF, ≥ 6,3 V** | radial, Raster 5 mm | 0,50 € |
 | 5 | **M2-Schraube, 10–14 mm** | Zylinderkopf; sie schneidet ihr Gewinde im Horn selbst, eine Mutter braucht es nicht | 0,20 € |
 | 6 | **Dupont-Litzen** | **männlich/weiblich**, 10–20 cm, dazu ein paar **männlich/männlich** – ein gemischter Satz | 2 € |
-| 6a | **Mini-Steckbrett** | das kleinste genügt: Der 5V-Pin ist nur einmal da, Servo und Elko brauchen ihn beide (siehe *Verdrahtung*). Alternativ WAGO 221-413 oder Lötkolben | 1 € |
+| 6a | **Mini-Steckbrett + Stiftleiste** | das kleinste Steckbrett genügt, von der Stiftleiste drei Pins für den Servostecker: Der 5V-Pin ist nur einmal da, Servo und Elko brauchen ihn beide (siehe *Verdrahtung*). Alternativ WAGO 221-413 oder Lötkolben | 1 € |
 | 7 | **USB-Kabel + 5-V-Netzteil, ≥ 1 A** | **Datenkabel**, kein reines Ladekabel. Steckertyp prüfen: ältere DevKits haben Micro-USB | 5 € |
 | 8 | **Kabelbinder, klein** | hält die Platine auf ihrem Mittelsteg, durch den Tunnel darin | – |
 | 9 | **PETG-Filament, ca. 180 g** | **kein PLA** – das kriecht unter Dauerlast | 4 € |
@@ -176,9 +176,10 @@ weibliches Ende auf den Boardpin, männliches Ende in die Servobuchse.
 Der Kondensator muss an **5V und GND** – und den 5V-Pin hat das Board nur
 einmal, dort sitzt schon das Servo. Zwei Buchsen passen nicht auf einen Stift.
 Für den Test treffen sich deshalb 5V, GND, Servo und Elko auf einem
-**Mini-Steckbrett** (plus zwei Litzen **männlich/männlich**, siehe
-[Schaltplan](servotest/schaltplan.png)); für die Box siehe *Verdrahtung*.
-Ein gemischter Litzensatz deckt alles ab.
+**Mini-Steckbrett**: Der Servostecker kommt auf eine dreipolige Stiftleiste
+im Steckbrett, die Boardpins über drei Litzen männlich/weiblich in dieselben
+Spalten (siehe [Schaltplan](servotest/schaltplan.png)); für die Box siehe
+*Verdrahtung*. Ein gemischter Litzensatz deckt alles ab.
 
 
 ### Welches Board genau

@@ -1,14 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 850" width="1000" height="850" font-family="DejaVu Sans, Arial, sans-serif">
-<rect width="1000" height="850" fill="#fff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="1000" height="1000" font-family="DejaVu Sans, Arial, sans-serif">
+<rect width="1000" height="1000" fill="#fff"/>
 <text x="30" y="40" font-size="24" font-weight="bold">Servotest – Verdrahtung</text>
 <text x="30" y="66" font-size="14" fill="#444">ESP32 DevKit (38 Pins, USB-C) von oben · Stifte zeigen nach unten: Dupont-Buchsen von unten aufstecken</text>
 <rect x="60" y="250" width="540" height="150" rx="8" fill="#1d1d1d"/>
 <rect x="78" y="292" width="120" height="66" rx="3" fill="#b9b9b9"/>
 <text x="138" y="330" font-size="13" text-anchor="middle">ESP32</text>
 <rect x="592" y="308" width="34" height="34" rx="5" fill="#9a9a9a"/>
-<text x="642" y="322" font-size="13">USB-C</text>
-<text x="642" y="340" font-size="12" fill="#444">zum Rechner</text>
-<text x="642" y="356" font-size="12" fill="#444">(Datenkabel!)</text>
 <circle cx="88" cy="268" r="4" fill="#c9a227"/>
 <text x="88" y="288" font-size="9" fill="#bbb" text-anchor="middle" font-weight="normal">GND</text>
 <circle cx="114" cy="268" r="4" fill="#c9a227"/>
@@ -21,8 +18,8 @@
 <text x="192" y="288" font-size="9" fill="#bbb" text-anchor="middle" font-weight="normal">RXD</text>
 <circle cx="218" cy="268" r="4" fill="#c9a227"/>
 <text x="218" y="288" font-size="9" fill="#bbb" text-anchor="middle" font-weight="normal">G21</text>
-<circle cx="244" cy="268" r="6" fill="#ffd43b"/>
-<text x="244" y="288" font-size="11" fill="#fff" text-anchor="middle" font-weight="bold">GND</text>
+<circle cx="244" cy="268" r="4" fill="#c9a227"/>
+<text x="244" y="288" font-size="9" fill="#bbb" text-anchor="middle" font-weight="normal">GND</text>
 <circle cx="270" cy="268" r="4" fill="#c9a227"/>
 <text x="270" y="288" font-size="9" fill="#bbb" text-anchor="middle" font-weight="normal">G19</text>
 <circle cx="296" cy="268" r="6" fill="#ffd43b"/>
@@ -73,8 +70,8 @@
 <text x="374" y="370" font-size="9" fill="#bbb" text-anchor="middle" font-weight="normal">G14</text>
 <circle cx="400" cy="382" r="4" fill="#c9a227"/>
 <text x="400" y="370" font-size="9" fill="#bbb" text-anchor="middle" font-weight="normal">G12</text>
-<circle cx="426" cy="382" r="4" fill="#c9a227"/>
-<text x="426" y="370" font-size="9" fill="#bbb" text-anchor="middle" font-weight="normal">GND</text>
+<circle cx="426" cy="382" r="6" fill="#ffd43b"/>
+<text x="426" y="370" font-size="11" fill="#fff" text-anchor="middle" font-weight="bold">GND</text>
 <circle cx="452" cy="382" r="4" fill="#c9a227"/>
 <text x="452" y="370" font-size="9" fill="#bbb" text-anchor="middle" font-weight="normal">G13</text>
 <circle cx="478" cy="382" r="4" fill="#c9a227"/>
@@ -85,57 +82,141 @@
 <text x="530" y="370" font-size="9" fill="#bbb" text-anchor="middle" font-weight="normal">CMD</text>
 <circle cx="556" cy="382" r="6" fill="#ffd43b"/>
 <text x="556" y="370" font-size="11" fill="#fff" text-anchor="middle" font-weight="bold">5V</text>
-<rect x="650" y="470" width="300" height="120" rx="6" fill="#f1f3f5" stroke="#adb5bd"/>
-<text x="800" y="582" font-size="12" text-anchor="middle" fill="#555">Mini-Steckbrett</text>
-<line x1="670" y1="505" x2="930" y2="505" stroke="#d62828" stroke-width="3" opacity="0.25"/>
-<text x="940" y="509" font-size="11" fill="#d62828">+5V</text>
-<rect x="676" y="501" width="8" height="8" fill="#ced4da"/>
-<rect x="701" y="501" width="8" height="8" fill="#ced4da"/>
-<rect x="726" y="501" width="8" height="8" fill="#ced4da"/>
-<rect x="751" y="501" width="8" height="8" fill="#ced4da"/>
-<rect x="776" y="501" width="8" height="8" fill="#ced4da"/>
-<rect x="801" y="501" width="8" height="8" fill="#ced4da"/>
-<rect x="826" y="501" width="8" height="8" fill="#ced4da"/>
-<rect x="851" y="501" width="8" height="8" fill="#ced4da"/>
-<rect x="876" y="501" width="8" height="8" fill="#ced4da"/>
-<rect x="901" y="501" width="8" height="8" fill="#ced4da"/>
-<line x1="670" y1="545" x2="930" y2="545" stroke="#222" stroke-width="3" opacity="0.25"/>
-<text x="940" y="549" font-size="11" fill="#222">GND</text>
-<rect x="676" y="541" width="8" height="8" fill="#ced4da"/>
-<rect x="701" y="541" width="8" height="8" fill="#ced4da"/>
-<rect x="726" y="541" width="8" height="8" fill="#ced4da"/>
-<rect x="751" y="541" width="8" height="8" fill="#ced4da"/>
-<rect x="776" y="541" width="8" height="8" fill="#ced4da"/>
-<rect x="801" y="541" width="8" height="8" fill="#ced4da"/>
-<rect x="826" y="541" width="8" height="8" fill="#ced4da"/>
-<rect x="851" y="541" width="8" height="8" fill="#ced4da"/>
-<rect x="876" y="541" width="8" height="8" fill="#ced4da"/>
-<rect x="901" y="541" width="8" height="8" fill="#ced4da"/>
-<rect x="841" y="418" width="28" height="44" rx="5" fill="#364fc7"/>
-<rect x="861" y="418" width="8" height="44" fill="#91a7ff"/>
-<text x="825" y="412" font-size="12">Elko 1000 µF</text>
-<line x1="849" y1="462" x2="849" y2="505" stroke="#555" stroke-width="2"/>
-<line x1="863" y1="462" x2="863" y2="545" stroke="#555" stroke-width="2"/>
-<text x="829" y="497" font-size="11" fill="#d62828">+ langes Bein</text>
-<text x="869" y="535" font-size="11">− Streifen</text>
-<rect x="700" y="110" width="150" height="80" rx="6" fill="#5f3dc4"/>
-<circle cx="740" cy="150" r="16" fill="#e5dbff"/>
-<text x="800" y="156" font-size="16" fill="#fff" text-anchor="middle">MG90S</text>
-<path d="M760,190 L760,225 L296,225 L296,268" fill="none" stroke="#f08c00" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M730,190 L730,210 L755,210 L755,545" fill="none" stroke="#7a4a1f" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M745,190 L745,200 L780,200 L780,505" fill="none" stroke="#d62828" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
-<text x="860" y="130" font-size="12" fill="#7a4a1f">braun = GND</text>
-<text x="860" y="148" font-size="12" fill="#d62828">rot = +5V</text>
-<text x="860" y="166" font-size="12" fill="#f08c00">orange = Signal</text>
-<path d="M244,268 L244,238 L630,238 L630,545 L680,545" fill="none" stroke="#222" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
-<path d="M556,382 L556,440 L705,440 L705,505" fill="none" stroke="#d62828" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
-<text x="30" y="630" font-size="15" font-weight="bold" fill="#222">So wird gesteckt</text>
-<text x="30" y="654" font-size="13" font-weight="normal" fill="#222">1  orange (Signal) → G18. Litze männlich/weiblich: weiblich auf den Stift, männlich in die Servobuchse.</text>
-<text x="30" y="678" font-size="13" font-weight="normal" fill="#222">2  rot (+5V) und braun (GND) des Servos ins Steckbrett – über zwei Litzen männlich/männlich.</text>
-<text x="30" y="702" font-size="13" font-weight="normal" fill="#222">3  Board 5V und Board GND ins Steckbrett – zwei Litzen männlich/weiblich (weiblich auf den Stift).</text>
-<text x="30" y="726" font-size="13" font-weight="normal" fill="#222">4  Elko ins Steckbrett: langes Bein (+) in die 5V-Reihe, Bein am hellen Streifen (−) in die GND-Reihe.</text>
-<text x="30" y="750" font-size="13" font-weight="normal" fill="#222">5  Alles nachzählen, erst dann USB einstecken.</text>
-<text x="30" y="774" font-size="13" font-weight="normal" fill="#222"></text>
-<text x="30" y="798" font-size="13" font-weight="normal" fill="#222">Ohne Steckbrett: erst ohne Elko testen – orange, rot, braun direkt (3 Litzen männlich/weiblich).</text>
-<text x="30" y="822" font-size="13" font-weight="normal" fill="#222">Startet das Board beim Fahren neu (Hilfetext erscheint wieder), fehlt der Elko.</text>
+<rect x="680" y="380" width="214" height="270" rx="6" fill="#f1f3f5" stroke="#adb5bd"/>
+<rect x="703" y="403" width="14" height="102" rx="7" fill="#dee2e6" opacity="0.6"/>
+<rect x="706" y="406" width="8" height="8" fill="#adb5bd"/>
+<rect x="706" y="428" width="8" height="8" fill="#adb5bd"/>
+<rect x="706" y="450" width="8" height="8" fill="#adb5bd"/>
+<rect x="706" y="472" width="8" height="8" fill="#adb5bd"/>
+<rect x="706" y="494" width="8" height="8" fill="#adb5bd"/>
+<rect x="703" y="535" width="14" height="102" rx="7" fill="#dee2e6" opacity="0.6"/>
+<rect x="706" y="538" width="8" height="8" fill="#adb5bd"/>
+<rect x="706" y="560" width="8" height="8" fill="#adb5bd"/>
+<rect x="706" y="582" width="8" height="8" fill="#adb5bd"/>
+<rect x="706" y="604" width="8" height="8" fill="#adb5bd"/>
+<rect x="706" y="626" width="8" height="8" fill="#adb5bd"/>
+<rect x="725" y="403" width="14" height="102" rx="7" fill="#dee2e6" opacity="0.6"/>
+<rect x="728" y="406" width="8" height="8" fill="#adb5bd"/>
+<rect x="728" y="428" width="8" height="8" fill="#adb5bd"/>
+<rect x="728" y="450" width="8" height="8" fill="#adb5bd"/>
+<rect x="728" y="472" width="8" height="8" fill="#adb5bd"/>
+<rect x="728" y="494" width="8" height="8" fill="#adb5bd"/>
+<rect x="725" y="535" width="14" height="102" rx="7" fill="#dee2e6" opacity="0.6"/>
+<rect x="728" y="538" width="8" height="8" fill="#adb5bd"/>
+<rect x="728" y="560" width="8" height="8" fill="#adb5bd"/>
+<rect x="728" y="582" width="8" height="8" fill="#adb5bd"/>
+<rect x="728" y="604" width="8" height="8" fill="#adb5bd"/>
+<rect x="728" y="626" width="8" height="8" fill="#adb5bd"/>
+<rect x="747" y="403" width="14" height="102" rx="7" fill="#dee2e6" opacity="0.6"/>
+<rect x="750" y="406" width="8" height="8" fill="#adb5bd"/>
+<rect x="750" y="428" width="8" height="8" fill="#adb5bd"/>
+<rect x="750" y="450" width="8" height="8" fill="#adb5bd"/>
+<rect x="750" y="472" width="8" height="8" fill="#adb5bd"/>
+<rect x="750" y="494" width="8" height="8" fill="#adb5bd"/>
+<rect x="747" y="535" width="14" height="102" rx="7" fill="#dee2e6" opacity="0.6"/>
+<rect x="750" y="538" width="8" height="8" fill="#adb5bd"/>
+<rect x="750" y="560" width="8" height="8" fill="#adb5bd"/>
+<rect x="750" y="582" width="8" height="8" fill="#adb5bd"/>
+<rect x="750" y="604" width="8" height="8" fill="#adb5bd"/>
+<rect x="750" y="626" width="8" height="8" fill="#adb5bd"/>
+<rect x="769" y="403" width="14" height="102" rx="7" fill="#f08c00" opacity="0.35"/>
+<rect x="772" y="406" width="8" height="8" fill="#adb5bd"/>
+<rect x="772" y="428" width="8" height="8" fill="#adb5bd"/>
+<rect x="772" y="450" width="8" height="8" fill="#adb5bd"/>
+<rect x="772" y="472" width="8" height="8" fill="#adb5bd"/>
+<rect x="772" y="494" width="8" height="8" fill="#adb5bd"/>
+<rect x="769" y="535" width="14" height="102" rx="7" fill="#dee2e6" opacity="0.6"/>
+<rect x="772" y="538" width="8" height="8" fill="#adb5bd"/>
+<rect x="772" y="560" width="8" height="8" fill="#adb5bd"/>
+<rect x="772" y="582" width="8" height="8" fill="#adb5bd"/>
+<rect x="772" y="604" width="8" height="8" fill="#adb5bd"/>
+<rect x="772" y="626" width="8" height="8" fill="#adb5bd"/>
+<rect x="791" y="403" width="14" height="102" rx="7" fill="#d62828" opacity="0.35"/>
+<rect x="794" y="406" width="8" height="8" fill="#adb5bd"/>
+<rect x="794" y="428" width="8" height="8" fill="#adb5bd"/>
+<rect x="794" y="450" width="8" height="8" fill="#adb5bd"/>
+<rect x="794" y="472" width="8" height="8" fill="#adb5bd"/>
+<rect x="794" y="494" width="8" height="8" fill="#adb5bd"/>
+<rect x="791" y="535" width="14" height="102" rx="7" fill="#dee2e6" opacity="0.6"/>
+<rect x="794" y="538" width="8" height="8" fill="#adb5bd"/>
+<rect x="794" y="560" width="8" height="8" fill="#adb5bd"/>
+<rect x="794" y="582" width="8" height="8" fill="#adb5bd"/>
+<rect x="794" y="604" width="8" height="8" fill="#adb5bd"/>
+<rect x="794" y="626" width="8" height="8" fill="#adb5bd"/>
+<rect x="813" y="403" width="14" height="102" rx="7" fill="#7a4a1f" opacity="0.35"/>
+<rect x="816" y="406" width="8" height="8" fill="#adb5bd"/>
+<rect x="816" y="428" width="8" height="8" fill="#adb5bd"/>
+<rect x="816" y="450" width="8" height="8" fill="#adb5bd"/>
+<rect x="816" y="472" width="8" height="8" fill="#adb5bd"/>
+<rect x="816" y="494" width="8" height="8" fill="#adb5bd"/>
+<rect x="813" y="535" width="14" height="102" rx="7" fill="#dee2e6" opacity="0.6"/>
+<rect x="816" y="538" width="8" height="8" fill="#adb5bd"/>
+<rect x="816" y="560" width="8" height="8" fill="#adb5bd"/>
+<rect x="816" y="582" width="8" height="8" fill="#adb5bd"/>
+<rect x="816" y="604" width="8" height="8" fill="#adb5bd"/>
+<rect x="816" y="626" width="8" height="8" fill="#adb5bd"/>
+<rect x="835" y="403" width="14" height="102" rx="7" fill="#dee2e6" opacity="0.6"/>
+<rect x="838" y="406" width="8" height="8" fill="#adb5bd"/>
+<rect x="838" y="428" width="8" height="8" fill="#adb5bd"/>
+<rect x="838" y="450" width="8" height="8" fill="#adb5bd"/>
+<rect x="838" y="472" width="8" height="8" fill="#adb5bd"/>
+<rect x="838" y="494" width="8" height="8" fill="#adb5bd"/>
+<rect x="835" y="535" width="14" height="102" rx="7" fill="#dee2e6" opacity="0.6"/>
+<rect x="838" y="538" width="8" height="8" fill="#adb5bd"/>
+<rect x="838" y="560" width="8" height="8" fill="#adb5bd"/>
+<rect x="838" y="582" width="8" height="8" fill="#adb5bd"/>
+<rect x="838" y="604" width="8" height="8" fill="#adb5bd"/>
+<rect x="838" y="626" width="8" height="8" fill="#adb5bd"/>
+<rect x="857" y="403" width="14" height="102" rx="7" fill="#dee2e6" opacity="0.6"/>
+<rect x="860" y="406" width="8" height="8" fill="#adb5bd"/>
+<rect x="860" y="428" width="8" height="8" fill="#adb5bd"/>
+<rect x="860" y="450" width="8" height="8" fill="#adb5bd"/>
+<rect x="860" y="472" width="8" height="8" fill="#adb5bd"/>
+<rect x="860" y="494" width="8" height="8" fill="#adb5bd"/>
+<rect x="857" y="535" width="14" height="102" rx="7" fill="#dee2e6" opacity="0.6"/>
+<rect x="860" y="538" width="8" height="8" fill="#adb5bd"/>
+<rect x="860" y="560" width="8" height="8" fill="#adb5bd"/>
+<rect x="860" y="582" width="8" height="8" fill="#adb5bd"/>
+<rect x="860" y="604" width="8" height="8" fill="#adb5bd"/>
+<rect x="860" y="626" width="8" height="8" fill="#adb5bd"/>
+<text x="680" y="668" font-size="11" fill="#555">Mini-Steckbrett: die 5 Löcher einer Spalte</text>
+<text x="680" y="683" font-size="11" fill="#555">sind verbunden, die beiden Hälften nicht.</text>
+<rect x="700" y="100" width="150" height="70" rx="6" fill="#5f3dc4"/>
+<circle cx="736" cy="135" r="15" fill="#e5dbff"/>
+<text x="800" y="141" font-size="16" fill="#fff" text-anchor="middle">MG90S</text>
+<text x="860" y="118" font-size="12" fill="#7a4a1f">braun = GND</text>
+<text x="860" y="136" font-size="12" fill="#d62828">rot = +5V</text>
+<text x="860" y="154" font-size="12" fill="#f08c00">orange = Signal</text>
+<path d="M793,170 L793,356 L776,374 L776,380" fill="none" stroke="#f08c00" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M798,170 L798,356 L798,374 L798,380" fill="none" stroke="#d62828" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M803,170 L803,356 L820,374 L820,380" fill="none" stroke="#7a4a1f" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+<rect x="765" y="380" width="66" height="35" rx="3" fill="#222"/>
+<rect x="774" y="411" width="4" height="8" fill="#ffd43b"/>
+<rect x="796" y="411" width="4" height="8" fill="#ffd43b"/>
+<rect x="818" y="411" width="4" height="8" fill="#ffd43b"/>
+<text x="758" y="358" font-size="11" fill="#333" text-anchor="end">Servostecker auf</text>
+<text x="758" y="372" font-size="11" fill="#333" text-anchor="end">3er-Stiftleiste</text>
+<circle cx="809.0" cy="476" r="16" fill="#364fc7"/>
+<path d="M818.0,463 A16,16 0 0 1 818.0,489 Z" fill="#91a7ff"/>
+<line x1="825.0" y1="476" x2="902" y2="476" stroke="#333" stroke-width="1"/>
+<text x="906" y="440" font-size="11" fill="#333">Elko 1000 µF</text>
+<text x="906" y="455" font-size="11" fill="#555">(von oben)</text>
+<text x="906" y="470" font-size="11" fill="#d62828">+ langes Bein:</text>
+<text x="906" y="485" font-size="11" fill="#d62828">rote Spalte</text>
+<text x="906" y="500" font-size="11" fill="#333">− Streifen:</text>
+<text x="906" y="515" font-size="11" fill="#333">braune Spalte</text>
+<path d="M296,268 L296,218 L650,218 L650,509 L776,509 L776,498" fill="none" stroke="#f08c00" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M556,382 L556,520 L798,520 L798,498" fill="none" stroke="#d62828" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
+<path d="M426,382 L426,531 L820,531 L820,498" fill="none" stroke="#222" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>
+<text x="60" y="422" font-size="12" fill="#444">USB-C rechts: Datenkabel zum Rechner</text>
+<text x="30" y="760" font-size="15" font-weight="bold" fill="#222">So wird gesteckt</text>
+<text x="30" y="784" font-size="13" font-weight="normal" fill="#222">1  Drei Stifte einer Stiftleiste in die obere Hälfte des Steckbretts, in drei Spalten nebeneinander.</text>
+<text x="30" y="808" font-size="13" font-weight="normal" fill="#222">    Den Servostecker draufstecken. Jetzt trägt jede der drei Spalten eine Servofarbe.</text>
+<text x="30" y="832" font-size="13" font-weight="normal" fill="#222">2  Board G18 → orange Spalte, Board 5V → rote Spalte, Board GND → braune Spalte</text>
+<text x="30" y="856" font-size="13" font-weight="normal" fill="#222">    (3 Litzen männlich/weiblich: weiblich von unten auf den Boardstift, männlich ins Steckbrett).</text>
+<text x="30" y="880" font-size="13" font-weight="normal" fill="#222">3  Elko: langes Bein (+) in die rote Spalte, Bein am hellen Streifen (−) in die braune.</text>
+<text x="30" y="904" font-size="13" font-weight="normal" fill="#222">4  Alles nachzählen, erst dann USB einstecken.</text>
+<text x="30" y="928" font-size="13" font-weight="normal" fill="#222"></text>
+<text x="30" y="952" font-size="13" font-weight="normal" fill="#222">Ohne Stiftleiste: drei Litzen männlich/männlich in die Löcher des Servosteckers, die anderen Enden in drei Spalten.</text>
+<text x="30" y="976" font-size="13" font-weight="normal" fill="#222">Ohne Steckbrett: erst ohne Elko – drei Litzen männlich/weiblich vom Servostecker direkt an G18, 5V und GND.</text>
 </svg>

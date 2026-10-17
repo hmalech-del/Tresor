@@ -17,8 +17,9 @@ durch?). Die zweite Stufe nur, wenn die erste sauber war.
 | M2-Schraube, 10–14 mm | der Stift; dazu ein **1,6-mm-Bohrer** |
 | ESP32 DevKit | mit angelöteten Stiftleisten |
 | USB-**Daten**kabel | kein reines Ladekabel – häufigster Grund, wenn der Rechner nichts erkennt |
-| Dupont-Litzen | 3× männlich/weiblich, 2× männlich/männlich |
+| Dupont-Litzen | 3× männlich/weiblich |
 | Mini-Steckbrett | das kleinste genügt – dort treffen sich 5V, GND, Servo und Elko |
+| Stiftleiste, 3 Pins | von einer Stiftleiste abgebrochen; trägt den Servostecker im Steckbrett. Ersatzweise 3 Litzen männlich/männlich |
 | Elko 1000 µF, ≥ 6,3 V | steckt im Steckbrett |
 | Rechner | mit der Arduino-IDE 2 |
 
@@ -82,26 +83,33 @@ Kontrolle: 5V ist der Pin direkt an der Buchse in der Reihe mit 3V3, CMD und
 EN; G18 liegt in der Reihe mit CLK, zwischen G5 und G19.
 
 Das Board hat **nur einen 5V-Pin**. An ihm müssen Servo und Elko hängen – zwei
-Buchsen passen aber nicht auf einen Stift. Deshalb treffen sich 5V und GND auf
-einem **Mini-Steckbrett**:
+Buchsen passen aber nicht auf einen Stift. Deshalb treffen sich alle auf einem
+**Mini-Steckbrett**. Dort sind immer die **5 Löcher einer Spalte** miteinander
+verbunden; obere und untere Hälfte sind getrennt.
 
-| Von | Nach | Litze |
-|---|---|---|
-| Servo orange (Signal) | **GPIO 18** (Beschriftung „G18", „D18" oder „18") | männlich/weiblich |
-| Servo rot (Plus) | Steckbrett, Reihe **+5V** | männlich/männlich |
-| Servo braun (Minus) | Steckbrett, Reihe **GND** | männlich/männlich |
-| Board **5V** (auf manchen Boards „VIN") | Steckbrett, Reihe +5V | männlich/weiblich |
-| Board **GND** (einer der drei) | Steckbrett, Reihe GND | männlich/weiblich |
+1. **Servostecker aufs Steckbrett:** Die drei Litzen des Servos enden in einem
+   gemeinsamen dreipoligen Stecker (Buchse). Drei Stifte von einer
+   Stiftleiste abbrechen, in die obere Hälfte stecken – drei Spalten
+   nebeneinander – und den Servostecker draufstecken. Jetzt trägt jede der
+   drei Spalten eine Servofarbe: orange, rot, braun.
+2. **Board anschließen**, je eine Litze männlich/weiblich, das weibliche Ende
+   von unten auf den Boardstift, das männliche in eine freie Öffnung der Spalte:
 
-Weibliche Enden kommen auf die Boardstifte – die zeigen nach unten, also von
-unten aufstecken. Männliche Enden in die Servobuchse und ins Steckbrett.
+   | Board | in die Spalte |
+   |---|---|
+   | **G18** (Beschriftung „G18", „D18" oder „18") | orange |
+   | **5V** (auf manchen Boards „VIN") | rot |
+   | **GND** (einer der drei) | braun |
 
-Den **Elko** ins Steckbrett: **langes Bein in die +5V-Reihe**, das Bein an der
-Seite mit dem hellen Streifen (Minus) in die GND-Reihe. Verpolt kann er
-platzen. Einmal alles nachzählen, dann erst USB anstecken.
+3. **Elko:** langes Bein (+) in die **rote** Spalte, das Bein an der Seite
+   mit dem hellen Streifen (Minus) in die **braune**. Verpolt kann er platzen.
+4. Einmal alles nachzählen, dann erst USB anstecken.
 
-**Ohne Steckbrett** geht der erste Test auch ohne Elko: orange an G18, rot an
-5V, braun an GND, je eine Litze männlich/weiblich. Für ein paar Fahrten ohne
+**Keine Stiftleiste zur Hand:** je eine Litze männlich/männlich in die drei
+Löcher des Servosteckers, die anderen Enden in drei Spalten – gleiches Ergebnis.
+
+**Ohne Steckbrett** geht der erste Test auch ohne Elko: je eine Litze
+männlich/weiblich vom Servostecker an G18 (orange), 5V (rot) und GND (braun). Für ein paar Fahrten ohne
 Last reicht das meist. Startet das Board beim Anfahren neu, fehlt der Elko.
 
 Der Plan wird aus `servotest/schaltplan.py` erzeugt (`python3 schaltplan.py`).
