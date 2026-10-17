@@ -554,6 +554,12 @@ langes Bein an 5V.
 Der 5V-Pin ist nur einmal da, Servo und Elko brauchen ihn beide. GND gibt es
 dreimal, das ist kein Problem. Für 5V in der Box, von einfach bis dauerhaft:
 
+- **Gar nicht:** Läuft der 20er-Dauertest (`servotest/`) ohne Elko, ohne dass
+  das Board neu startet, braucht die Box keinen. Testen mit dem Netzteil und
+  Kabel, die später an der Box hängen – an einem schwächeren Netzteil kann es
+  anders aussehen. Dann gehen drei Litzen männlich/weiblich direkt vom
+  Servostecker aufs Board.
+
 - **Mini-Steckbrett** wie beim [Servotest](servotest/schaltplan.png) – passt
   ins Fach unter dem Zwischenboden, festkleben.
 - **WAGO-Klemme** (221-413, drei Leiter): je eine Litze vom Board-5V, vom
