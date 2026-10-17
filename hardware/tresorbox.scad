@@ -145,7 +145,7 @@ kabel_d   = 13;               // 12 + 1 mm Luft, falls die Platine nicht ganz in
  * Kabel darin, und 13 mm waeren ein Fenster in die Kiste. Zwei gedruckte
  * Halbschalen (kabeltuelle) werden um das eingesteckte Kabel gelegt, ins Loch
  * gedrueckt und verklebt - es bleibt nur der Kabeldurchmesser. */
-kabel_seil_d = 4.6;          // USB-C-Kabel: 3,5-4,5 mm; vor dem Druck nachmessen
+kabel_seil_d = 3.5;          // gemessenes Kabel 3 mm + 0,5 Luft (Heisskleber); dickeres Kabel: nachmessen, hier eintragen
 tuelle_spiel = 0.3;          // im Loch - der Heisskleber fuellt den Rest
 tuelle_kragen = 4;           // so viel steht der Kragen aussen ueber das Loch hinaus
 

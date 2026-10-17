@@ -8,7 +8,9 @@ description: Kontext für die Tresorbox (hardware/ im Repo hmalech-del/tresor) -
 Eine gedruckte Kiste (PETG), die ein Servo verriegelt. Später soll die
 Tresor-App sie per Bluetooth öffnen – erst, wenn der Tresor offen ist.
 
-**Stand:** (26. 9.) Das **Prüfstück ist gedruckt**, Riegel und Zunge laufen
+**Stand 17. 10.: Servotest am Prüfstück bestanden** (Riegel sauber, Endlagen ±23 wie voreingestellt, Zunge hält/geht frei, Dauertest ok, ohne Elko am PC-USB, `RICHTUNG -1` → jetzt Vorgabe; servotest.ino hat BOOT-Taste: kurz = zu/auf, 2 s = Dauertest). USB-Kabel 3 mm → `kabel_seil_d 3.5`. Upload unter Windows brauchte den CP210x-Treiber; „COM-Port belegt“ = anderes Programm (Cura) hält ihn. Sketch hier nur gegen Mock-Header mit g++ geprüft (Arduino-/Espressif-Server gesperrt). Nächstes: ganze Kiste drucken.
+
+**Früher:** (26. 9.) Das **Prüfstück ist gedruckt**, Riegel und Zunge laufen
 von Hand ordentlich (der Slicer hatte Stützen gesetzt, die der Nutzer
 wegkratzen musste – keines der Teile braucht welche). Der kurze Riegel seines
 Drucks ist noch der alte, am falschen Ende gekürzte: für den Servotest
@@ -43,7 +45,7 @@ tiefes Fach 45 × 38 × 45; der Zwischenboden hat dort statt Bein eine Schürze
 bis zum Boden. Block-Enden immer über `block_x0`/`block_x1`, nie `±block_b/2`.
 **Kabeltülle** (14. 10., Nutzer: Loch nach dem Einfädeln zu groß): zwei
 Halbschalen (`kabeltuelle.stl`) um das eingesteckte Kabel, ins 13-mm-Loch,
-verklebt; offen bleibt `kabel_seil_d` 4,6.
+verklebt; `kabel_seil_d` 3,5 (Kabel gemessen 3 mm).
 `pruefung.py` prüft Steg/Buchsen, Kabelloch unter dem Deckelrand, Beine frei
 von Platine/Stecker/Servokabel. Bilder: `ansicht.scad` mit `ansicht` = offen |
 zu | boden, Kamera `0,0,0,50,0,20,0 --viewall --autocenter`. Die große Kiste ist noch nicht gedruckt,

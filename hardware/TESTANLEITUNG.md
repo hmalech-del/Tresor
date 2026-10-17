@@ -130,13 +130,32 @@ gedrückt halten, bis das Hochladen losgeht. Hilft auch das nicht: unter
 Dann **Werkzeuge → Serieller Monitor**, unten **115200 Baud** und **„Neue
 Zeile"** einstellen. Es erscheint die Hilfe des Testprogramms.
 
+### Ohne Rechner testen
+
+Das Programm bleibt auf dem Board, auch ohne Strom. Am USB-Netzteil (oder an
+einer Powerbank) startet es von selbst, und die Taste **BOOT** steuert es:
+
+| BOOT | Was passiert |
+|---|---|
+| kurz drücken | zu, beim nächsten Mal auf, im Wechsel |
+| 2 s halten, dann loslassen | Dauertest, 20 Zyklen |
+
+BOOT **nicht beim Einstecken** gedrückt halten – dann wartet das Board aufs
+Hochladen statt das Programm zu starten. Das ist auch der Test, ob das
+spätere Netzteil ohne Elko reicht: Startet das Board beim Dauertest neu,
+fährt es danach nicht weiter.
+
+Mit Befehlen geht es auch vom **Android-Handy**: USB-OTG-Adapter, App
+„Serial USB Terminal“ (Kai Morich), 115200 Baud – dieselben Befehle wie im
+Seriellen Monitor.
+
 ### Testablauf
 
 | # | Eingabe | Was passieren soll |
 |---|---|---|
 | 1 | Horn **abnehmen**, dann `m` | Servo fährt in die Mitte (90°). |
 | 2 | – | Riegel wieder mit der Spitze mitten in den Zungenschlitz, **Horn aufstecken**, Stift in den Querschlitz. Sitzt es einen Zahn schief, abziehen und neu aufsetzen. Dann das **Wellenschräubchen** eindrehen. |
-| 3 | `z` | Der Riegel fährt durch das Loch der Zunge. Fährt er stattdessen zurück: im Programm `RICHTUNG = -1`, neu hochladen. |
+| 3 | `z` | Der Riegel fährt durch das Loch der Zunge. Fährt er stattdessen zurück: im Programm `RICHTUNG` umdrehen (Vorgabe `-1`, so lief es im Prüfstück), neu hochladen. |
 | 4 | – | Versuch, die Zunge an der Schulter hochzuziehen: **Sie muss halten.** |
 | 5 | `a` | Der Riegel fährt zurück, die Zunge lässt sich **frei abheben**. |
 | 6 | `+` / `-` oder Zahl + Enter | Endlagen fein einstellen: zu – die Spitze steht gut 3 mm hinter der Zunge; auf – die Zunge geht frei, ohne dass der Stift am Schlitzende anstößt. Gefundene Winkel notieren (`p` zeigt sie). |

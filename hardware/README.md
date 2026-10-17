@@ -10,6 +10,12 @@ Drei gedruckte Teile, drei gekaufte, rund 14 Euro.
 *Oben die Kiste, darunter das Prüfstück: Blockausschnitt mit Bohrung und
 Schlitz, dazu kurzer Riegel und kurze Zunge mit Schulter. 25 Minuten Druck.*
 
+> **Stand 17. 10.: Servotest am Prüfstück bestanden.** Riegel läuft von Hand
+> und mit Servo ohne Haken, Endlagen ±23° wie voreingestellt, die Zunge hält
+> zu und geht auf frei heraus, Dauertest ohne Neustart – am Rechner-USB auch
+> ohne Elko. Drehrichtung `RICHTUNG = -1` (jetzt Vorgabe im Testprogramm).
+> Nächster Schritt: die ganze Kiste drucken.
+
 > **Stand 4. 10.: Servotasche neu konstruiert – erst das neue Prüfstück
 > drucken.** Im ersten Entwurf stand die Servoachse nur 7,7 mm neben der
 > Riegelmitte; der Rumpf ragte 5,5 mm in die Bahn des Riegels, und der Platz
@@ -441,7 +447,7 @@ dann `servotest/servotest.ino` mit der Arduino-IDE aufspielen (Board
 
 Das Programm fährt langsam und schaltet das Servo nach jeder Fahrt ab. Fährt
 `z` auf statt zu, steht die Drehrichtung andersherum: `RICHTUNG` im Programm
-auf `-1`. Brummt das Servo in einer Endlage, drückt es gegen einen Anschlag –
+umdrehen (Vorgabe ist `-1`, so lief es im Prüfstück). Brummt das Servo in einer Endlage, drückt es gegen einen Anschlag –
 dann die Endlage mit `+`/`-` ein, zwei Grad zurücknehmen.
 
 Das Testprogramm ist **nicht die Firmware** – es kennt kein Bluetooth und
@@ -595,7 +601,7 @@ Die Passungen sind **nach Aufgabe getrennt**, nicht über einen Wert geregelt:
 | `spiel_servo_ende` | 0,8 | … am Ende gegenüber dem Kabel (eigener Wert, falls dort einmal wieder eine Schraube sitzen soll) |
 | `zb_luft` | 1,0 | Zwischenboden zu Wand und Block – steht lose |
 | `kabel_d` | 13 | Kabelloch: USB-C-Stecker 11 × 7 mm plus Luft für eine nicht ganz fluchtende Platine – nur fürs Einfädeln |
-| `kabel_seil_d` | 4,6 | Loch der Kabeltülle: danach bleibt nur das Kabel. **Dein Kabel nachmessen** (USB-C meist 3,5–4,5 mm) |
+| `kabel_seil_d` | 3,5 | Loch der Kabeltülle: danach bleibt nur das Kabel. Gemessen 3 mm + 0,5 Luft für Heißkleber; ein anderes Kabel nachmessen |
 | `tuelle_spiel` | 0,3 | Kabeltülle im Wandloch – der Heißkleber füllt den Rest |
 
 **Was nur sitzen muss, bekommt Spiel und Heißkleber.** Genau sind nur
@@ -742,4 +748,5 @@ nicht rechnen. Damit ist die Kiste so hart wie die Kryptografie und nicht so
 weich wie eine Oberflächenregel.
 
 **Nichts davon ist auf Hardware getestet**, es existiert bisher nur als
-Konstruktion. Der erste Druck steht noch aus.
+Konstruktion. Getestet ist bis jetzt nur die Mechanik mit dem Servo am
+Prüfstück (17. 10.).
