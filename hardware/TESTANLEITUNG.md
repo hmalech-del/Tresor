@@ -68,9 +68,15 @@ nicht besser, und ein Servo, das gegen einen Widerstand drückt, stirbt.
    Module"**, unter **Werkzeuge → Port** den neuen Eintrag wählen
    (Windows: COM3 o. ä., Mac: `/dev/cu.usbserial-…` oder `cu.SLAB…`).
 
-Erscheint kein Port: anderes Kabel probieren (Datenkabel!). Steht auf dem Board
-ein Chip „CH340", braucht macOS/Windows evtl. dessen Treiber; „CP2102" geht
-meist ohne.
+**COM1 ist nie das Board** – das ist die eingebaute serielle Schnittstelle
+des Rechners. Das Board ist der Port, der beim Anstecken neu dazukommt
+(Liste einmal mit, einmal ohne Board ansehen).
+
+Erscheint kein neuer Port: anderes Kabel probieren (Datenkabel!). Dann im
+Windows-Geräte-Manager nachsehen: Steht dort ein Gerät mit gelbem
+Warnzeichen („CP2102 USB to UART Bridge Controller"), fehlt der Treiber –
+„CP210x Universal Windows Driver" von Silicon Labs installieren, Board neu
+anstecken. Bei einem Chip „CH340" entsprechend dessen Treiber.
 
 ### Verdrahten – ohne USB
 
@@ -118,7 +124,8 @@ Der Plan wird aus `servotest/schaltplan.py` erzeugt (`python3 schaltplan.py`).
 
 `servotest/servotest.ino` öffnen, **Hochladen** (Pfeil oben links). Bleibt
 die Ausgabe bei `Connecting....` hängen: die Taste **BOOT** auf dem Board
-gedrückt halten, bis das Hochladen losgeht.
+gedrückt halten, bis das Hochladen losgeht. Hilft auch das nicht: unter
+**Werkzeuge → Upload Speed** 115200 wählen.
 
 Dann **Werkzeuge → Serieller Monitor**, unten **115200 Baud** und **„Neue
 Zeile"** einstellen. Es erscheint die Hilfe des Testprogramms.
